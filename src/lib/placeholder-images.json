@@ -1,0 +1,82 @@
+{
+  "placeholderImages": [
+    {
+      "id": "dsa-cover",
+      "description": "Abstract visualization of data structures and algorithms",
+      "imageUrl": "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "data algorithm"
+    },
+    {
+      "id": "cs-cover",
+      "description": "Illustration of core computer science concepts",
+      "imageUrl": "https://images.unsplash.com/photo-1484417894907-623942c8ee29?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y29tcHV0ZXIlMjBzY2llbmNlfGVufDB8fHx8MTc1ODU5NzMxNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "computer science"
+    },
+    {
+      "id": "playground-cover",
+      "description": "Code playground environment with code snippets",
+      "imageUrl": "https://images.unsplash.com/photo-1566837945700-30057527ade0?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "Playground"
+    },
+    {
+      "id": "dsa-arrays",
+      "description": "Visual representation of an array data structure",
+      "imageUrl": "https://images.unsplash.com/photo-1746470427630-060eb7f7cc36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxkYXRhJTIwZ3JpZHxlbnwwfHx8fDE3NTg1OTczMTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "data grid"
+    },
+    {
+      "id": "dsa-linked-list",
+      "description": "Diagram of a linked list with nodes and pointers",
+      "imageUrl": "https://images.unsplash.com/photo-1664526936810-ec0856d31b92?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxub2RlcyUyMGNvbm5lY3RlZHxlbnwwfHx8fDE3NTg1OTczMTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nodes connected"
+    },
+    {
+      "id": "dsa-stack-queue",
+      "description": "Illustration of stack and queue operations",
+      "imageUrl": "https://images.unsplash.com/photo-1541692641319-981cc79ee10a?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "data flow"
+    },
+    {
+      "id": "dsa-trees",
+      "description": "A binary tree structure diagram",
+      "imageUrl": "https://images.unsplash.com/photo-1712718276068-43482675cde4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx0cmVlJTIwZGlhZ3JhbXxlbnwwfHx8fDE3NTg1OTczMTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "tree diagram"
+    },
+    {
+      "id": "dsa-graphs",
+      "description": "A network graph with interconnected nodes",
+      "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxkYXRhJTIwZmxvd3xlbnwwfHx8fDE3NTg1OTczMTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "network nodes"
+    },
+    {
+      "id": "dsa-dp",
+      "description": "Conceptual art for dynamic programming",
+      "imageUrl": "https://images.unsplash.com/photo-1710432101159-9c37e9f682a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxhYnN0cmFjdCUyMHB1enpsZXxlbnwwfHx8fDE3NTg1OTczMTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract puzzle"
+    },
+    {
+      "id": "cs-os",
+      "description": "Operating system interface and icons",
+      "imageUrl": "https://images.unsplash.com/photo-1729786423717-07716ec501e9?q=80&w=1228&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "computer interface"
+    },
+    {
+      "id": "cs-dbms",
+      "description": "Database server racks and schemas",
+      "imageUrl": "https://images.unsplash.com/photo-1483736762161-1d107f3c78e1?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "server database"
+    },
+    {
+      "id": "cs-cn",
+      "description": "Abstract network of interconnected lines and dots",
+      "imageUrl": "https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxnbG9iYWwlMjBuZXR3b3JrfGVufDB8fHx8MTc1ODU5NzMxNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "global network"
+    },
+    {
+      "id": "cs-oops",
+      "description": "Conceptual diagram of object-oriented programming principles",
+      "imageUrl": "https://images.unsplash.com/photo-1694365899936-850bc6c2b0f6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8YWJzdHJhY3QlMjBzaGFwZXN8ZW58MHx8fHwxNzU4NTk2OTY5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract shapes"
+    }
+  ]
+}

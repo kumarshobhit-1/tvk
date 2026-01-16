@@ -1,0 +1,2261 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Editor from "@monaco-editor/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Play, RotateCcw, Copy, Check, Download, Loader2, Save, FolderOpen } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { saveCode, loadCode, hasSavedCode } from "@/lib/code-storage";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+// Types
+interface Example {
+  input: string;
+  output: string;
+  explanation: string;
+}
+
+interface DSAProblem {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  examples: Example[];
+  constraints: string[];
+  templates: {
+    javascript: string;
+    python: string;
+    java?: string;
+    cpp?: string;
+    c?: string;
+  };
+}
+
+// Language configurations
+const languages = [
+  { id: "javascript", name: "JavaScript", extension: "js" },
+  { id: "python", name: "Python", extension: "py" },
+  { id: "java", name: "Java", extension: "java" },
+  { id: "cpp", name: "C++", extension: "cpp" },
+  { id: "c", name: "C", extension: "c" },
+];
+
+// Default code templates
+const defaultCode: Record<string, string> = {
+  javascript: `// JavaScript Playground
+function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+
+console.log(greet("World"));
+
+// Example: Array operations
+const numbers = [1, 2, 3, 4, 5];
+const squared = numbers.map(n => n * n);
+console.log("Squared:", squared);`,
+
+  python: `# Python Playground
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("World"))
+
+# Example: List comprehension
+numbers = [1, 2, 3, 4, 5]
+squared = [n**2 for n in numbers]
+print("Squared:", squared)`,
+
+  java: `// Java Playground
+public class Main {
+    public static void main(String[] args) {
+        System.out.println(greet("World"));
+        
+        // Example: Array operations
+        int[] numbers = {1, 2, 3, 4, 5};
+        for (int num : numbers) {
+            System.out.println("Squared: " + (num * num));
+        }
+    }
+    
+    public static String greet(String name) {
+        return "Hello, " + name + "!";
+    }
+}`,
+
+  cpp: `// C++ Playground
+#include <iostream>
+#include <vector>
+using namespace std;
+
+string greet(string name) {
+    return "Hello, " + name + "!";
+}
+
+int main() {
+    cout << greet("World") << endl;
+    
+    // Example: Vector operations
+    vector<int> numbers = {1, 2, 3, 4, 5};
+    for (int num : numbers) {
+        cout << "Squared: " << num * num << endl;
+    }
+    
+    return 0;
+}`,
+
+  c: `// C Playground
+#include <stdio.h>
+#include <string.h>
+
+void greet(char* name) {
+    printf("Hello, %s!\\n", name);
+}
+
+int main() {
+    greet("World");
+    
+    // Example: Array operations
+    int numbers[] = {1, 2, 3, 4, 5};
+    int size = sizeof(numbers) / sizeof(numbers[0]);
+    
+    for (int i = 0; i < size; i++) {
+        printf("Squared: %d\\n", numbers[i] * numbers[i]);
+    }
+    
+    return 0;
+}`,
+};
+
+// DSA Problems are now fetched from Firebase in the component
+// Previously hardcoded problems have been moved to Firebase playground_problems collection
+
+export function CodePlayground() {
+  const [language, setLanguage] = useState("java");
+  const [code, setCode] = useState(defaultCode.java);
+  const [output, setOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [selectedProblem, setSelectedProblem] = useState<string | null>(null);
+  const [dsaProblems, setDsaProblems] = useState<DSAProblem[]>([]);
+  const [problemsLoading, setProblemsLoading] = useState(true);
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  
+  // Save/Load states
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch problems from Firebase
+  useEffect(() => {
+    const fetchProblems = async () => {
+      try {
+        const problemsSnapshot = await getDocs(collection(db, "playground_problems"));
+        const problems = problemsSnapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        })) as DSAProblem[];
+        setDsaProblems(problems);
+      } catch (error) {
+        console.error("Error fetching problems:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load problems. Please refresh the page.",
+          variant: "destructive"
+        });
+      } finally {
+        setProblemsLoading(false);
+      }
+    };
+    fetchProblems();
+  }, [toast]);
+
+  // Filtered problems based on search and filters
+  const filteredProblems = dsaProblems.filter((problem) => {
+    // Search filter
+    if (searchQuery && !problem.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !problem.description.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Difficulty filter
+    if (selectedDifficulty && problem.difficulty !== selectedDifficulty) {
+      return false;
+    }
+    
+    // Category filter
+    if (selectedCategory && problem.category !== selectedCategory) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Get unique categories for filter dropdown
+  const uniqueCategories = Array.from(new Set(dsaProblems.map(p => p.category)));
+
+  // Track unsaved changes
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+  }, [code]);
+
+  // Auto-load saved code when problem or language changes
+  useEffect(() => {
+    const loadUserCode = async () => {
+      if (!user || !selectedProblem) return;
+      
+      try {
+        setIsLoading(true);
+        const savedCode = await loadCode(user.uid, selectedProblem, language);
+        if (savedCode) {
+          setCode(savedCode);
+          setHasUnsavedChanges(false);
+        } else {
+          // Load problem template if no saved code
+          const problem = dsaProblems.find(p => p.id === selectedProblem);
+          if (problem) {
+            const template = problem.templates[language as keyof typeof problem.templates];
+            if (template) {
+              setCode(template);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading code:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadUserCode();
+  }, [user, selectedProblem, language, dsaProblems]);
+
+  // Handle problem selection
+  const handleProblemSelect = (problemId: string) => {
+    setSelectedProblem(problemId);
+    const problem = dsaProblems.find(p => p.id === problemId);
+    if (problem) {
+      const template = problem.templates[language as keyof typeof problem.templates];
+      if (template) {
+        setCode(template);
+      }
+    } else {
+      setCode(defaultCode[language]);
+    }
+  };
+
+  // Handle language change
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    if (selectedProblem) {
+      const problem = dsaProblems.find(p => p.id === selectedProblem);
+      if (problem) {
+        const template = problem.templates[newLanguage as keyof typeof problem.templates];
+        if (template) {
+          setCode(template);
+        }
+      }
+    } else {
+      setCode(defaultCode[newLanguage]);
+    }
+  };
+
+export function CodePlayground() {
+  const [language, setLanguage] = useState("java");
+  const [code, setCode] = useState(defaultCode.java);
+  const [output, setOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [selectedProblem, setSelectedProblem] = useState<string | null>(null);
+  const [dsaProblems, setDsaProblems] = useState<DSAProblem[]>([]);
+  const [problemsLoading, setProblemsLoading] = useState(true);
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  
+  // Save/Load states
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch problems from Firebase
+  useEffect(() => {
+    const fetchProblems = async () => {
+      try {
+        const problemsSnapshot = await getDocs(collection(db, "playground_problems"));
+        const problems = problemsSnapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        })) as DSAProblem[];
+        setDsaProblems(problems);
+      } catch (error) {
+        console.error("Error fetching problems:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load problems. Please refresh the page.",
+          variant: "destructive"
+        });
+      } finally {
+        setProblemsLoading(false);
+      }
+    };
+    fetchProblems();
+  }, [toast]);
+
+  // Filtered problems based on search and filters
+  const filteredProblems = dsaProblems.filter((problem) => {
+    // Search filter
+    if (searchQuery && !problem.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !problem.description.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Difficulty filter
+    if (selectedDifficulty && problem.difficulty !== selectedDifficulty) {
+      return false;
+    }
+    
+    // Category filter
+    if (selectedCategory && problem.category !== selectedCategory) {
+      return false;
+    }
+    
+    // Status filter (TODO: Implement with saved progress)
+    // Will be implemented with save code feature
+    
+    return true;
+  });
+
+  // Get unique categories for dropdown
+  const categories = Array.from(new Set(dsaProblems.map(p => p.category)));
+
+  // Track unsaved changes
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+  }, [code]);
+
+  // Auto-load saved code when problem or language changes
+  useEffect(() => {
+    const loadUserCode = async () => {
+      if (!user || !selectedProblem) return;
+      
+      try {
+        setIsLoading(true);
+        const savedCode = await loadCode(user.uid, selectedProblem, language);
+        if (savedCode) {
+          setCode(savedCode);
+          setHasUnsavedChanges(false);
+        } else {
+          // Load problem template if no saved code
+          const problem = dsaProblems.find(p => p.id === selectedProblem);
+          if (problem) {
+            const template = problem.templates[language as keyof typeof problem.templates];
+            if (template) {
+              setCode(template);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading code:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadUserCode();
+  }, [user, selectedProblem, language, dsaProblems]);
+
+  // Handle save code
+  const handleSaveCode = async () => {
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please login to save your code.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedProblem) {
+      toast({
+        title: "No problem selected",
+        description: "Please select a problem first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await saveCode(user.uid, selectedProblem, language, code);
+      setHasUnsavedChanges(false);
+      toast({
+        title: "Code saved!",
+        description: "Your code has been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving code:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save code. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle load code
+  const handleLoadCode = async () => {
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please login to load saved code.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedProblem) {
+      toast({
+        title: "No problem selected",
+        description: "Please select a problem first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const savedCode = await loadCode(user.uid, selectedProblem, language);
+      if (savedCode) {
+        setCode(savedCode);
+        setHasUnsavedChanges(false);
+        toast({
+          title: "Code loaded!",
+          description: "Your saved code has been loaded.",
+        });
+      } else {
+        toast({
+          title: "No saved code",
+          description: "No saved code found for this problem and language.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error loading code:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load code. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle problem selection
+  const handleProblemSelect = (problemId: string) => {
+    setSelectedProblem(problemId);
+    const problem = dsaProblems.find(p => p.id === problemId);
+    if (problem) {
+      const template = problem.templates[language as keyof typeof problem.templates];
+      if (template) {
+        setCode(template);
+      }
+    } else {
+      setCode(defaultCode[language]);
+    }
+  };
+
+  // Handle language change
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    if (selectedProblem) {
+      const problem = dsaProblems.find(p => p.id === selectedProblem);
+      if (problem) {
+        const template = problem.templates[newLanguage as keyof typeof problem.templates];
+        if (template) {
+          setCode(template);
+        }
+      }
+    } else {
+      setCode(defaultCode[newLanguage]);
+    }
+  };
+
+  const handleRunCode = async () => {
+    setIsRunning(true);
+    setOutput("Running code...");
+
+    try {
+      // Call the API endpoint for code execution
+      const response = await fetch('/api/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          language,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setOutput(`Error: ${result.error || 'Failed to execute code'}\n${result.details || ''}`);
+      } else {
+        setOutput(result.output || 'No output');
+      }
+    } catch (error) {
+      setOutput(`Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleReset = () => {
+    if (selectedProblem) {
+      const problem = dsaProblems.find(p => p.id === selectedProblem);
+      if (problem) {
+        const template = problem.templates[language as keyof typeof problem.templates];
+        if (template) {
+          setCode(template);
+        }
+      }
+    } else {
+      setCode(defaultCode[language]);
+    }
+    setOutput("");
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "Copied!",
+        description: "Code copied to clipboard.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy code.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDownload = () => {
+    const extensions: { [key: string]: string } = {
+      javascript: 'js',
+      python: 'py',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+    };
+    const ext = extensions[language] || 'txt';
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Downloaded!",
+      description: `Code downloaded as code.${ext}`,
+    });
+  };
+
+  const getProblemDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Easy":
+        return "text-green-600 border-green-600";
+      case "Medium":
+        return "text-yellow-600 border-yellow-600";
+      case "Hard":
+        return "text-red-600 border-red-600";
+      default:
+        return "text-gray-600 border-gray-600";
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSelectedDifficulty(null);
+    setSelectedCategory(null);
+    setSelectedStatus(null);
+  };
+
+  // Get current problem
+  const currentProblem = selectedProblem ? dsaProblems.find(p => p.id === selectedProblem) : null;
+
+  if (problemsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading problems...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2">Code Playground</h1>
+        <p className="text-muted-foreground">
+          Practice coding, test algorithms, and solve DSA problems in real-time
+        </p>
+      </div>
+
+      <Tabs defaultValue="playground" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="playground">Playground</TabsTrigger>
+    const complement = target - nums[i];
+    if (map.has(complement)) {
+      return [map.get(complement), i];
+    }
+    map.set(nums[i], i);
+  }
+  
+  return [];
+}
+
+// Test cases
+console.log(twoSum([2, 7, 11, 15], 9)); // [0, 1]
+console.log(twoSum([3, 2, 4], 6));       // [1, 2]
+console.log(twoSum([3, 3], 6));          // [0, 1]`,
+      python: `# Two Sum Problem
+# Time Complexity: O(n), Space Complexity: O(n)
+
+def two_sum(nums, target):
+    num_map = {}
+    
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in num_map:
+            return [num_map[complement], i]
+        num_map[num] = i
+    
+    return []
+
+# Test cases
+print(two_sum([2, 7, 11, 15], 9))  # [0, 1]
+print(two_sum([3, 2, 4], 6))        # [1, 2]
+print(two_sum([3, 3], 6))           # [0, 1]`,
+      java: `// Two Sum Problem
+// Time Complexity: O(n), Space Complexity: O(n)
+
+import java.util.*;
+
+public class Main {
+    public static int[] twoSum(int[] nums, int target) {
+        Map<Integer, Integer> map = new HashMap<>();
+        
+        for (int i = 0; i < nums.length; i++) {
+            int complement = target - nums[i];
+            if (map.containsKey(complement)) {
+                return new int[] { map.get(complement), i };
+            }
+            map.put(nums[i], i);
+        }
+        
+        return new int[] {};
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        System.out.println(Arrays.toString(twoSum(new int[]{2, 7, 11, 15}, 9))); // [0, 1]
+        System.out.println(Arrays.toString(twoSum(new int[]{3, 2, 4}, 6)));       // [1, 2]
+        System.out.println(Arrays.toString(twoSum(new int[]{3, 3}, 6)));          // [0, 1]
+    }
+}`,
+    },
+  },
+  {
+    id: "palindrome-number",
+    title: "Palindrome Number",
+    category: "Math",
+    description: "Given an integer x, return true if x is a palindrome, and false otherwise.",
+    difficulty: "Easy",
+    examples: [
+      { input: "x = 121", output: "true", explanation: "121 reads the same from left to right and right to left" },
+      { input: "x = -121", output: "false", explanation: "From left to right: -121, From right to left: 121-" },
+      { input: "x = 10", output: "false", explanation: "Reads 01 from right to left" }
+    ],
+    constraints: ["-2³¹ ≤ x ≤ 2³¹ - 1"],
+    templates: {
+      javascript: `// Palindrome Number
+// Time Complexity: O(log n), Space Complexity: O(1)
+
+function isPalindrome(x) {
+  if (x < 0) return false;
+  if (x < 10) return true;
+  if (x % 10 === 0) return false;
+  
+  let reversed = 0;
+  let original = x;
+  
+  while (x > 0) {
+    reversed = reversed * 10 + x % 10;
+    x = Math.floor(x / 10);
+  }
+  
+  return original === reversed;
+}
+
+// Test cases
+console.log(isPalindrome(121));   // true
+console.log(isPalindrome(-121));  // false
+console.log(isPalindrome(10));    // false
+console.log(isPalindrome(12321)); // true`,
+      python: `# Palindrome Number
+# Time Complexity: O(log n), Space Complexity: O(1)
+
+def is_palindrome(x):
+    if x < 0:
+        return False
+    if x < 10:
+        return True
+    if x % 10 == 0:
+        return False
+    
+    reversed_num = 0
+    original = x
+    
+    while x > 0:
+        reversed_num = reversed_num * 10 + x % 10
+        x //= 10
+    
+    return original == reversed_num
+
+# Test cases
+print(is_palindrome(121))   # True
+print(is_palindrome(-121))  # False
+print(is_palindrome(10))    # False
+print(is_palindrome(12321)) # True`,
+      java: `// Palindrome Number
+// Time Complexity: O(log n), Space Complexity: O(1)
+
+public class Main {
+    public static boolean isPalindrome(int x) {
+        if (x < 0) return false;
+        if (x < 10) return true;
+        if (x % 10 == 0) return false;
+        
+        int reversed = 0;
+        int original = x;
+        
+        while (x > 0) {
+            reversed = reversed * 10 + x % 10;
+            x /= 10;
+        }
+        
+        return original == reversed;
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        System.out.println(isPalindrome(121));   // true
+        System.out.println(isPalindrome(-121));  // false
+        System.out.println(isPalindrome(10));    // false
+        System.out.println(isPalindrome(12321)); // true
+    }
+}`,
+    },
+  },
+  {
+    id: "reverse-string",
+    title: "Reverse String",
+    category: "String",
+    description: "Write a function that reverses a string. The input string is given as an array of characters s.",
+    difficulty: "Easy",
+    examples: [
+      { input: 's = ["h","e","l","l","o"]', output: '["o","l","l","e","h"]', explanation: "" },
+      { input: 's = ["H","a","n","n","a","h"]', output: '["h","a","n","n","a","H"]', explanation: "" }
+    ],
+    constraints: ["1 ≤ s.length ≤ 10⁵", "s[i] is a printable ascii character"],
+    templates: {
+      javascript: `// Reverse String
+// Time Complexity: O(n), Space Complexity: O(1)
+
+function reverseString(s) {
+  let left = 0;
+  let right = s.length - 1;
+  
+  while (left < right) {
+    [s[left], s[right]] = [s[right], s[left]];
+    left++;
+    right--;
+  }
+  
+  return s;
+}
+
+// Test cases
+console.log(reverseString(["h","e","l","l","o"]));
+console.log(reverseString(["H","a","n","n","a","h"]));`,
+      python: `# Reverse String
+# Time Complexity: O(n), Space Complexity: O(1)
+
+def reverse_string(s):
+    left, right = 0, len(s) - 1
+    
+    while left < right:
+        s[left], s[right] = s[right], s[left]
+        left += 1
+        right -= 1
+    
+    return s
+
+# Test cases
+print(reverse_string(["h","e","l","l","o"]))
+print(reverse_string(["H","a","n","n","a","h"]))`,
+      java: `// Reverse String
+// Time Complexity: O(n), Space Complexity: O(1)
+
+import java.util.Arrays;
+
+public class Main {
+    public static void reverseString(char[] s) {
+        int left = 0;
+        int right = s.length - 1;
+        
+        while (left < right) {
+            char temp = s[left];
+            s[left] = s[right];
+            s[right] = temp;
+            left++;
+            right--;
+        }
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        char[] s1 = {'h','e','l','l','o'};
+        reverseString(s1);
+        System.out.println(Arrays.toString(s1));
+        
+        char[] s2 = {'H','a','n','n','a','h'};
+        reverseString(s2);
+        System.out.println(Arrays.toString(s2));
+    }
+}`,
+    },
+  },
+  {
+    id: "binary-search",
+    title: "Binary Search",
+    category: "Array",
+    description: "Given a sorted array of integers nums and a target value, return the index of target. If target doesn't exist, return -1.",
+    difficulty: "Easy",
+    examples: [
+      { input: "nums = [-1,0,3,5,9,12], target = 9", output: "4", explanation: "9 exists in nums at index 4" },
+      { input: "nums = [-1,0,3,5,9,12], target = 2", output: "-1", explanation: "2 does not exist in nums" }
+    ],
+    constraints: ["1 ≤ nums.length ≤ 10⁴", "-10⁴ < nums[i], target < 10⁴", "All integers in nums are unique", "nums is sorted in ascending order"],
+    templates: {
+      javascript: `// Binary Search
+// Time Complexity: O(log n), Space Complexity: O(1)
+
+function binarySearch(nums, target) {
+  let left = 0;
+  let right = nums.length - 1;
+  
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    
+    if (nums[mid] === target) {
+      return mid;
+    } else if (nums[mid] < target) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  
+  return -1;
+}
+
+// Test cases
+console.log(binarySearch([-1,0,3,5,9,12], 9));  // 4
+console.log(binarySearch([-1,0,3,5,9,12], 2));  // -1
+console.log(binarySearch([5], 5));               // 0`,
+      python: `# Binary Search
+# Time Complexity: O(log n), Space Complexity: O(1)
+
+def binary_search(nums, target):
+    left, right = 0, len(nums) - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    
+    return -1
+
+# Test cases
+print(binary_search([-1,0,3,5,9,12], 9))  # 4
+print(binary_search([-1,0,3,5,9,12], 2))  # -1
+print(binary_search([5], 5))               # 0`,
+      java: `// Binary Search
+// Time Complexity: O(log n), Space Complexity: O(1)
+
+public class Main {
+    public static int binarySearch(int[] nums, int target) {
+        int left = 0;
+        int right = nums.length - 1;
+        
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] == target) {
+                return mid;
+            } else if (nums[mid] < target) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        
+        return -1;
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        System.out.println(binarySearch(new int[]{-1,0,3,5,9,12}, 9));  // 4
+        System.out.println(binarySearch(new int[]{-1,0,3,5,9,12}, 2));  // -1
+        System.out.println(binarySearch(new int[]{5}, 5));               // 0
+    }
+}`,
+    },
+  },
+  {
+    id: "valid-parentheses",
+    title: "Valid Parentheses",
+    category: "Stack",
+    description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
+    difficulty: "Easy",
+    examples: [
+      { input: 's = "()"', output: "true", explanation: "" },
+      { input: 's = "()[]{}"', output: "true", explanation: "" },
+      { input: 's = "(]"', output: "false", explanation: "" }
+    ],
+    constraints: ["1 ≤ s.length ≤ 10⁴", "s consists of parentheses only '()[]{}'"],
+    templates: {
+      javascript: `// Valid Parentheses
+// Time Complexity: O(n), Space Complexity: O(n)
+
+function isValid(s) {
+  const stack = [];
+  const map = { ')': '(', '}': '{', ']': '[' };
+  
+  for (const char of s) {
+    if (!map[char]) {
+      stack.push(char);
+    } else {
+      if (stack.pop() !== map[char]) {
+        return false;
+      }
+    }
+  }
+  
+  return stack.length === 0;
+}
+
+// Test cases
+console.log(isValid("()"));       // true
+console.log(isValid("()[]{}"));   // true
+console.log(isValid("(]"));       // false
+console.log(isValid("([)]"));     // false
+console.log(isValid("{[]}"));     // true`,
+      python: `# Valid Parentheses
+# Time Complexity: O(n), Space Complexity: O(n)
+
+def is_valid(s):
+    stack = []
+    mapping = {')': '(', '}': '{', ']': '['}
+    
+    for char in s:
+        if char not in mapping:
+            stack.append(char)
+        else:
+            if not stack or stack.pop() != mapping[char]:
+                return False
+    
+    return len(stack) == 0
+
+# Test cases
+print(is_valid("()"))       # True
+print(is_valid("()[]{}"))   # True
+print(is_valid("(]"))       # False
+print(is_valid("([)]"))     # False
+print(is_valid("{[]}"))     # True`,
+      java: `// Valid Parentheses
+// Time Complexity: O(n), Space Complexity: O(n)
+
+import java.util.*;
+
+public class Main {
+    public static boolean isValid(String s) {
+        Stack<Character> stack = new Stack<>();
+        Map<Character, Character> map = new HashMap<>();
+        map.put(')', '(');
+        map.put('}', '{');
+        map.put(']', '[');
+        
+        for (char c : s.toCharArray()) {
+            if (!map.containsKey(c)) {
+                stack.push(c);
+            } else {
+                if (stack.isEmpty() || stack.pop() != map.get(c)) {
+                    return false;
+                }
+            }
+        }
+        
+        return stack.isEmpty();
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        System.out.println(isValid("()"));       // true
+        System.out.println(isValid("()[]{}"));   // true
+        System.out.println(isValid("(]"));       // false
+        System.out.println(isValid("([)]"));     // false
+        System.out.println(isValid("{[]}"));     // true
+    }
+}`,
+    },
+  },
+  {
+    id: "max-subarray",
+    title: "Maximum Subarray",
+    category: "Dynamic Programming",
+    description: "Given an integer array nums, find the contiguous subarray with the largest sum and return its sum.",
+    difficulty: "Medium",
+    examples: [
+      { input: "nums = [-2,1,-3,4,-1,2,1,-5,4]", output: "6", explanation: "[4,-1,2,1] has the largest sum = 6" },
+      { input: "nums = [1]", output: "1", explanation: "" },
+      { input: "nums = [5,4,-1,7,8]", output: "23", explanation: "" }
+    ],
+    constraints: ["1 ≤ nums.length ≤ 10⁵", "-10⁴ ≤ nums[i] ≤ 10⁴"],
+    templates: {
+      javascript: `// Maximum Subarray (Kadane's Algorithm)
+// Time Complexity: O(n), Space Complexity: O(1)
+
+function maxSubArray(nums) {
+  let maxSum = nums[0];
+  let currentSum = nums[0];
+  
+  for (let i = 1; i < nums.length; i++) {
+    currentSum = Math.max(nums[i], currentSum + nums[i]);
+    maxSum = Math.max(maxSum, currentSum);
+  }
+  
+  return maxSum;
+}
+
+// Test cases
+console.log(maxSubArray([-2,1,-3,4,-1,2,1,-5,4])); // 6
+console.log(maxSubArray([1]));                       // 1
+console.log(maxSubArray([5,4,-1,7,8]));             // 23`,
+      python: `# Maximum Subarray (Kadane's Algorithm)
+# Time Complexity: O(n), Space Complexity: O(1)
+
+def max_sub_array(nums):
+    max_sum = current_sum = nums[0]
+    
+    for i in range(1, len(nums)):
+        current_sum = max(nums[i], current_sum + nums[i])
+        max_sum = max(max_sum, current_sum)
+    
+    return max_sum
+
+# Test cases
+print(max_sub_array([-2,1,-3,4,-1,2,1,-5,4]))  # 6
+print(max_sub_array([1]))                        # 1
+print(max_sub_array([5,4,-1,7,8]))              # 23`,
+      java: `// Maximum Subarray (Kadane's Algorithm)
+// Time Complexity: O(n), Space Complexity: O(1)
+
+public class Main {
+    public static int maxSubArray(int[] nums) {
+        int maxSum = nums[0];
+        int currentSum = nums[0];
+        
+        for (int i = 1; i < nums.length; i++) {
+            currentSum = Math.max(nums[i], currentSum + nums[i]);
+            maxSum = Math.max(maxSum, currentSum);
+        }
+        
+        return maxSum;
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        System.out.println(maxSubArray(new int[]{-2,1,-3,4,-1,2,1,-5,4})); // 6
+        System.out.println(maxSubArray(new int[]{1}));                      // 1
+        System.out.println(maxSubArray(new int[]{5,4,-1,7,8}));            // 23
+    }
+}`,
+    },
+  },
+  {
+    id: "merge-sorted-arrays",
+    title: "Merge Two Sorted Arrays",
+    category: "Array",
+    description: "You are given two integer arrays nums1 and nums2, sorted in non-decreasing order. Merge nums2 into nums1 as one sorted array.",
+    difficulty: "Easy",
+    examples: [
+      { input: "nums1 = [1,2,3,0,0,0], m = 3, nums2 = [2,5,6], n = 3", output: "[1,2,2,3,5,6]", explanation: "" },
+      { input: "nums1 = [1], m = 1, nums2 = [], n = 0", output: "[1]", explanation: "" }
+    ],
+    constraints: ["nums1.length == m + n", "nums2.length == n", "0 ≤ m, n ≤ 200"],
+    templates: {
+      javascript: `// Merge Two Sorted Arrays
+// Time Complexity: O(m+n), Space Complexity: O(1)
+
+function merge(nums1, m, nums2, n) {
+  let i = m - 1;
+  let j = n - 1;
+  let k = m + n - 1;
+  
+  while (i >= 0 && j >= 0) {
+    if (nums1[i] > nums2[j]) {
+      nums1[k--] = nums1[i--];
+    } else {
+      nums1[k--] = nums2[j--];
+    }
+  }
+  
+  while (j >= 0) {
+    nums1[k--] = nums2[j--];
+  }
+  
+  return nums1;
+}
+
+// Test cases
+console.log(merge([1,2,3,0,0,0], 3, [2,5,6], 3));
+console.log(merge([1], 1, [], 0));`,
+      python: `# Merge Two Sorted Arrays
+# Time Complexity: O(m+n), Space Complexity: O(1)
+
+def merge(nums1, m, nums2, n):
+    i, j, k = m - 1, n - 1, m + n - 1
+    
+    while i >= 0 and j >= 0:
+        if nums1[i] > nums2[j]:
+            nums1[k] = nums1[i]
+            i -= 1
+        else:
+            nums1[k] = nums2[j]
+            j -= 1
+        k -= 1
+    
+    while j >= 0:
+        nums1[k] = nums2[j]
+        j -= 1
+        k -= 1
+    
+    return nums1
+
+# Test cases
+print(merge([1,2,3,0,0,0], 3, [2,5,6], 3))
+print(merge([1], 1, [], 0))`,
+      java: `// Merge Two Sorted Arrays
+// Time Complexity: O(m+n), Space Complexity: O(1)
+
+import java.util.Arrays;
+
+public class Main {
+    public static void merge(int[] nums1, int m, int[] nums2, int n) {
+        int i = m - 1;
+        int j = n - 1;
+        int k = m + n - 1;
+        
+        while (i >= 0 && j >= 0) {
+            if (nums1[i] > nums2[j]) {
+                nums1[k] = nums1[i];
+                i--;
+            } else {
+                nums1[k] = nums2[j];
+                j--;
+            }
+            k--;
+        }
+        
+        while (j >= 0) {
+            nums1[k] = nums2[j];
+            j--;
+            k--;
+        }
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        int[] arr1 = {1,2,3,0,0,0};
+        merge(arr1, 3, new int[]{2,5,6}, 3);
+        System.out.println(Arrays.toString(arr1));
+        
+        int[] arr2 = {1};
+        merge(arr2, 1, new int[]{}, 0);
+        System.out.println(Arrays.toString(arr2));
+    }
+}`,
+    },
+  },
+  {
+    id: "climbing-stairs",
+    title: "Climbing Stairs",
+    category: "Dynamic Programming",
+    description: "You are climbing a staircase. It takes n steps to reach the top. Each time you can climb 1 or 2 steps. How many distinct ways can you climb to the top?",
+    difficulty: "Easy",
+    examples: [
+      { input: "n = 2", output: "2", explanation: "1. 1 step + 1 step, 2. 2 steps" },
+      { input: "n = 3", output: "3", explanation: "1. 1+1+1, 2. 1+2, 3. 2+1" }
+    ],
+    constraints: ["1 ≤ n ≤ 45"],
+    templates: {
+      javascript: `// Climbing Stairs
+// Time Complexity: O(n), Space Complexity: O(1)
+
+function climbStairs(n) {
+  if (n <= 2) return n;
+  
+  let prev1 = 1, prev2 = 2;
+  
+  for (let i = 3; i <= n; i++) {
+    const current = prev1 + prev2;
+    prev1 = prev2;
+    prev2 = current;
+  }
+  
+  return prev2;
+}
+
+// Test cases
+console.log(climbStairs(2));  // 2
+console.log(climbStairs(3));  // 3
+console.log(climbStairs(5));  // 8
+console.log(climbStairs(10)); // 89`,
+      python: `# Climbing Stairs
+# Time Complexity: O(n), Space Complexity: O(1)
+
+def climb_stairs(n):
+    if n <= 2:
+        return n
+    
+    prev1, prev2 = 1, 2
+    
+    for i in range(3, n + 1):
+        current = prev1 + prev2
+        prev1 = prev2
+        prev2 = current
+    
+    return prev2
+
+# Test cases
+print(climb_stairs(2))   # 2
+print(climb_stairs(3))   # 3
+print(climb_stairs(5))   # 8
+print(climb_stairs(10))  # 89`,
+      java: `// Climbing Stairs
+// Time Complexity: O(n), Space Complexity: O(1)
+
+public class Main {
+    public static int climbStairs(int n) {
+        if (n <= 2) return n;
+        
+        int prev1 = 1;
+        int prev2 = 2;
+        
+        for (int i = 3; i <= n; i++) {
+            int current = prev1 + prev2;
+            prev1 = prev2;
+            prev2 = current;
+        }
+        
+        return prev2;
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        System.out.println(climbStairs(2));   // 2
+        System.out.println(climbStairs(3));   // 3
+        System.out.println(climbStairs(5));   // 8
+        System.out.println(climbStairs(10));  // 89
+    }
+}`,
+    },
+  },
+  {
+    id: "best-time-stock",
+    title: "Best Time to Buy and Sell Stock",
+    category: "Array",
+    description: "You are given an array prices where prices[i] is the price of a given stock on the ith day. Find the maximum profit you can achieve.",
+    difficulty: "Easy",
+    examples: [
+      { input: "prices = [7,1,5,3,6,4]", output: "5", explanation: "Buy on day 2 (price = 1) and sell on day 5 (price = 6), profit = 6-1 = 5" },
+      { input: "prices = [7,6,4,3,1]", output: "0", explanation: "No transactions are done and the max profit = 0" }
+    ],
+    constraints: ["1 ≤ prices.length ≤ 10⁵", "0 ≤ prices[i] ≤ 10⁴"],
+    templates: {
+      javascript: `// Best Time to Buy and Sell Stock
+// Time Complexity: O(n), Space Complexity: O(1)
+
+function maxProfit(prices) {
+  let minPrice = Infinity;
+  let maxProfit = 0;
+  
+  for (const price of prices) {
+    minPrice = Math.min(minPrice, price);
+    maxProfit = Math.max(maxProfit, price - minPrice);
+  }
+  
+  return maxProfit;
+}
+
+// Test cases
+console.log(maxProfit([7,1,5,3,6,4])); // 5
+console.log(maxProfit([7,6,4,3,1]));   // 0
+console.log(maxProfit([2,4,1]));       // 2`,
+      python: `# Best Time to Buy and Sell Stock
+# Time Complexity: O(n), Space Complexity: O(1)
+
+def max_profit(prices):
+    min_price = float('inf')
+    max_profit = 0
+    
+    for price in prices:
+        min_price = min(min_price, price)
+        max_profit = max(max_profit, price - min_price)
+    
+    return max_profit
+
+# Test cases
+print(max_profit([7,1,5,3,6,4]))  # 5
+print(max_profit([7,6,4,3,1]))    # 0
+print(max_profit([2,4,1]))        # 2`,
+      java: `// Best Time to Buy and Sell Stock
+// Time Complexity: O(n), Space Complexity: O(1)
+
+public class Main {
+    public static int maxProfit(int[] prices) {
+        int minPrice = Integer.MAX_VALUE;
+        int maxProfit = 0;
+        
+        for (int price : prices) {
+            minPrice = Math.min(minPrice, price);
+            maxProfit = Math.max(maxProfit, price - minPrice);
+        }
+        
+        return maxProfit;
+    }
+    
+    public static void main(String[] args) {
+        // Test cases
+        System.out.println(maxProfit(new int[]{7,1,5,3,6,4})); // 5
+        System.out.println(maxProfit(new int[]{7,6,4,3,1}));   // 0
+        System.out.println(maxProfit(new int[]{2,4,1}));       // 2
+    }
+}`,
+    },
+  },
+  {
+    id: "reverse-linked-list",
+    title: "Reverse Linked List",
+    category: "Linked List",
+    description: "Given the head of a singly linked list, reverse the list, and return the reversed list.",
+    difficulty: "Easy",
+    examples: [
+      { input: "head = [1,2,3,4,5]", output: "[5,4,3,2,1]", explanation: "" },
+      { input: "head = [1,2]", output: "[2,1]", explanation: "" },
+      { input: "head = []", output: "[]", explanation: "" }
+    ],
+    constraints: ["0 ≤ list length ≤ 5000", "-5000 ≤ Node.val ≤ 5000"],
+    templates: {
+      javascript: `// Reverse Linked List
+// Time Complexity: O(n), Space Complexity: O(1)
+
+class ListNode {
+  constructor(val = 0, next = null) {
+    this.val = val;
+    this.next = next;
+  }
+}
+
+function reverseList(head) {
+  let prev = null;
+  let current = head;
+  
+  while (current !== null) {
+    const nextTemp = current.next;
+    current.next = prev;
+    prev = current;
+    current = nextTemp;
+  }
+  
+  return prev;
+}
+
+// Test helper
+function arrayToList(arr) {
+  let dummy = new ListNode();
+  let current = dummy;
+  for (const val of arr) {
+    current.next = new ListNode(val);
+    current = current.next;
+  }
+  return dummy.next;
+}
+
+function listToArray(head) {
+  const result = [];
+  while (head) {
+    result.push(head.val);
+    head = head.next;
+  }
+  return result;
+}
+
+// Test
+const list = arrayToList([1,2,3,4,5]);
+const reversed = reverseList(list);
+console.log(listToArray(reversed)); // [5,4,3,2,1]`,
+      python: `# Reverse Linked List
+# Time Complexity: O(n), Space Complexity: O(1)
+
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def reverse_list(head):
+    prev = None
+    current = head
+    
+    while current:
+        next_temp = current.next
+        current.next = prev
+        prev = current
+        current = next_temp
+    
+    return prev
+
+# Test helper
+def array_to_list(arr):
+    dummy = ListNode()
+    current = dummy
+    for val in arr:
+        current.next = ListNode(val)
+        current = current.next
+    return dummy.next
+
+def list_to_array(head):
+    result = []
+    while head:
+        result.append(head.val)
+        head = head.next
+    return result
+
+# Test
+list_node = array_to_list([1,2,3,4,5])
+reversed_list = reverse_list(list_node)
+print(list_to_array(reversed_list))  # [5,4,3,2,1]`,
+      java: `// Reverse Linked List
+// Time Complexity: O(n), Space Complexity: O(1)
+
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int val) { this.val = val; }
+}
+
+public class Main {
+    public static ListNode reverseList(ListNode head) {
+        ListNode prev = null;
+        ListNode current = head;
+        
+        while (current != null) {
+            ListNode nextTemp = current.next;
+            current.next = prev;
+            prev = current;
+            current = nextTemp;
+        }
+        
+        return prev;
+    }
+    
+    // Test helper
+    public static ListNode arrayToList(int[] arr) {
+        if (arr.length == 0) return null;
+        ListNode dummy = new ListNode(0);
+        ListNode current = dummy;
+        for (int val : arr) {
+            current.next = new ListNode(val);
+            current = current.next;
+        }
+        return dummy.next;
+    }
+    
+    public static String listToArray(ListNode head) {
+        StringBuilder result = new StringBuilder("[");
+        while (head != null) {
+            result.append(head.val);
+            if (head.next != null) result.append(",");
+            head = head.next;
+        }
+        result.append("]");
+        return result.toString();
+    }
+    
+    public static void main(String[] args) {
+        // Test
+        ListNode list = arrayToList(new int[]{1,2,3,4,5});
+        ListNode reversed = reverseList(list);
+        System.out.println(listToArray(reversed)); // [5,4,3,2,1]
+    }
+}`,
+    },
+  },
+];
+
+export function CodePlayground() {
+  const [language, setLanguage] = useState("java");
+  const [code, setCode] = useState(defaultCode.java);
+  const [output, setOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [selectedProblem, setSelectedProblem] = useState<string | null>(null);
+  const [dsaProblems, setDsaProblems] = useState<DSAProblem[]>([]);
+  const [problemsLoading, setProblemsLoading] = useState(true);
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  
+  // Save/Load states
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch problems from Firebase
+  useEffect(() => {
+    const fetchProblems = async () => {
+      try {
+        const problemsSnapshot = await getDocs(collection(db, "playground_problems"));
+        const problems = problemsSnapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        })) as DSAProblem[];
+        setDsaProblems(problems);
+      } catch (error) {
+        console.error("Error fetching problems:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load problems. Please refresh the page.",
+          variant: "destructive"
+        });
+      } finally {
+        setProblemsLoading(false);
+      }
+    };
+    fetchProblems();
+  }, [toast]);
+
+  // Filtered problems based on search and filters
+  const filteredProblems = dsaProblems.filter((problem) => {
+    // Search filter
+    if (searchQuery && !problem.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !problem.description.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Difficulty filter
+    if (selectedDifficulty && problem.difficulty !== selectedDifficulty) {
+      return false;
+    }
+    
+    // Category filter
+    if (selectedCategory && problem.category !== selectedCategory) {
+      return false;
+    }
+    
+    // Status filter (TODO: Implement with saved progress)
+    // Will be implemented with save code feature
+    
+    return true;
+  });
+
+  // Get unique categories for dropdown
+  const categories = Array.from(new Set(dsaProblems.map(p => p.category)));
+
+  useEffect(() => {
+    if (selectedProblem) {
+      const problem = dsaProblems.find((p) => p.id === selectedProblem);
+      if (problem) {
+        const template = problem.templates[language as keyof typeof problem.templates];
+        if (template) {
+          setCode(template);
+        }
+      }
+    } else {
+      setCode(defaultCode[language]);
+    }
+  }, [language, selectedProblem]);
+
+  const handleRunCode = async () => {
+    setIsRunning(true);
+    setOutput("Running code...");
+
+    try {
+      // Call the API endpoint for code execution
+      const response = await fetch('/api/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          language,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setOutput(`Error: ${result.error || 'Failed to execute code'}\n${result.details || ''}`);
+        toast({
+          title: "Execution Failed",
+          description: result.error || "Failed to execute code",
+          variant: "destructive",
+        });
+      } else {
+        setOutput(result.output || 'Code executed successfully (no output)');
+        
+        if (result.success) {
+          toast({
+            title: "Success!",
+            description: `${languages.find(l => l.id === language)?.name} code executed successfully`,
+          });
+        }
+      }
+    } catch (error: any) {
+      setOutput(`Error: ${error.message}\n\nPlease check your internet connection and try again.`);
+      toast({
+        title: "Execution Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleReset = () => {
+    setCode(selectedProblem 
+      ? dsaProblems.find(p => p.id === selectedProblem)?.templates[language as keyof typeof dsaProblems[0]['templates']] || defaultCode[language]
+      : defaultCode[language]
+    );
+    setOutput("");
+    toast({
+      title: "Code Reset",
+      description: "Editor has been reset to default template",
+    });
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    toast({
+      title: "Copied!",
+      description: "Code copied to clipboard",
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    const extension = languages.find(l => l.id === language)?.extension || 'txt';
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code.${extension}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Downloaded!",
+      description: `Code saved as code.${extension}`,
+    });
+  };
+
+  // Save code to Firebase
+  const handleSaveCode = async () => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to save your code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedProblem) {
+      toast({
+        title: "No Problem Selected",
+        description: "Please select a problem to save code for",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await saveCode(user.uid, selectedProblem, language, code);
+      setHasUnsavedChanges(false);
+      toast({
+        title: "Code Saved! ✅",
+        description: "Your code has been saved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save code. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load saved code from Firebase
+  const handleLoadCode = async () => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to load saved code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedProblem) {
+      toast({
+        title: "No Problem Selected",
+        description: "Please select a problem to load code for",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const savedCode = await loadCode(user.uid, selectedProblem, language);
+      if (savedCode) {
+        setCode(savedCode);
+        setHasUnsavedChanges(false);
+        toast({
+          title: "Code Loaded! 📂",
+          description: "Your saved code has been loaded",
+        });
+      } else {
+        toast({
+          title: "No Saved Code",
+          description: "No saved code found for this problem and language",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Load Failed",
+        description: "Failed to load code. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-load saved code when problem or language changes
+  useEffect(() => {
+    if (user && selectedProblem) {
+      loadCode(user.uid, selectedProblem, language).then((savedCode) => {
+        if (savedCode) {
+          setCode(savedCode);
+          setHasUnsavedChanges(false);
+        }
+      });
+    }
+  }, [user, selectedProblem, language]);
+
+  // Track code changes
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+  }, [code]);
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2">Code Playground</h1>
+        <p className="text-muted-foreground">
+          Practice coding, test algorithms, and solve DSA problems in real-time
+        </p>
+      </div>
+
+      <Tabs defaultValue="playground" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="playground">Playground</TabsTrigger>
+          <TabsTrigger value="problems">DSA Problems</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="playground" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <CardTitle>Code Editor</CardTitle>
+                    <CardDescription>Write and test your code</CardDescription>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={language} onValueChange={setLanguage}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {languages.map((lang) => (
+                          <SelectItem key={lang.id} value={lang.id}>
+                            {lang.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="icon" onClick={handleCopy}>
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={handleDownload}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    {selectedProblem && user && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleLoadCode} 
+                          disabled={isLoading}
+                          className="hidden sm:flex"
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <FolderOpen className="h-4 w-4 mr-2" />
+                          )}
+                          Load
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleSaveCode} 
+                          disabled={isSaving || !hasUnsavedChanges}
+                          className="hidden sm:flex"
+                        >
+                          {isSaving ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          {hasUnsavedChanges ? "Save *" : "Saved"}
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="outline" onClick={handleReset}>
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reset
+                    </Button>
+                    <Button onClick={handleRunCode} disabled={isRunning}>
+                      {isRunning ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4 mr-2" />
+                      )}
+                      Run
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {selectedProblem && user && (
+                  <div className="mb-4 flex gap-2 sm:hidden">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleLoadCode} 
+                      disabled={isLoading}
+                      className="flex-1"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                      )}
+                      Load
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleSaveCode} 
+                      disabled={isSaving || !hasUnsavedChanges}
+                      className="flex-1"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      {hasUnsavedChanges ? "Save *" : "Saved"}
+                    </Button>
+                  </div>
+                )}
+                <div className="border rounded-lg overflow-hidden">
+                  <Editor
+                    height="500px"
+                    language={language}
+                    value={code}
+                    onChange={(value) => setCode(value || "")}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: "on",
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Output</CardTitle>
+                <CardDescription>Code execution results</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted rounded-lg p-4 font-mono text-sm min-h-[500px] max-h-[500px] overflow-auto">
+                  {output ? (
+                    <pre className="whitespace-pre-wrap">{output}</pre>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Click &quot;Run&quot; to see output here...
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="problems" className="space-y-4">
+          {!selectedProblem ? (
+            <>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold">DSA Practice Problems</h2>
+                  <p className="text-sm md:text-base text-muted-foreground">Select a problem to start coding</p>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {filteredProblems.length} of {dsaProblems.length} Problems
+                </div>
+              </div>
+
+              {/* Filters Section */}
+              <Card className="mb-6">
+                <CardContent className="pt-6 space-y-4">
+                  {/* Search Bar */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Search problems by title or description..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-4 py-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    
+                    {/* Category Dropdown */}
+                    <select
+                      value={selectedCategory || ""}
+                      onChange={(e) => setSelectedCategory(e.target.value || null)}
+                      className="px-4 py-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[150px]"
+                    >
+                      <option value="">All Categories</option>
+                      {categories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Difficulty Chips */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-sm font-medium mr-2">Difficulty:</span>
+                    <button
+                      onClick={() => setSelectedDifficulty(selectedDifficulty === "Easy" ? null : "Easy")}
+                      className={`px-3 py-1 text-xs rounded-full transition-all ${
+                        selectedDifficulty === "Easy"
+                          ? "bg-green-600 text-white shadow-md"
+                          : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 hover:bg-green-200"
+                      }`}
+                    >
+                      Easy
+                    </button>
+                    <button
+                      onClick={() => setSelectedDifficulty(selectedDifficulty === "Medium" ? null : "Medium")}
+                      className={`px-3 py-1 text-xs rounded-full transition-all ${
+                        selectedDifficulty === "Medium"
+                          ? "bg-yellow-600 text-white shadow-md"
+                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 hover:bg-yellow-200"
+                      }`}
+                    >
+                      Medium
+                    </button>
+                    <button
+                      onClick={() => setSelectedDifficulty(selectedDifficulty === "Hard" ? null : "Hard")}
+                      className={`px-3 py-1 text-xs rounded-full transition-all ${
+                        selectedDifficulty === "Hard"
+                          ? "bg-red-600 text-white shadow-md"
+                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 hover:bg-red-200"
+                      }`}
+                    >
+                      Hard
+                    </button>
+                    
+                    {/* Clear Filters */}
+                    {(searchQuery || selectedDifficulty || selectedCategory) && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery("");
+                          setSelectedDifficulty(null);
+                          setSelectedCategory(null);
+                          toast({
+                            title: "Filters Cleared",
+                            description: "All filters have been reset",
+                          });
+                        }}
+                        className="ml-auto px-3 py-1 text-xs rounded-full bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                {filteredProblems.length > 0 ? (
+                  filteredProblems.map((problem) => (
+                  <Card
+                    key={problem.id}
+                    className="cursor-pointer hover:border-primary hover:shadow-md transition-all"
+                    onClick={() => {
+                      setSelectedProblem(problem.id);
+                    }}
+                  >
+                    <CardHeader className="space-y-3 p-4 md:p-6">
+                      <div className="flex justify-between items-start gap-2">
+                        <CardTitle className="text-base md:text-lg line-clamp-2">{problem.title}</CardTitle>
+                        <span
+                          className={`text-xs px-2 py-1 rounded whitespace-nowrap shrink-0 ${
+                            problem.difficulty === "Easy"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                              : problem.difficulty === "Medium"
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                          }`}
+                        >
+                          {problem.difficulty}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                          {problem.category}
+                        </span>
+                      </div>
+                      <CardDescription className="line-clamp-2 text-sm">
+                        {problem.description}
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))
+                ) : (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <p className="text-muted-foreground">
+                        No problems found matching your filters. Try adjusting your search.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {(() => {
+                const problem = dsaProblems.find(p => p.id === selectedProblem);
+                if (!problem) return null;
+                
+                return (
+                  <div className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        {/* Mobile: Back button at top */}
+                        <div className="md:hidden mb-4">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setSelectedProblem(null)}
+                            className="w-full"
+                          >
+                            ← Back to Problems
+                          </Button>
+                        </div>
+                        
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                              <CardTitle className="text-xl md:text-2xl">{problem.title}</CardTitle>
+                              <span
+                                className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
+                                  problem.difficulty === "Easy"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                    : problem.difficulty === "Medium"
+                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                }`}
+                              >
+                                {problem.difficulty}
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap">
+                                {problem.category}
+                              </span>
+                            </div>
+                            <CardDescription className="text-sm md:text-base">
+                              {problem.description}
+                            </CardDescription>
+                          </div>
+                          
+                          {/* Desktop: Back button on right */}
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setSelectedProblem(null)}
+                            className="hidden md:flex whitespace-nowrap"
+                          >
+                            ← Back to Problems
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Examples Section */}
+                        <div>
+                          <h3 className="font-semibold mb-3 text-base md:text-lg">Examples:</h3>
+                          <div className="space-y-4">
+                            {problem.examples.map((example, idx) => (
+                              <div key={idx} className="bg-muted p-3 md:p-4 rounded-lg space-y-2">
+                                <div className="break-words">
+                                  <span className="font-semibold text-sm md:text-base">Input: </span>
+                                  <code className="text-xs md:text-sm break-all">{example.input}</code>
+                                </div>
+                                <div className="break-words">
+                                  <span className="font-semibold text-sm md:text-base">Output: </span>
+                                  <code className="text-xs md:text-sm break-all">{example.output}</code>
+                                </div>
+                                {example.explanation && (
+                                  <div className="break-words">
+                                    <span className="font-semibold text-sm md:text-base">Explanation: </span>
+                                    <span className="text-xs md:text-sm">{example.explanation}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Constraints Section */}
+                        <div>
+                          <h3 className="font-semibold mb-3 text-base md:text-lg">Constraints:</h3>
+                          <ul className="list-disc list-inside space-y-1 bg-muted p-3 md:p-4 rounded-lg">
+                            {problem.constraints.map((constraint, idx) => (
+                              <li key={idx} className="text-xs md:text-sm break-words">{constraint}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Start Coding Button */}
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                          <Button 
+                            onClick={() => {
+                              // Switch to Playground tab
+                              const playgroundTab = document.querySelector('[value="playground"]') as HTMLElement;
+                              playgroundTab?.click();
+                            }}
+                            className="flex-1 w-full sm:w-auto"
+                          >
+                            Start Coding →
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              toast({
+                                title: "Template Loaded",
+                                description: `${problem.title} template loaded in editor`,
+                              });
+                            }}
+                            className="w-full sm:w-auto"
+                          >
+                            Load Template
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

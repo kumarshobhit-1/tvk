@@ -1,0 +1,180 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isStudent() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own data, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile during signup
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can update their own profile, but not the role field
+      allow update: if isOwner(userId) && 
+                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Exams collection
+    match /exams/{examId} {
+      // Anyone can read published exams, admins can read all
+      allow read: if resource.data.published == true || isAdmin();
+      
+      // Only admins can create, update, or delete exams
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Exam attempts collection
+    match /exam_attempts/{attemptId} {
+      // Users can only read their own attempts, admins can read all
+      allow read: if isOwner(resource.data.studentId) || isAdmin();
+      
+      // Students can create attempts for themselves
+      allow create: if isStudent() && 
+                      request.auth.uid == request.resource.data.studentId &&
+                      request.resource.data.status == 'in_progress';
+      
+      // Students can update their own in-progress attempts
+      allow update: if isOwner(resource.data.studentId) && 
+                      resource.data.status == 'in_progress' &&
+                      (request.resource.data.status == 'in_progress' || 
+                       request.resource.data.status == 'completed');
+      
+      // Admins can update any attempt (for recalculation)
+      allow update: if isAdmin();
+      
+      // Only admins can delete attempts
+      allow delete: if isAdmin();
+    }
+    
+    // Questions collection (for exam questions)
+    match /questions/{questionId} {
+      // Only admins can read questions (to prevent answer leaks)
+      allow read: if isAdmin();
+      
+      // Only admins can create, update, or delete questions
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Progress tracking collection
+    match /progress/{userId} {
+      // Users can read their own progress, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can update their own progress
+      allow update: if isOwner(userId);
+      
+      // System can create progress records
+      allow create: if isAuthenticated();
+      
+      // Only admins can delete progress
+      allow delete: if isAdmin();
+    }
+    
+    // Activity tracking collection
+    match /activity/{activityId} {
+      // Users can read their own activity, admins can read all
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // System can create activity logs
+      allow create: if isAuthenticated() && 
+                      request.auth.uid == request.resource.data.userId;
+      
+      // No updates or deletes allowed (audit log)
+      allow update, delete: if false;
+    }
+    
+    // CS Topics collection (for computer science subjects)
+    match /cs_topics/{topicId} {
+      // Anyone can read published topics
+      allow read: if true;
+      
+      // Only admins can create, update, or delete topics
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // DSA Topics collection (for data structures & algorithms)
+    match /dsa_topics/{topicId} {
+      // Anyone can read published topics
+      allow read: if true;
+      
+      // Only admins can create, update, or delete topics
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Code submissions collection (for playground)
+    match /code_submissions/{submissionId} {
+      // Users can read their own submissions, admins can read all
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // Users can create their own submissions
+      allow create: if isAuthenticated() && 
+                      request.auth.uid == request.resource.data.userId;
+      
+      // Users can update their own submissions
+      allow update: if isOwner(resource.data.userId);
+      
+      // Only admins can delete submissions
+      allow delete: if isAdmin();
+    }
+    
+    // Achievements collection
+    match /achievements/{achievementId} {
+      // Users can read their own achievements, admins can read all
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // System can create achievements
+      allow create: if isAuthenticated();
+      
+      // No updates allowed (achievement records are immutable)
+      allow update: if false;
+      
+      // Only admins can delete achievements
+      allow delete: if isAdmin();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isOwner(resource.data.userId);
+      
+      // System can create notifications
+      allow create: if isAuthenticated();
+      
+      // Users can mark their own notifications as read
+      allow update: if isOwner(resource.data.userId) && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      
+      // Users can delete their own notifications
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

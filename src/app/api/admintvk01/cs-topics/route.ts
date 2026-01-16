@@ -1,0 +1,41 @@
+import { NextRequest, NextResponse } from "next/server";
+import { adminDB } from "@/lib/firebase/firebase-admin";
+
+export async function GET() {
+  try {
+    const snapshot = await adminDB.collection("cs_topics").get();
+    const items = snapshot.docs.map(doc => ({ 
+      ...doc.data(), 
+      firebaseDocId: doc.id 
+    }));
+    
+    return NextResponse.json({ items });
+  } catch (error) {
+    console.error("Error fetching CS topics:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch CS topics", items: [] },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.json();
+    data.createdAt = new Date();
+    
+    const docRef = await adminDB.collection("cs_topics").add(data);
+    
+    return NextResponse.json({ 
+      success: true, 
+      id: docRef.id,
+      message: "CS topic created successfully" 
+    });
+  } catch (error) {
+    console.error("Error creating CS topic:", error);
+    return NextResponse.json(
+      { error: "Failed to create CS topic" },
+      { status: 500 }
+    );
+  }
+}
