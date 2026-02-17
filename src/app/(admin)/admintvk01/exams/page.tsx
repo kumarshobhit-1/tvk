@@ -485,13 +485,15 @@ export default function AdminExamsPage() {
                     <Label>Options *</Label>
                     <div className="space-y-2">
                       {question.options.map((option) => (
-                        <div key={option.id} className="flex gap-2 items-center">
-                          <Input
+                        <div key={option.id} className="flex gap-2 items-start">
+                          <Textarea
                             value={option.text}
                             onChange={(e) =>
                               updateOption(qIndex, option.id, e.target.value)
                             }
                             placeholder={`Option ${option.id.toUpperCase()}`}
+                            rows={2}
+                            className="flex-1 min-h-[60px]"
                           />
                           <Button
                             variant={

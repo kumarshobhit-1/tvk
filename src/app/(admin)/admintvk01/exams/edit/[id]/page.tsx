@@ -441,7 +441,7 @@ export default function EditExamPage() {
                   <div className="space-y-3">
                     <Label>Options *</Label>
                     {question.options.map((option) => (
-                      <div key={option.id} className="flex items-center gap-2">
+                      <div key={option.id} className="flex items-start gap-2">
                         <input
                           type="radio"
                           name={`correct-${question.id}`}
@@ -449,17 +449,19 @@ export default function EditExamPage() {
                           onChange={() =>
                             updateQuestion(qIndex, { correctOptionId: option.id })
                           }
-                          className="cursor-pointer"
+                          className="cursor-pointer mt-3"
                         />
-                        <Badge variant="outline" className="min-w-[24px] justify-center">
+                        <Badge variant="outline" className="min-w-[24px] justify-center mt-2">
                           {option.id.toUpperCase()}
                         </Badge>
-                        <Input
+                        <Textarea
                           placeholder={`Option ${option.id.toUpperCase()}`}
                           value={option.text}
                           onChange={(e) =>
                             updateOption(qIndex, option.id, e.target.value)
                           }
+                          rows={2}
+                          className="flex-1 min-h-[60px]"
                         />
                       </div>
                     ))}

@@ -71,7 +71,7 @@ export function QuestionCard({
         </div>
 
         <div className="mb-6">
-          <p className="text-lg font-medium leading-relaxed">{question.text}</p>
+          <p className="text-lg font-medium leading-relaxed whitespace-pre-wrap">{question.text}</p>
           <p className="text-sm text-muted-foreground mt-2">
             Marks: {question.marks}
           </p>
@@ -144,7 +144,7 @@ export function QuestionCard({
                       </span>
                     )}
                   </div>
-                  <span className="flex-1">{option.text}</span>
+                  <span className="flex-1 whitespace-pre-wrap">{option.text}</span>
                 </div>
               </button>
             );
@@ -156,7 +156,7 @@ export function QuestionCard({
             <p className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
               Explanation:
             </p>
-            <p className="text-blue-800 dark:text-blue-200">{question.explanation}</p>
+            <p className="text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{question.explanation}</p>
           </div>
         )}
       </CardContent>
