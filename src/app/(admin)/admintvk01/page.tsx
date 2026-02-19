@@ -240,7 +240,7 @@ export default function AdminHomePage() {
       <p className="text-muted-foreground mb-8">Manage all content</p>
 
       {/* Exam Management Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Link href="/admintvk01/exams">
           <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
             <CardContent className="p-4">
@@ -299,6 +299,22 @@ export default function AdminHomePage() {
                 <div>
                   <CardTitle className="text-base mb-0 group-hover:text-gray-900">Recalculate Result</CardTitle>
                   <CardDescription className="text-sm group-hover:text-gray-700">Refresh Exam Result</CardDescription>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admintvk01/pdfs">
+          <Card className="hover:bg-purple-400 hover:border-purple-400 transition-all cursor-pointer border-border group">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-50 group-hover:bg-white/20 rounded-full transition-colors">
+                  <FileText className="h-5 w-5 text-purple-500 group-hover:text-gray-900" />
+                </div>
+                <div>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">PDF Library</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700">Upload & manage PDFs</CardDescription>
                 </div>
               </div>
             </CardContent>

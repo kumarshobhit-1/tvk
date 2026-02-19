@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { LayoutGrid, BookOpen, LogOut, LogIn, User as UserIcon, Menu, Info, Shield, Mail, Code2, Home } from "lucide-react";
+import { LayoutGrid, BookOpen, LogOut, LogIn, User as UserIcon, Menu, Info, Shield, Mail, Code2, Home, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -35,6 +35,7 @@ const navLinks = [
   { href: "/dsa", label: "DSA Sheet", icon: <LayoutGrid className="h-4 w-4" /> },
   { href: "/cs", label: "CS Subjects", icon: <BookOpen className="h-4 w-4" /> },
   { href: "/exam", label: "Exams", icon: <BookOpen className="h-4 w-4" /> },
+  { href: "/library", label: "PDF Library", icon: <FileText className="h-4 w-4" /> },
   { href: "/playground", label: "Playground", icon: <Code2 className="h-4 w-4" /> },
   { href: "/about", label: "About Us", icon: <Info className="h-4 w-4" /> },
   { href: "/contact", label: "Contact Us", icon: <Mail className="h-4 w-4" /> },
