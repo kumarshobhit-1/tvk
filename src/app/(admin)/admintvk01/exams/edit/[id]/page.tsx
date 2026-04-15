@@ -117,6 +117,43 @@ export default function EditExamPage() {
     setQuestions([...questions, newQuestion]);
   };
 
+  const addOption = (questionIndex: number) => {
+    const optionIds = ["a", "b", "c", "d", "e"];
+    setQuestions(
+      questions.map((q, i) => {
+        if (i === questionIndex && q.options.length < 5) {
+          const nextId = optionIds[q.options.length];
+          return {
+            ...q,
+            options: [...q.options, { id: nextId, text: "" }],
+          };
+        }
+        return q;
+      })
+    );
+  };
+
+  const removeOption = (questionIndex: number, optionId: string) => {
+    setQuestions(
+      questions.map((q, i) => {
+        if (i === questionIndex && q.options.length > 2) {
+          const filteredOptions = q.options.filter((opt) => opt.id !== optionId);
+          // Adjust correctOptionId if removing the correct option
+          let correctOptionId = q.correctOptionId;
+          if (correctOptionId === optionId) {
+            correctOptionId = filteredOptions[0]?.id || "a";
+          }
+          return {
+            ...q,
+            options: filteredOptions,
+            correctOptionId,
+          };
+        }
+        return q;
+      })
+    );
+  };
+
   const removeQuestion = (index: number) => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
@@ -463,10 +500,31 @@ export default function EditExamPage() {
                           rows={2}
                           className="flex-1 min-h-[60px]"
                         />
+                        {question.options.length > 2 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeOption(qIndex, option.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 mt-2"
+                            title="Remove option"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     ))}
+                    {question.options.length < 5 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addOption(qIndex)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Option
+                      </Button>
+                    )}
                     <p className="text-xs text-muted-foreground">
-                      Select the correct answer using the radio button
+                      Select the correct answer using the radio button (2-5 options allowed)
                     </p>
                   </div>
 

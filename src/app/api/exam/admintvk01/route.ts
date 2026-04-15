@@ -18,6 +18,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Validate questions and options
+    for (let i = 0; i < examData.questions.length; i++) {
+      const q = examData.questions[i];
+      if (!q.options || q.options.length < 2 || q.options.length > 5) {
+        return NextResponse.json(
+          { error: `Question ${i + 1}: Must have between 2 and 5 options` },
+          { status: 400 }
+        );
+      }
+      if (!q.text || q.text.trim() === "") {
+        return NextResponse.json(
+          { error: `Question ${i + 1}: Question text is required` },
+          { status: 400 }
+        );
+      }
+      if (!q.correctOptionId) {
+        return NextResponse.json(
+          { error: `Question ${i + 1}: Correct option must be selected` },
+          { status: 400 }
+        );
+      }
+      if (q.options.some((opt: any) => !opt.text || opt.text.trim() === "")) {
+        return NextResponse.json(
+          { error: `Question ${i + 1}: All options must have text` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Use authenticated user ID
     const userId = auth.userId!;
 
@@ -80,6 +109,37 @@ export async function PUT(request: NextRequest) {
 
     if (!examSnap.exists) {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+    }
+
+    // Validate questions and options
+    if (examData.questions && Array.isArray(examData.questions)) {
+      for (let i = 0; i < examData.questions.length; i++) {
+        const q = examData.questions[i];
+        if (!q.options || q.options.length < 2 || q.options.length > 5) {
+          return NextResponse.json(
+            { error: `Question ${i + 1}: Must have between 2 and 5 options` },
+            { status: 400 }
+          );
+        }
+        if (!q.text || q.text.trim() === "") {
+          return NextResponse.json(
+            { error: `Question ${i + 1}: Question text is required` },
+            { status: 400 }
+          );
+        }
+        if (!q.correctOptionId) {
+          return NextResponse.json(
+            { error: `Question ${i + 1}: Correct option must be selected` },
+            { status: 400 }
+          );
+        }
+        if (q.options.some((opt: any) => !opt.text || opt.text.trim() === "")) {
+          return NextResponse.json(
+            { error: `Question ${i + 1}: All options must have text` },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Update exam

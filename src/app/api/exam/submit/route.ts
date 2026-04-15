@@ -46,6 +46,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Time limit exceeded" }, { status: 400 });
     }
 
+    // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
+    const questionsToScore = (attempt as any).questionsSnapshot || exam.questions;
+
     // Calculate score
     let score = 0;
     let correctAnswers = 0;
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest) {
     let unanswered = 0;
 
     const updatedAnswers: ExamAnswer[] = answers.map((answer: ExamAnswer) => {
-      const question = exam.questions.find((q) => q.id === answer.questionId);
+      const question = questionsToScore.find((q: any) => q.id === answer.questionId);
       if (!question) return answer;
 
       if (!answer.selectedOptionId) {

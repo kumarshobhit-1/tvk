@@ -127,8 +127,19 @@ export async function POST(request: NextRequest) {
       }));
     }
 
-    // Create attempt
+    // Create attempt with question snapshot for safety
     const currentTime = new Date();
+    const questionsSnapshot = questions.map((q) => ({
+      id: q.id,
+      text: q.text,
+      options: q.options,
+      correctOptionId: q.correctOptionId,
+      explanation: q.explanation,
+      marks: q.marks,
+      difficulty: q.difficulty,
+      subject: q.subject,
+    }));
+
     const attemptData: Omit<ExamAttempt, "id"> = {
       examId,
       userId,
@@ -143,7 +154,10 @@ export async function POST(request: NextRequest) {
       status: "in-progress",
       ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
       userAgent: request.headers.get("user-agent") || "unknown",
-    };
+    } as any;
+
+    // Add questionsSnapshot for reference
+    (attemptData as any).questionsSnapshot = questionsSnapshot;
 
     const attemptRef = await adminDB.collection("exam_attempts").add(attemptData);
 

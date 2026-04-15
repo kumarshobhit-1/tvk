@@ -61,7 +61,9 @@ export async function GET(request: NextRequest) {
       timeTaken: attempt.timeTaken || 0,
       submittedAt: attempt.submittedAt!,
       answers: attempt.answers.map((answer) => {
-        const question = exam.questions?.find((q) => q.id === answer.questionId);
+        // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
+        const questionsToUse = (attempt as any).questionsSnapshot || exam.questions;
+        const question = questionsToUse?.find((q: any) => q.id === answer.questionId);
         
         if (!question) {
           // Fallback if question not found

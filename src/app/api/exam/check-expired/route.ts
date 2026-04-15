@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
 
       // Add 1 minute grace period
       if (elapsedMinutes > exam.durationMinutes + 1) {
+        // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
+        const questionsToScore = (attempt as any).questionsSnapshot || exam.questions;
+
         // Calculate scores
         let score = 0;
         let correctAnswers = 0;
@@ -39,7 +42,7 @@ export async function POST(request: NextRequest) {
         let unanswered = 0;
 
         attempt.answers.forEach((answer) => {
-          const question = exam.questions.find((q) => q.id === answer.questionId);
+          const question = questionsToScore.find((q: any) => q.id === answer.questionId);
           if (!question) return;
 
           if (!answer.selectedOptionId) {
