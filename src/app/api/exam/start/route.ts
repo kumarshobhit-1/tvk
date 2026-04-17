@@ -1,10 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDB } from "@/lib/firebase/firebase-admin";
+import { cookies } from "next/headers";
+import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
+import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { Exam, ExamAttempt, ExamQuestion } from "@/lib/exam-types";
+
+const startExamLimiter = new RateLimiter(RATE_LIMITS.general);
 
 export async function POST(request: NextRequest) {
   try {
-    const { examId, userId, userEmail, userName } = await request.json();
+    if (!startExamLimiter.isAllowed(request)) {
+      return NextResponse.json({ error: RATE_LIMITS.general.message }, { status: 429 });
+    }
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+    const userId = decodedToken.uid;
+
+    const { examId } = await request.json();
+
+    const userDoc = await adminDB.collection("users").doc(userId).get();
+    const userData = userDoc.exists ? userDoc.data() : undefined;
+    const userEmail = userData?.email || decodedToken.email || "";
+    const userName = userData?.displayName || decodedToken.name || "User";
 
     if (!userId || !userEmail || !userName) {
       return NextResponse.json({ error: "User information required" }, { status: 400 });

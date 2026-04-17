@@ -97,7 +97,7 @@ export default function AdminPDFsPage() {
 
     const checkAdmin = async () => {
       try {
-        const response = await fetch("/api/exam/admintvk01?examId=test");
+        const response = await authenticatedFetch("/api/pdf/admintvk01");
         if (response.status === 403) {
           router.push("/");
           return;

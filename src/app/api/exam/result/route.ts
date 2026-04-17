@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDB } from "@/lib/firebase/firebase-admin";
+import { cookies } from "next/headers";
+import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam, ExamAttempt, ExamResult } from "@/lib/exam-types";
 
 export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+
     const searchParams = request.nextUrl.searchParams;
     const attemptId = searchParams.get("attemptId");
 
@@ -24,6 +32,11 @@ export async function GET(request: NextRequest) {
     }
 
     const attempt = { id: attemptSnap.id, ...attemptSnap.data() } as ExamAttempt & { id: string };
+
+    // Prevent IDOR: user can fetch only own result
+    if (attempt.userId !== decodedToken.uid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
 
     // Check if submitted
     if (attempt.status !== "submitted") {

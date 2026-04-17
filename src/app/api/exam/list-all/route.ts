@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam } from "@/lib/exam-types";
-import { verifyAdminAuth } from "@/lib/auth-helpers";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 // Get all exams (for admin)
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const authResult = await verifyAdminAuth(request);
-    if (authResult.error) {
-      return authResult.error;
+    // View exam analytics/list permission
+    const authResult = await verifyAdminPermission(request, "canViewExamAnalytics");
+    if (!authResult.isValid) {
+      return NextResponse.json(
+        { error: authResult.error || "Forbidden" },
+        { status: 403 }
+      );
     }
     const examsRef = adminDB.collection("exams");
     const examsSnap = await examsRef.orderBy("createdAt", "desc").get();
@@ -32,10 +35,13 @@ export async function GET(request: NextRequest) {
 // Delete exam
 export async function DELETE(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const authResult = await verifyAdminAuth(request);
-    if (authResult.error) {
-      return authResult.error;
+    // Exam delete permission
+    const authResult = await verifyAdminPermission(request, "canDeleteExam");
+    if (!authResult.isValid) {
+      return NextResponse.json(
+        { error: authResult.error || "Forbidden" },
+        { status: 403 }
+      );
     }
 
     const { examId } = await request.json();

@@ -68,7 +68,7 @@ export default function ExamsPage() {
           const statuses: Record<string, ExamStatus> = {};
           for (const exam of data.exams) {
             try {
-              const statusRes = await fetch(`/api/exam/status?examId=${exam.id}&userId=${user.uid}`);
+              const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`);
               if (statusRes.ok) {
                 statuses[exam.id] = await statusRes.json();
               }

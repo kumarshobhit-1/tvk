@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDB } from "@/lib/firebase/firebase-admin";
+import { cookies } from "next/headers";
+import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json({ error: "User ID required" }, { status: 400 });
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+    const userId = decodedToken.uid;
 
     console.log("Fetching exam results for userId:", userId);
 

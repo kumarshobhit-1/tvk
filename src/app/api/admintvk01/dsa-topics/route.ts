@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
-import { verifyAdminAuth } from "@/lib/auth-helpers";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
-  // Verify admin authentication
-  const auth = await verifyAdminAuth(request);
+  const auth = await verifyAdminPermission(request, "canManageTopics");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {
@@ -28,10 +27,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Verify admin authentication
-  const auth = await verifyAdminAuth(request);
+  const auth = await verifyAdminPermission(request, "canManageTopics");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {

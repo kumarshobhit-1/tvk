@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam } from "@/lib/exam-types";
-import { verifyAdminAuth } from "@/lib/auth-helpers";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 export async function POST(request: NextRequest) {
-  // Verify admin authentication
-  const auth = await verifyAdminAuth(request);
+  // Exam create permission
+  const auth = await verifyAdminPermission(request, "canCreateExam");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       shuffleOptions: examData.shuffleOptions || false,
       instructions: examData.instructions || [],
       questions: examData.questions,
-      isPublished: examData.isPublished || false,
+      isPublished: examData.isPublished ?? true,
       isActive: true, // New exams are active by default
       category: examData.category || "SEBI",
       createdBy: userId,
@@ -91,10 +91,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  // Verify admin authentication
-  const auth = await verifyAdminAuth(request);
+  // Exam edit permission
+  const auth = await verifyAdminPermission(request, "canEditExam");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {
@@ -159,10 +159,10 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify admin authentication
-  const auth = await verifyAdminAuth(request);
+  // Exam read for admin edit/view
+  const auth = await verifyAdminPermission(request, "canEditExam");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {

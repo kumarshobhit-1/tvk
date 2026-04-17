@@ -226,7 +226,7 @@ export function ExamRunner({
       }
     };
 
-    const interval = setInterval(checkStatus, 10000); // Check every 10 seconds
+    const interval = setInterval(checkStatus, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
   }, [attemptId, router, exam.id, toast, saveProgressToServer]);

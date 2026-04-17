@@ -1,0 +1,81 @@
+Production Restore Checklist
+
+Incident confirm karo
+
+Data loss scope confirm karo: kaunsi collections/documents affected hain.
+
+Decision lo: full restore karna hai ya selected collections ka restore.
+
+Safety actions before restore
+
+App ko maintenance mode ya read-only mode me daalo.
+
+Ongoing writes stop karo (background jobs, cron, queues).
+
+Team ko announce karo: restore window start time + expected impact.
+
+Backup source validate karo
+
+Project set karo:
+Command: gcloud config set project codeminted-0
+
+Available backups dekho:
+Command: gcloud storage ls gs://codeminted-0-firestore-backups-as2/firestore-backups/
+
+Correct date/time backup choose karo (latest healthy point-in-time).
+
+Permissions verify karo
+
+Firestore service agent ko bucket read access hona chahiye.
+
+Agar permission issue aaye to pehle IAM fix karo, phir import karo.
+
+Import run karo
+
+Full backup import command:
+Command: gcloud firestore import gs://codeminted-0-firestore-backups-as2/firestore-backups/YYYY-MM-DD
+
+Agar specific collections import karni ho:
+Command: gcloud firestore import gs://codeminted-0-firestore-backups-as2/firestore-backups/YYYY-MM-DD --collection-ids=users,orders,exam_attempts
+
+Operation monitor karo
+
+Running operations list:
+Command: gcloud firestore operations list --limit=10
+
+Specific operation detail:
+Command: gcloud firestore operations describe OPERATION_NAME
+
+Status done true aur error empty hona chahiye.
+
+Data validation after restore
+
+Critical collections ka document count check karo.
+
+App ke key flows test karo: login, read, write, admin panel.
+
+Random sample records verify karo (IDs, timestamps, relationships).
+
+Go-live safely
+
+Pehle internal QA sign-off lo.
+
+Maintenance mode hatao.
+
+Writes gradually resume karo.
+
+Incident closure note publish karo.
+
+Post-restore must-do
+
+Root cause analysis likho: data delete kaise hua.
+
+Preventive controls add karo: stricter IAM, delete safeguards, alerts.
+
+Ek fresh post-restore backup bhi le lo.
+
+Important notes
+
+Firestore import existing matching documents overwrite kar sakta hai.
+Import extra unwanted old docs ko auto-delete nahi karta.
+High-risk case me pehle staging project me same backup restore test karna best hai.

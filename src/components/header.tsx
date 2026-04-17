@@ -57,7 +57,12 @@ export function Header() {
       const userDocRef = doc(db, "users", user.uid);
       try {
         const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists() && userDoc.data().isAdmin === true) {
+        const adminRole = userDoc.exists() ? userDoc.data().adminRole : undefined;
+        if (
+          userDoc.exists() &&
+          (userDoc.data().isAdmin === true ||
+            ['super_admin', 'isAdmin', 'content_admin', 'exam_admin', 'qa_admin'].includes(adminRole))
+        ) {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdminPermission(request, "canCreateQAQuestion");
+    if (!auth.isValid) {
+      return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 403 });
+    }
+
     const snapshot = await adminDB.collection("dsa_questions").get();
     const items = snapshot.docs.map(doc => ({ 
       ...doc.data(), 
@@ -21,6 +27,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyAdminPermission(request, "canCreateQAQuestion");
+    if (!auth.isValid) {
+      return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 403 });
+    }
+
     const data = await request.json();
     data.createdAt = new Date();
     

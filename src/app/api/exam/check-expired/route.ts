@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDB } from "@/lib/firebase/firebase-admin";
+import { cookies } from "next/headers";
+import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
+import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { ExamAttempt, Exam } from "@/lib/exam-types";
+
+const checkExpiredLimiter = new RateLimiter(RATE_LIMITS.general);
 
 // Check and expire exams that have exceeded their duration
 export async function POST(request: NextRequest) {
   try {
-    // Get all in-progress attempts
+    if (!checkExpiredLimiter.isAllowed(request)) {
+      return NextResponse.json({ error: RATE_LIMITS.general.message }, { status: 429 });
+    }
+
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+
+    // Get only current user's in-progress attempts
     const attemptsSnap = await adminDB.collection("exam_attempts")
+      .where("userId", "==", decodedToken.uid)
       .where("status", "==", "in-progress")
       .get();
 

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await verifyAdminPermission(request, "canManagePlayground");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
     const { id } = params;
     const data = await request.json();
@@ -29,6 +35,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await verifyAdminPermission(request, "canManagePlayground");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
     const { id } = params;
     

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await verifyAdminPermission(request, "canManagePlayground");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
     const snapshot = await adminDB.collection("playground_problems").get();
     const items = snapshot.docs.map(doc => ({ 
@@ -20,6 +26,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminPermission(request, "canManagePlayground");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
     const data = await request.json();
     data.createdAt = new Date();

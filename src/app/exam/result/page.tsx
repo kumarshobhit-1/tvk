@@ -53,7 +53,7 @@ export default function ResultPage() {
       fetchSingleResult(attemptId);
     } else {
       // Fetch all user results
-      fetchAllResults(user.uid);
+      fetchAllResults();
     }
   }, [user, authLoading, attemptId]);
 
@@ -83,9 +83,9 @@ export default function ResultPage() {
     }
   };
 
-  const fetchAllResults = async (userId: string) => {
+  const fetchAllResults = async () => {
     try {
-      const response = await fetch(`/api/exam/my-results?userId=${userId}`);
+      const response = await fetch(`/api/exam/my-results`);
       
       if (!response.ok) {
         const errorData = await response.json();

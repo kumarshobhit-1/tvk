@@ -51,3 +51,6 @@ firestore-debug.log
 *.bat text eol=crlf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+
+/load-tests
+.env.example

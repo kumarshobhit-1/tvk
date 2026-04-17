@@ -39,7 +39,7 @@ export default function AllExamsPage() {
 
     const checkAdmin = async () => {
       try {
-        const response = await fetch("/api/exam/admintvk01?examId=test");
+        const response = await authenticatedFetch("/api/exam/admintvk01?examId=test");
         if (response.status === 403) {
           router.push("/");
           return;

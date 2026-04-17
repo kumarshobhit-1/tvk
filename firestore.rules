@@ -12,9 +12,30 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.adminRole;
+    }
+    
     function isAdmin() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+              getUserRole() in ['super_admin', 'isAdmin', 'content_admin', 'exam_admin', 'qa_admin']);
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'super_admin';
+    }
+    
+    function isExamAdmin() {
+      return isAuthenticated() && getUserRole() in ['super_admin', 'isAdmin', 'exam_admin'];
+    }
+    
+    function isContentAdmin() {
+      return isAuthenticated() && getUserRole() in ['super_admin', 'isAdmin', 'content_admin'];
+    }
+    
+    function isQAAdmin() {
+      return isAuthenticated() && getUserRole() in ['super_admin', 'isAdmin', 'qa_admin'];
     }
     
     function isStudent() {
@@ -30,53 +51,88 @@ service cloud.firestore {
       // Users can create their own profile during signup
       allow create: if isAuthenticated() && request.auth.uid == userId;
       
-      // Users can update their own profile, but not the role field
+      // Users can update their own profile, but not the role/admin fields
       allow update: if isOwner(userId) && 
-                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'adminRole', 'isAdmin']));
       
-      // Only admins can delete users
-      allow delete: if isAdmin();
+      // Only super admins can update admin roles
+      allow update: if isSuperAdmin() && resource.data.adminRole != null;
+      
+      // Only super admins can delete users
+      allow delete: if isSuperAdmin();
     }
     
-    // Exams collection
+    // Exams collection - Exam Admin permissions
     match /exams/{examId} {
-      // Anyone can read published exams, admins can read all
-      allow read: if resource.data.published == true || isAdmin();
+      // Anyone can read published exams, exam admins can read all
+      allow read: if resource.data.isPublished == true || isExamAdmin();
       
-      // Only admins can create, update, or delete exams
-      allow create, update, delete: if isAdmin();
+      // Only exam admins can create, update, or delete exams
+      allow create, update, delete: if isExamAdmin();
+    }
+    
+    // PDFs collection - Content Admin permissions
+    match /pdfs/{pdfId} {
+      // Anyone can read uploaded PDFs, content admins can read all
+      allow read: if resource.data.uploaded == true || isContentAdmin();
+      
+      // Only content admins can create, update, or delete PDFs
+      allow create, update, delete: if isContentAdmin();
+    }
+    
+    // DSA Topics collection - QA Admin permissions
+    match /dsa_topics/{topicId} {
+      // Anyone can read published topics, QA admins can read all
+      allow read: if resource.data.published == true || isQAAdmin();
+      
+      // Only QA admins can create, update, or delete topics
+      allow create, update, delete: if isQAAdmin();
+    }
+    
+    // CS Topics collection - QA Admin permissions
+    match /cs_topics/{topicId} {
+      // Anyone can read published topics, QA admins can read all
+      allow read: if resource.data.published == true || isQAAdmin();
+      
+      // Only QA admins can create, update, or delete topics
+      allow create, update, delete: if isQAAdmin();
     }
     
     // Exam attempts collection
     match /exam_attempts/{attemptId} {
-      // Users can only read their own attempts, admins can read all
-      allow read: if isOwner(resource.data.studentId) || isAdmin();
+      // Users can read their own attempts, admins can read all
+      allow read: if isOwner(resource.data.userId) || isExamAdmin();
       
       // Students can create attempts for themselves
       allow create: if isStudent() && 
-                      request.auth.uid == request.resource.data.studentId &&
+                      request.auth.uid == request.resource.data.userId &&
                       request.resource.data.status == 'in_progress';
       
       // Students can update their own in-progress attempts
-      allow update: if isOwner(resource.data.studentId) && 
-                      resource.data.status == 'in_progress' &&
-                      (request.resource.data.status == 'in_progress' || 
-                       request.resource.data.status == 'completed');
+      allow update: if isOwner(resource.data.userId) && 
+                      resource.data.status == 'in_progress';
       
-      // Admins can update any attempt (for recalculation)
-      allow update: if isAdmin();
+      // Exam admins can update any attempt (for scoring/admin actions)
+      allow update: if isExamAdmin();
       
-      // Only admins can delete attempts
-      allow delete: if isAdmin();
+      // Only exam admins can delete attempts
+      allow delete: if isExamAdmin();
     }
     
-    // Questions collection (for exam questions)
-    match /questions/{questionId} {
-      // Only admins can read questions (to prevent answer leaks)
-      allow read: if isAdmin();
+    // Code submissions collection - QA Admin & Owner
+    match /code_submissions/{submissionId} {
+      // Users can read their own submissions, QA admins can read all
+      allow read: if isOwner(resource.data.userId) || isQAAdmin();
       
-      // Only admins can create, update, or delete questions
-      allow create, update, delete: if isAdmin();
+      // Users can create their own submissions
+      allow create: if isAuthenticated() && 
+                      request.auth.uid == request.resource.data.userId;
+      
+      // Users can update their own submissions
+      allow update: if isOwner(resource.data.userId);
+      
+      // Only QA admins can delete submissions
+      allow delete: if isQAAdmin();
     }
     
     // Progress tracking collection
@@ -90,8 +146,8 @@ service cloud.firestore {
       // System can create progress records
       allow create: if isAuthenticated();
       
-      // Only admins can delete progress
-      allow delete: if isAdmin();
+      // Only super admins can delete progress
+      allow delete: if isSuperAdmin();
     }
     
     // Activity tracking collection
@@ -107,40 +163,6 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     
-    // CS Topics collection (for computer science subjects)
-    match /cs_topics/{topicId} {
-      // Anyone can read published topics
-      allow read: if true;
-      
-      // Only admins can create, update, or delete topics
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // DSA Topics collection (for data structures & algorithms)
-    match /dsa_topics/{topicId} {
-      // Anyone can read published topics
-      allow read: if true;
-      
-      // Only admins can create, update, or delete topics
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Code submissions collection (for playground)
-    match /code_submissions/{submissionId} {
-      // Users can read their own submissions, admins can read all
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      
-      // Users can create their own submissions
-      allow create: if isAuthenticated() && 
-                      request.auth.uid == request.resource.data.userId;
-      
-      // Users can update their own submissions
-      allow update: if isOwner(resource.data.userId);
-      
-      // Only admins can delete submissions
-      allow delete: if isAdmin();
-    }
-    
     // Achievements collection
     match /achievements/{achievementId} {
       // Users can read their own achievements, admins can read all
@@ -152,8 +174,8 @@ service cloud.firestore {
       // No updates allowed (achievement records are immutable)
       allow update: if false;
       
-      // Only admins can delete achievements
-      allow delete: if isAdmin();
+      // Only super admins can delete achievements
+      allow delete: if isSuperAdmin();
     }
     
     // Notifications collection

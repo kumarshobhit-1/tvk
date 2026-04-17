@@ -53,7 +53,7 @@ export default function ExamPage() {
         }
 
         // Fetch exam status
-        const statusResponse = await fetch(`/api/exam/status?examId=${examId}&userId=${user?.uid || "anonymous"}`);
+        const statusResponse = await fetch(`/api/exam/status?examId=${examId}`);
         if (statusResponse.ok) {
           const status = await statusResponse.json();
           setExamStatus(status);
@@ -79,12 +79,7 @@ export default function ExamPage() {
       const response = await fetch("/api/exam/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          examId,
-          userId: user?.uid || "anonymous",
-          userEmail: user?.email || "anonymous@example.com",
-          userName: user?.displayName || "Anonymous User"
-        }),
+        body: JSON.stringify({ examId }),
       });
 
       const data = await response.json();

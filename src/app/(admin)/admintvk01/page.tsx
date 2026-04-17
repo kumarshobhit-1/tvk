@@ -12,11 +12,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, PlusCircle, Trash2, Edit, FileText, ListChecks, Calculator, ClipboardList, Activity, RefreshCw } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, Edit, FileText, ListChecks, Calculator, ClipboardList, Activity, RefreshCw, Shield } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { authenticatedFetch } from "@/lib/api-client";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { AdminRole } from "@/lib/role-types";
 
 // Helper types to add firebaseDocId for state management
 type DsaQuestionWithId = DsaQuestion & { firebaseDocId: string };
@@ -52,6 +57,8 @@ type DeletionInfo = {
 } | null;
 
 export default function AdminHomePage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [dsaTopics, setDsaTopics] = useState<DsaTopicWithId[]>([]);
   const [dsaQuestions, setDsaQuestions] = useState<DsaQuestionWithId[]>([]);
   const [csSubjects, setCsSubjects] = useState<CsSubjectWithId[]>([]);
@@ -62,7 +69,14 @@ export default function AdminHomePage() {
   const [itemToDelete, setItemToDelete] = useState<DeletionInfo>(null);
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [currentForm, setCurrentForm] = useState<string | null>(null);
+  const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
   const { toast } = useToast();
+
+  const canManageExams = adminRole === "super_admin" || adminRole === "isAdmin" || adminRole === "exam_admin";
+  const canManageQA = adminRole === "super_admin" || adminRole === "isAdmin" || adminRole === "qa_admin";
+  const canManagePDFs = adminRole === "super_admin" || adminRole === "isAdmin" || adminRole === "content_admin";
+  const canManageAdmins = adminRole === "super_admin";
 
   const fetchAllContent = async () => {
     setLoading(true);
@@ -99,8 +113,42 @@ export default function AdminHomePage() {
   };
 
   useEffect(() => {
-    fetchAllContent();
-  }, []);
+    const loadAdminRole = async () => {
+      if (authLoading) return;
+      if (!user) {
+        router.push("/");
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const role = userDoc.exists()
+          ? ((userDoc.data().adminRole as AdminRole | undefined) || (userDoc.data().isAdmin ? "isAdmin" : undefined))
+          : undefined;
+        if (!role) {
+          router.push("/");
+          return;
+        }
+        setAdminRole(role);
+      } catch (error) {
+        console.error("Failed to load admin role", error);
+        router.push("/");
+      } finally {
+        setRoleLoading(false);
+      }
+    };
+
+    loadAdminRole();
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (roleLoading) return;
+    if (canManageQA) {
+      fetchAllContent();
+      return;
+    }
+    setLoading(false);
+  }, [roleLoading, canManageQA]);
 
   const openDialog = (form: string, data: any | null = null) => {
     setCurrentForm(form);
@@ -226,7 +274,7 @@ export default function AdminHomePage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || roleLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="animate-spin h-12 w-12" />
@@ -239,8 +287,27 @@ export default function AdminHomePage() {
       <h1 className="text-4xl font-bold mb-8">Content Management</h1>
       <p className="text-muted-foreground mb-8">Manage all content</p>
 
-      {/* Exam Management Cards */}
+      {/* Role-based Management Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        {canManageAdmins && (
+        <Link href="/admintvk01/admin-users">
+          <Card className="hover:bg-amber-300 hover:border-amber-300 transition-all cursor-pointer border-border group">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-50 group-hover:bg-white/20 rounded-full transition-colors">
+                  <Shield className="h-5 w-5 text-amber-600 group-hover:text-gray-900" />
+                </div>
+                <div>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Manage Admins</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700">Control admin roles</CardDescription>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        )}
+
+        {canManageExams && (
         <Link href="/admintvk01/exams">
           <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
             <CardContent className="p-4">
@@ -256,7 +323,9 @@ export default function AdminHomePage() {
             </CardContent>
           </Card>
         </Link>
+        )}
 
+        {canManageExams && (
         <Link href="/admintvk01/exams/list">
           <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
             <CardContent className="p-4">
@@ -272,7 +341,9 @@ export default function AdminHomePage() {
             </CardContent>
           </Card>
         </Link>
+        )}
 
+        {canManageExams && (
         <Link href="/admintvk01/exams/manage">
           <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
             <CardContent className="p-4">
@@ -288,7 +359,9 @@ export default function AdminHomePage() {
             </CardContent>
           </Card>
         </Link>
+        )}
 
+        {canManageExams && (
         <Link href="/admintvk01/exams/recalculate">
           <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
             <CardContent className="p-4">
@@ -304,7 +377,9 @@ export default function AdminHomePage() {
             </CardContent>
           </Card>
         </Link>
+        )}
 
+        {canManagePDFs && (
         <Link href="/admintvk01/pdfs">
           <Card className="hover:bg-purple-400 hover:border-purple-400 transition-all cursor-pointer border-border group">
             <CardContent className="p-4">
@@ -320,8 +395,10 @@ export default function AdminHomePage() {
             </CardContent>
           </Card>
         </Link>
+        )}
       </div>
 
+      {canManageQA ? (
       <Tabs defaultValue="dsa-topics" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dsa-topics"><FileText className="mr-2 h-4 w-4" />DSA Topics</TabsTrigger>
@@ -493,6 +570,15 @@ export default function AdminHomePage() {
           </Table>
         </TabsContent>
       </Tabs>
+      ) : (
+        <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+          {canManagePDFs && !canManageExams
+            ? "You have Content Admin access. Only PDF Library management is available."
+            : canManageExams
+            ? "You have Exam Admin access. Exam management cards are available above."
+            : "No QA permissions assigned to this admin role."}
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>

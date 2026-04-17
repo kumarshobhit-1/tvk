@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { ExamAttempt, Exam } from "@/lib/exam-types";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 // Get all published exams with their active attempt counts
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdminPermission(request, "canManageExamAttempts");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
     // Get all published exams
     const examsQuery = adminDB.collection("exams").where("isPublished", "==", true);
@@ -137,6 +143,11 @@ export async function GET(request: NextRequest) {
 
 // End an exam attempt (admin action)
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminPermission(request, "canManageExamAttempts");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
     const { attemptId, action } = await request.json();
 
@@ -248,15 +259,17 @@ export async function POST(request: NextRequest) {
 
 // Emergency exam control endpoints
 export async function PATCH(request: NextRequest) {
+  const auth = await verifyAdminPermission(request, "canEmergencyStop");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
-    const { action, examId, userId } = await request.json();
+    const { action, examId } = await request.json();
     
-    if (!examId || !userId || !action) {
+    if (!examId || !action) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
-
-    // Verify admin status (you might want to implement proper admin check here)
-    // For now, assuming the request is from admin route
 
     if (action === "emergency_stop_all") {
       // Emergency stop exam - mark as inactive and force submit all active attempts
@@ -264,7 +277,7 @@ export async function PATCH(request: NextRequest) {
         isActive: false,
         emergencyStopped: true,
         emergencyStoppedAt: FieldValue.serverTimestamp(),
-        emergencyStoppedBy: userId
+        emergencyStoppedBy: auth.userId
       });
       
       // Get exam details for scoring

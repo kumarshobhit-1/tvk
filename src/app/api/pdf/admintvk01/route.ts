@@ -1,15 +1,15 @@
 // Admin API for creating folders and uploading PDFs
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
-import { verifyAdminAuth } from "@/lib/auth-helpers";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { uploadPDFToCloudinary, deletePDFFromCloudinary } from "@/lib/cloudinary";
 import type { PDFFolder, PDFFile } from "@/lib/pdf-types";
 
 // POST - Create folder or upload PDF
 export async function POST(request: NextRequest) {
-  const auth = await verifyAdminAuth(request);
+  const auth = await verifyAdminPermission(request, "canManagePDFs");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {
@@ -148,9 +148,9 @@ export async function POST(request: NextRequest) {
 
 // GET - List all folders and files (admin)
 export async function GET(request: NextRequest) {
-  const auth = await verifyAdminAuth(request);
+  const auth = await verifyAdminPermission(request, "canManagePDFs");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {
@@ -195,9 +195,9 @@ export async function GET(request: NextRequest) {
 
 // PUT - Update folder or file
 export async function PUT(request: NextRequest) {
-  const auth = await verifyAdminAuth(request);
+  const auth = await verifyAdminPermission(request, "canManagePDFs");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {
@@ -233,9 +233,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete folder or file
 export async function DELETE(request: NextRequest) {
-  const auth = await verifyAdminAuth(request);
+  const auth = await verifyAdminPermission(request, "canManagePDFs");
   if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
   }
 
   try {

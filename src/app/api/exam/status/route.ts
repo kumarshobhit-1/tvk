@@ -1,20 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDB } from "@/lib/firebase/firebase-admin";
+import { cookies } from "next/headers";
+import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import type { ExamAttempt } from "@/lib/exam-types";
 
 export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+
     const searchParams = request.nextUrl.searchParams;
     const examId = searchParams.get("examId");
-    const userId = searchParams.get("userId");
+    const userId = decodedToken.uid;
 
-    if (!examId || !userId) {
-      return NextResponse.json({ error: "Exam ID and User ID required" }, { status: 400 });
+    if (!examId) {
+      return NextResponse.json({ error: "Exam ID required" }, { status: 400 });
     }
 
     // Get all attempts for this exam by this user
     const attemptsSnap = await adminDB.collection("exam_attempts")
       .where("examId", "==", examId)
+      .where("userId", "==", userId)
       .where("status", "==", "submitted")
       .get();
 
@@ -22,8 +31,7 @@ export async function GET(request: NextRequest) {
       .map(doc => ({
         id: doc.id,
         ...doc.data()
-      }))
-      .filter((attempt: any) => attempt.userId === userId); // Filter by exact userId
+      }));
 
     const passedAttempt = attempts.find((a: any) => a.passed);
     const attemptCount = attempts.length;

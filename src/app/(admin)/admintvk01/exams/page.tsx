@@ -36,7 +36,7 @@ export default function AdminExamsPage() {
   const [negativeMarking, setNegativeMarking] = useState(0.25);
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
-  const [isPublished, setIsPublished] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
   const [instructions, setInstructions] = useState<string[]>([
     "Read each question carefully",
     "Select the best answer",
@@ -54,7 +54,7 @@ export default function AdminExamsPage() {
 
     const checkAdmin = async () => {
       try {
-        const response = await fetch("/api/exam/admintvk01?examId=test");
+        const response = await authenticatedFetch("/api/exam/admintvk01?examId=test");
         if (response.status === 403) {
           router.push("/");
           return;

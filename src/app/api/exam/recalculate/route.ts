@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import type { ExamAttempt, Exam } from "@/lib/exam-types";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 // Recalculate all submitted attempts with correct passing logic
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdminPermission(request, "canManageExamAttempts");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
+
   try {
     const attemptsSnap = await adminDB.collection("exam_attempts").get();
     
