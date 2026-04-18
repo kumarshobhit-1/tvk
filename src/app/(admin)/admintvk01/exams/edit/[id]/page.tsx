@@ -37,6 +37,7 @@ export default function EditExamPage() {
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [passingMarks, setPassingMarks] = useState(40);
   const [negativeMarking, setNegativeMarking] = useState(0.25);
+  const [isPremium, setIsPremium] = useState(false);
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
@@ -83,6 +84,7 @@ export default function EditExamPage() {
       setDurationMinutes(exam.durationMinutes);
       setPassingMarks(exam.passingMarks);
       setNegativeMarking(exam.negativeMarking);
+      setIsPremium(exam.isPremium === true);
       setShuffleQuestions(exam.shuffleQuestions);
       setShuffleOptions(exam.shuffleOptions);
       setIsPublished(exam.isPublished);
@@ -247,6 +249,7 @@ export default function EditExamPage() {
         title,
         description,
         category,
+        isPremium,
         durationMinutes,
         totalMarks,
         passingMarks,
@@ -631,6 +634,19 @@ export default function EditExamPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
+                    <Label>Premium Exam</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Show exam to all users but allow attempt only for premium users
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isPremium}
+                    onCheckedChange={setIsPremium}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
                     <Label>Publish Exam</Label>
                     <p className="text-sm text-muted-foreground">
                       Make exam visible to students
@@ -666,6 +682,12 @@ export default function EditExamPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Duration:</span>
                   <span className="font-medium">{durationMinutes} minutes</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Access:</span>
+                  <Badge variant={isPremium ? "secondary" : "outline"}>
+                    {isPremium ? "Premium Only Attempt" : "Open to All"}
+                  </Badge>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Status:</span>

@@ -10,6 +10,7 @@ export type AdminRole =
 export interface AdminPermissions {
   // Super Admin
   canManageAdmins?: boolean;
+  canManagePremiumUsers?: boolean;
   canManageRoles?: boolean;
   canViewAnalytics?: boolean;
   canEmergencyStop?: boolean;
@@ -43,6 +44,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
   super_admin: {
     // Super Admin has ALL permissions
     canManageAdmins: true,
+    canManagePremiumUsers: true,
     canManageRoles: true,
     canViewAnalytics: true,
     canEmergencyStop: true,
@@ -66,6 +68,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
   },
   isAdmin: {
     // isAdmin: Full site control, but cannot manage other admins/roles
+    canManagePremiumUsers: true,
     canViewAnalytics: true,
     canEmergencyStop: true,
     canManagePDFs: true,

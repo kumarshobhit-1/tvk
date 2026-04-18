@@ -34,6 +34,7 @@ export default function AdminExamsPage() {
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [passingMarks, setPassingMarks] = useState(40);
   const [negativeMarking, setNegativeMarking] = useState(0.25);
+  const [isPremium, setIsPremium] = useState(false);
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
@@ -201,6 +202,7 @@ export default function AdminExamsPage() {
         title,
         description,
         category,
+        isPremium,
         type: "timed",
         durationMinutes,
         totalMarks,
@@ -391,6 +393,20 @@ export default function AdminExamsPage() {
                       id="shuffle-o"
                       checked={shuffleOptions}
                       onCheckedChange={setShuffleOptions}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="premium">Premium Exam</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Visible to everyone, but only premium users can attempt
+                      </p>
+                    </div>
+                    <Switch
+                      id="premium"
+                      checked={isPremium}
+                      onCheckedChange={setIsPremium}
                     />
                   </div>
 

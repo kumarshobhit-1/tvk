@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { Exam, ExamAttempt, ExamQuestion } from "@/lib/exam-types";
+import { isPremiumUser } from "@/lib/premium-access";
 
 const startExamLimiter = new RateLimiter(RATE_LIMITS.general);
 
@@ -43,6 +44,17 @@ export async function POST(request: NextRequest) {
     }
 
     const exam = examSnap.data() as Exam;
+    const premiumUser = isPremiumUser(userData);
+
+    if (exam.isPremium && !premiumUser) {
+      return NextResponse.json(
+        {
+          error: "Premium membership required to attempt this exam",
+          code: "PREMIUM_REQUIRED",
+        },
+        { status: 403 }
+      );
+    }
 
     if (!exam.isPublished) {
       return NextResponse.json({ error: "Exam not available" }, { status: 403 });

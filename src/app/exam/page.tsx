@@ -13,6 +13,7 @@ interface ExamListItem {
   id: string;
   title: string;
   description: string;
+  isPremium?: boolean;
   type: string;
   durationMinutes: number;
   totalMarks: number;
@@ -27,6 +28,9 @@ interface ExamStatus {
   maxAttempts: number;
   canRetake: boolean;
   lastAttemptId: string | null;
+  isPremiumUser?: boolean;
+  canAttemptPremium?: boolean;
+  isPremiumExam?: boolean;
 }
 
 export default function ExamsPage() {
@@ -130,7 +134,12 @@ export default function ExamsPage() {
             <Card key={exam.id} className="flex flex-col">
               <CardHeader>
                 <div className="flex items-start justify-between mb-2">
-                  <Badge variant="outline">{exam.category}</Badge>
+                  <div className="flex gap-2">
+                    <Badge variant="outline">{exam.category}</Badge>
+                    {(examStatuses[exam.id]?.isPremiumExam ?? exam.isPremium) && (
+                      <Badge variant="secondary">Premium</Badge>
+                    )}
+                  </div>
                   <Badge variant={exam.type === "practice" ? "secondary" : "default"}>
                     {exam.type}
                   </Badge>
@@ -202,6 +211,21 @@ export default function ExamsPage() {
                           <Link href={`/exam/result?attemptId=${status.lastAttemptId}`}>
                             View Last Attempt
                           </Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                          <Link href={`/exam/leaderboard/${exam.id}`}>
+                            <Users className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </>
+                    );
+                  }
+
+                  if (status.canAttemptPremium === false) {
+                    return (
+                      <>
+                        <Button className="flex-1" disabled>
+                          Premium Only
                         </Button>
                         <Button asChild variant="outline">
                           <Link href={`/exam/leaderboard/${exam.id}`}>

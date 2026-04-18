@@ -9,6 +9,7 @@ function toPublicExamSummary(id: string, examData: any) {
     id,
     title: examData.title,
     description: examData.description,
+    isPremium: examData.isPremium === true,
     type: examData.type,
     durationMinutes: examData.durationMinutes,
     totalMarks: examData.totalMarks,

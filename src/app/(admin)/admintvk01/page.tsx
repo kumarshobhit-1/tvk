@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, PlusCircle, Trash2, Edit, FileText, ListChecks, Calculator, ClipboardList, Activity, RefreshCw, Shield } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, Edit, FileText, ListChecks, Calculator, ClipboardList, Activity, RefreshCw, Shield, Crown } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -77,6 +77,7 @@ export default function AdminHomePage() {
   const canManageQA = adminRole === "super_admin" || adminRole === "isAdmin" || adminRole === "qa_admin";
   const canManagePDFs = adminRole === "super_admin" || adminRole === "isAdmin" || adminRole === "content_admin";
   const canManageAdmins = adminRole === "super_admin";
+  const canManagePremiumUsers = adminRole === "super_admin" || adminRole === "isAdmin";
 
   const fetchAllContent = async () => {
     setLoading(true);
@@ -300,6 +301,24 @@ export default function AdminHomePage() {
                 <div>
                   <CardTitle className="text-base mb-0 group-hover:text-gray-900">Manage Admins</CardTitle>
                   <CardDescription className="text-sm group-hover:text-gray-700">Control admin roles</CardDescription>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        )}
+
+        {canManagePremiumUsers && (
+        <Link href="/admintvk01/premium-users">
+          <Card className="hover:bg-yellow-300 hover:border-yellow-300 transition-all cursor-pointer border-border group">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-50 group-hover:bg-white/20 rounded-full transition-colors">
+                  <Crown className="h-5 w-5 text-yellow-600 group-hover:text-gray-900" />
+                </div>
+                <div>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Premium Users</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700">Grant premium access</CardDescription>
                 </div>
               </div>
             </CardContent>

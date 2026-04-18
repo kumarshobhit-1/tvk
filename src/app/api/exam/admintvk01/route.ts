@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { CacheKeys, getCache } from "@/lib/cache-strategy";
+
+function invalidateExamCaches(examId?: string) {
+  const cache = getCache();
+  if (examId) {
+    cache.invalidate(CacheKeys.exam(examId));
+  }
+  cache.invalidatePattern(/^exams:list:/);
+}
 
 export async function POST(request: NextRequest) {
   // Exam create permission
@@ -54,6 +63,7 @@ export async function POST(request: NextRequest) {
     const newExam: Omit<Exam, "id"> = {
       title: examData.title,
       description: examData.description || "",
+      isPremium: examData.isPremium === true,
       type: examData.type || "timed",
       durationMinutes: examData.durationMinutes || 60,
       totalMarks: examData.totalMarks || examData.questions.reduce((sum: number, q: any) => sum + (q.marks || 1), 0),
@@ -71,6 +81,7 @@ export async function POST(request: NextRequest) {
     };
 
     const examRef = await adminDB.collection("exams").add(newExam);
+    invalidateExamCaches(examRef.id);
 
     return NextResponse.json({ success: true, examId: examRef.id });
   } catch (error: any) {
@@ -98,7 +109,6 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const userId = auth.userId!;
     const { examId, ...examData } = await request.json();
 
     if (!examId) {
@@ -142,11 +152,17 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Keep premium flag explicit so false updates are always persisted.
+    const normalizedIsPremium = examData.isPremium === true;
+
     // Update exam
     await adminDB.collection("exams").doc(examId).update({
       ...examData,
+      isPremium: normalizedIsPremium,
       updatedAt: new Date(),
     });
+
+    invalidateExamCaches(examId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -166,7 +182,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const userId = auth.userId!;
     const searchParams = request.nextUrl.searchParams;
     const examId = searchParams.get("examId");
 

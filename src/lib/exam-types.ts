@@ -23,6 +23,7 @@ export interface Exam {
   id: string;
   title: string;
   description: string;
+  isPremium?: boolean;
   type: ExamType;
   durationMinutes: number; // Total duration in minutes
   totalMarks: number;
