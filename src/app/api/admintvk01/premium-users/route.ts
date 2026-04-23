@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
-import { isPremiumUser } from "@/lib/premium-access";
+import { isPremiumUser, normalizePremiumCategories } from "@/lib/premium-access";
 
 function toIsoDate(value: any): string | null {
   if (!value) return null;
@@ -52,6 +52,7 @@ async function ensureUserDocByUid(uid: string) {
     role: "student",
     isPremium: false,
     premium: false,
+    premiumCategories: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -100,6 +101,7 @@ export async function GET(request: NextRequest) {
           isPremium: isPremiumUser(userData),
           isPremiumRaw: userData.isPremium === true,
           premiumRaw: userData.premium === true,
+          premiumCategories: normalizePremiumCategories(userData),
           premiumUpdatedAt: toIsoDate(userData.premiumUpdatedAt),
           premiumUpdatedBy: userData.premiumUpdatedBy || null,
         },
@@ -129,6 +131,7 @@ export async function GET(request: NextRequest) {
         displayName,
         role: data.role || "student",
         isPremium: true,
+        premiumCategories: normalizePremiumCategories(data),
         premiumUpdatedAt: toIsoDate(data.premiumUpdatedAt),
       };
     }));
@@ -147,7 +150,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { userId, isPremium } = await request.json();
+    const { userId, isPremium, premiumCategories, grantAllAccess } = await request.json();
 
     if (!userId || typeof userId !== "string") {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -155,6 +158,24 @@ export async function PATCH(request: NextRequest) {
 
     if (typeof isPremium !== "boolean") {
       return NextResponse.json({ error: "isPremium must be boolean" }, { status: 400 });
+    }
+
+    const normalizedCategories = Array.isArray(premiumCategories)
+      ? premiumCategories
+          .map((category) => String(category || "").trim().toUpperCase())
+          .filter(Boolean)
+      : typeof premiumCategories === "string"
+        ? premiumCategories
+            .split(/[,|]/)
+            .map((category) => String(category || "").trim().toUpperCase())
+            .filter(Boolean)
+        : [];
+
+    if (isPremium && !grantAllAccess && normalizedCategories.length === 0) {
+      return NextResponse.json(
+        { error: "premiumCategories are required when granting premium access" },
+        { status: 400 }
+      );
     }
 
     const ensured = await ensureUserDocByUid(userId);
@@ -165,6 +186,9 @@ export async function PATCH(request: NextRequest) {
     await ensured.userRef.update({
       isPremium,
       premium: isPremium,
+      premiumCategories: isPremium
+        ? (grantAllAccess ? ["ALL"] : normalizedCategories)
+        : [],
       premiumUpdatedAt: new Date(),
       premiumUpdatedBy: auth.userId || null,
       premiumUpdatedByRole: auth.role || null,

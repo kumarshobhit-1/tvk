@@ -19,6 +19,12 @@ import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/ui/loading";
 import type { ExamQuestion, ExamOption, DifficultyLevel, Exam } from "@/lib/exam-types";
 
+const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
+
+function normalizeCategory(value: string) {
+  return value.trim().toUpperCase();
+}
+
 export default function EditExamPage() {
   const router = useRouter();
   const params = useParams();
@@ -29,6 +35,8 @@ export default function EditExamPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_CATEGORY_OPTIONS);
+  const [newCategoryInput, setNewCategoryInput] = useState("");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -43,6 +51,46 @@ export default function EditExamPage() {
   const [isPublished, setIsPublished] = useState(false);
   const [instructions, setInstructions] = useState<string[]>([]);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+
+  const loadCategoryOptions = async () => {
+    try {
+      const res = await authenticatedFetch("/api/exam/categories");
+      if (!res.ok) return;
+
+      const payload = await res.json();
+      const nextCategories = Array.isArray(payload.categories)
+        ? payload.categories.map((item: string) => normalizeCategory(item)).filter(Boolean)
+        : [];
+
+      setCategoryOptions(Array.from(new Set([...DEFAULT_CATEGORY_OPTIONS, ...nextCategories])));
+    } catch {
+      setCategoryOptions(DEFAULT_CATEGORY_OPTIONS);
+    }
+  };
+
+  const persistCategoryOption = async (rawCategory: string) => {
+    const normalized = normalizeCategory(rawCategory);
+    if (!normalized) return null;
+
+    const res = await authenticatedFetch("/api/exam/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category: normalized }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || "Failed to save category");
+    }
+
+    const data = await res.json();
+    const nextCategories = Array.isArray(data.categories)
+      ? data.categories.map((item: string) => normalizeCategory(item)).filter(Boolean)
+      : [];
+
+    setCategoryOptions(Array.from(new Set([...DEFAULT_CATEGORY_OPTIONS, ...nextCategories])));
+    return normalized;
+  };
 
   useEffect(() => {
     document.title = "Edit Exam - Admin | The Victory Key";
@@ -59,7 +107,7 @@ export default function EditExamPage() {
           return;
         }
         setIsAdmin(true);
-        await loadExam();
+        await Promise.all([loadExam(), loadCategoryOptions()]);
       } catch (error) {
         router.push("/");
       } finally {
@@ -81,6 +129,9 @@ export default function EditExamPage() {
       setTitle(exam.title);
       setDescription(exam.description || "");
       setCategory(exam.category);
+      setCategoryOptions((prev) =>
+        prev.includes(exam.category) ? prev : [...prev, exam.category]
+      );
       setDurationMinutes(exam.durationMinutes);
       setPassingMarks(exam.passingMarks);
       setNegativeMarking(exam.negativeMarking);
@@ -198,6 +249,15 @@ export default function EditExamPage() {
       toast({
         title: "Validation Error",
         description: "Exam title is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!category.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Category is required",
         variant: "destructive",
       });
       return false;
@@ -366,13 +426,41 @@ export default function EditExamPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SEBI">SEBI</SelectItem>
-                        <SelectItem value="Banking">Banking</SelectItem>
-                        <SelectItem value="SSC">SSC</SelectItem>
-                        <SelectItem value="UPSC">UPSC</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        {categoryOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newCategoryInput}
+                        onChange={(e) => setNewCategoryInput(e.target.value)}
+                        placeholder="Add new category"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const normalized = await persistCategoryOption(newCategoryInput);
+                            if (!normalized) return;
+                            setCategory(normalized);
+                            setNewCategoryInput("");
+                            toast({ title: "Category Added", description: `${normalized} saved successfully` });
+                          } catch (error: any) {
+                            toast({
+                              title: "Error",
+                              description: error.message || "Could not add category",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

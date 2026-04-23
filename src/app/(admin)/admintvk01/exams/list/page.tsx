@@ -159,7 +159,7 @@ export default function AllExamsPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Category:</span>
+                      <span className="text-muted-foreground">Course:</span>
                       <Badge variant="outline">{exam.category}</Badge>
                     </div>
                     <div className="flex items-center gap-2">

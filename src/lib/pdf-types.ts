@@ -4,6 +4,9 @@ export interface PDFFolder {
   id: string;
   name: string;
   description?: string;
+  category?: string;
+  isPremium?: boolean;
+  canAccess?: boolean;
   icon?: string;
   color?: string;
   parentId?: string | null; // For nested folders
@@ -18,6 +21,9 @@ export interface PDFFile {
   id: string;
   name: string;
   description?: string;
+  category?: string;
+  isPremium?: boolean;
+  canAccess?: boolean;
   folderId: string;
   cloudinaryPublicId: string;
   cloudinaryUrl: string;
@@ -53,6 +59,8 @@ export interface PDFFolderWithFiles extends PDFFolder {
 export interface CreateFolderRequest {
   name: string;
   description?: string;
+  category?: string;
+  isPremium?: boolean;
   icon?: string;
   color?: string;
   parentId?: string | null;

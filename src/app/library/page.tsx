@@ -12,6 +12,7 @@ import {
   FolderOpen, 
   Download, 
   Eye, 
+  EyeOff,
   Search,
   ChevronRight,
   ArrowLeft,
@@ -191,8 +192,9 @@ export default function LibraryPage() {
                 {getFilteredFolders().map((folder) => (
                   <Card
                     key={folder.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    className={`transition-shadow ${folder.canAccess === false ? "opacity-80" : "cursor-pointer hover:shadow-md"}`}
                     onClick={() => {
+                      if (folder.canAccess === false) return;
                       setSelectedFolder(folder);
                       setSearchQuery("");
                     }}
@@ -210,6 +212,17 @@ export default function LibraryPage() {
                         </Badge>
                       </div>
                       <CardTitle className="text-lg mt-3">{folder.name}</CardTitle>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          Course: {folder.category || "GENERAL"}
+                        </Badge>
+                        {folder.isPremium && (
+                          <Badge variant="secondary" className="text-xs">Premium</Badge>
+                        )}
+                        {folder.canAccess === false && (
+                          <Badge variant="destructive" className="text-xs">Locked</Badge>
+                        )}
+                      </div>
                       {folder.description && (
                         <CardDescription className="line-clamp-2">
                           {folder.description}
@@ -217,11 +230,18 @@ export default function LibraryPage() {
                       )}
                     </CardHeader>
                     <CardContent>
-                      <Button variant="outline" className="w-full">
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Open Folder
-                        <ChevronRight className="h-4 w-4 ml-auto" />
-                      </Button>
+                      {folder.canAccess === false ? (
+                        <Button variant="outline" className="w-full" disabled>
+                          <EyeOff className="h-4 w-4 mr-2" />
+                          Premium Locked
+                        </Button>
+                      ) : (
+                        <Button variant="outline" className="w-full">
+                          <FolderOpen className="h-4 w-4 mr-2" />
+                          Open Folder
+                          <ChevronRight className="h-4 w-4 ml-auto" />
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

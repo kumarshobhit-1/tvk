@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
           // Create PDF file record in Firestore
           const pdfFile: Omit<PDFFile, "id"> = {
             name: file.name.replace(/\.pdf$/i, ""),
+            category: folderData.category || "SEBI",
+            isPremium: folderData.isPremium === true,
             folderId,
             cloudinaryPublicId: cloudinaryResult.public_id,
             cloudinaryUrl: cloudinaryResult.url,
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
     const { action } = data;
 
     if (action === "createFolder") {
-      const { name, description, icon, color, parentId, isPublished } = data;
+      const { name, description, category, isPremium, icon, color, parentId, isPublished } = data;
 
       if (!name) {
         return NextResponse.json({ error: "Folder name is required" }, { status: 400 });
@@ -119,6 +121,8 @@ export async function POST(request: NextRequest) {
       const folder: Omit<PDFFolder, "id"> = {
         name,
         description: description || "",
+        category: String(category || "SEBI").trim().toUpperCase(),
+        isPremium: isPremium === true,
         icon: icon || "📁",
         color: color || "#3b82f6",
         parentId: parentId || null,
@@ -216,10 +220,39 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: `${type} not found` }, { status: 404 });
     }
 
-    await docRef.update({
+    const normalizedUpdates: Record<string, any> = {
       ...updates,
       updatedAt: new Date(),
-    });
+    };
+
+    if (type === "folder" && typeof normalizedUpdates.category === "string") {
+      normalizedUpdates.category = normalizedUpdates.category.trim().toUpperCase();
+    }
+
+    await docRef.update(normalizedUpdates);
+
+    if (type === "folder") {
+      const shouldSyncCategory = typeof normalizedUpdates.category === "string";
+      const shouldSyncPremium = typeof normalizedUpdates.isPremium === "boolean";
+
+      if (shouldSyncCategory || shouldSyncPremium) {
+        const filesSnapshot = await adminDB
+          .collection("pdf_files")
+          .where("folderId", "==", id)
+          .get();
+
+        if (!filesSnapshot.empty) {
+          const batch = adminDB.batch();
+          filesSnapshot.docs.forEach((fileDoc) => {
+            const fileUpdatePayload: Record<string, any> = { updatedAt: new Date() };
+            if (shouldSyncCategory) fileUpdatePayload.category = normalizedUpdates.category;
+            if (shouldSyncPremium) fileUpdatePayload.isPremium = normalizedUpdates.isPremium;
+            batch.update(fileDoc.ref, fileUpdatePayload);
+          });
+          await batch.commit();
+        }
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

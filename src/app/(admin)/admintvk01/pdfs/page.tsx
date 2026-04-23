@@ -57,6 +57,12 @@ const FOLDER_COLORS = [
   "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"
 ];
 
+const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
+
+function normalizeCategory(value: string) {
+  return value.trim().toUpperCase();
+}
+
 export default function AdminPDFsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useRequireAuth();
@@ -75,11 +81,16 @@ export default function AdminPDFsPage() {
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "folder" | "file"; id: string; name: string } | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_CATEGORY_OPTIONS);
+  const [editingFolder, setEditingFolder] = useState<PDFFolder | null>(null);
 
   // Form states
   const [folderName, setFolderName] = useState("");
   const [folderDescription, setFolderDescription] = useState("");
+  const [folderCategory, setFolderCategory] = useState("SEBI");
+  const [folderIsPremium, setFolderIsPremium] = useState(false);
   const [folderIcon, setFolderIcon] = useState("📁");
   const [folderColor, setFolderColor] = useState("#3b82f6");
   const [folderPublished, setFolderPublished] = useState(false);
@@ -87,32 +98,14 @@ export default function AdminPDFsPage() {
   const [uploadPublished, setUploadPublished] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [savingFolder, setSavingFolder] = useState(false);
+  const [updatingFolder, setUpdatingFolder] = useState(false);
+
+  const [editFolderCategory, setEditFolderCategory] = useState("SEBI");
+  const [editFolderIsPremium, setEditFolderIsPremium] = useState(false);
 
   useEffect(() => {
     document.title = "PDF Management - Admin | The Victory Key";
   }, []);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-
-    const checkAdmin = async () => {
-      try {
-        const response = await authenticatedFetch("/api/pdf/admintvk01");
-        if (response.status === 403) {
-          router.push("/");
-          return;
-        }
-        setIsAdmin(true);
-        fetchData();
-      } catch (error) {
-        router.push("/");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAdmin();
-  }, [user, authLoading, router]);
 
   const fetchData = useCallback(async () => {
     setRefreshing(true);
@@ -137,6 +130,45 @@ export default function AdminPDFsPage() {
     }
   }, [toast]);
 
+  const loadCategoryOptions = useCallback(async () => {
+    try {
+      const response = await authenticatedFetch("/api/exam/categories");
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const dynamicCategories = Array.isArray(data.categories)
+        ? data.categories.map((item: string) => normalizeCategory(item)).filter(Boolean)
+        : [];
+
+      setCategoryOptions(Array.from(new Set([...DEFAULT_CATEGORY_OPTIONS, ...dynamicCategories])));
+    } catch {
+      setCategoryOptions(DEFAULT_CATEGORY_OPTIONS);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const checkAdmin = async () => {
+      try {
+        const response = await authenticatedFetch("/api/pdf/admintvk01");
+        if (response.status === 403) {
+          router.push("/");
+          return;
+        }
+        setIsAdmin(true);
+        fetchData();
+        loadCategoryOptions();
+      } catch (error) {
+        router.push("/");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdmin();
+  }, [user, authLoading, router, fetchData, loadCategoryOptions]);
+
   const handleCreateFolder = async () => {
     if (!folderName.trim()) {
       toast({
@@ -156,6 +188,8 @@ export default function AdminPDFsPage() {
           action: "createFolder",
           name: folderName,
           description: folderDescription,
+          category: folderCategory,
+          isPremium: folderIsPremium,
           icon: folderIcon,
           color: folderColor,
           isPublished: folderPublished,
@@ -314,9 +348,58 @@ export default function AdminPDFsPage() {
     }
   };
 
+  const openEditFolderDialog = (folder: PDFFolder) => {
+    setEditingFolder(folder);
+    setEditFolderCategory(normalizeCategory(folder.category || "SEBI"));
+    setEditFolderIsPremium(folder.isPremium === true);
+    setShowEditFolderDialog(true);
+  };
+
+  const handleUpdateFolderAccess = async () => {
+    if (!editingFolder) return;
+
+    setUpdatingFolder(true);
+    try {
+      const response = await authenticatedFetch("/api/pdf/admintvk01", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "folder",
+          id: editingFolder.id,
+          category: normalizeCategory(editFolderCategory),
+          isPremium: editFolderIsPremium,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to update folder access");
+      }
+
+      toast({
+        title: "Updated",
+        description: "Folder category/premium updated successfully",
+      });
+
+      setShowEditFolderDialog(false);
+      setEditingFolder(null);
+      await fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Could not update folder access",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingFolder(false);
+    }
+  };
+
   const resetFolderForm = () => {
     setFolderName("");
     setFolderDescription("");
+    setFolderCategory("SEBI");
+    setFolderIsPremium(false);
     setFolderIcon("📁");
     setFolderColor("#3b82f6");
     setFolderPublished(false);
@@ -413,6 +496,16 @@ export default function AdminPDFsPage() {
                               <p className="text-xs text-muted-foreground">
                                 {folderFiles.length} files
                               </p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  {folder.category || "GENERAL"}
+                                </Badge>
+                                {folder.isPremium && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                    Premium
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -426,6 +519,15 @@ export default function AdminPDFsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditFolderDialog(folder);
+                                  }}
+                                >
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Edit Access
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -633,6 +735,33 @@ export default function AdminPDFsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Course Category</Label>
+                  <Select value={folderCategory} onValueChange={setFolderCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between rounded-md border px-3 py-2 mt-7">
+                  <div className="space-y-0.5">
+                    <Label>Premium Folder</Label>
+                    <p className="text-xs text-muted-foreground">Category-wise premium access</p>
+                  </div>
+                  <Switch
+                    checked={folderIsPremium}
+                    onCheckedChange={setFolderIsPremium}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label>Icon</Label>
                   <div className="flex flex-wrap gap-2">
                     {FOLDER_ICONS.map((icon) => (
@@ -689,6 +818,55 @@ export default function AdminPDFsPage() {
               </Button>
               <Button onClick={handleCreateFolder} disabled={savingFolder}>
                 {savingFolder ? "Creating..." : "Create Folder"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Folder Access</DialogTitle>
+              <DialogDescription>
+                Update category and premium access for this existing folder.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Course Category</Label>
+                <Select value={editFolderCategory} onValueChange={setEditFolderCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                <div className="space-y-0.5">
+                  <Label>Premium Folder</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Restrict folder by selected category premium
+                  </p>
+                </div>
+                <Switch
+                  checked={editFolderIsPremium}
+                  onCheckedChange={setEditFolderIsPremium}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditFolderDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateFolderAccess} disabled={updatingFolder}>
+                {updatingFolder ? "Updating..." : "Update Access"}
               </Button>
             </DialogFooter>
           </DialogContent>

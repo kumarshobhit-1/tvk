@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Loading from "@/components/ui/loading";
-import { Crown, RefreshCw, Search, ShieldCheck, UserRound } from "lucide-react";
+import { Crown, Plus, RefreshCw, Search, ShieldCheck, UserRound, X } from "lucide-react";
 
 type PreviewUser = {
   uid: string;
@@ -21,6 +22,7 @@ type PreviewUser = {
   role?: string;
   isPremium: boolean;
   hasFirestoreProfile: boolean;
+  premiumCategories?: string[];
   premiumUpdatedAt?: string | null;
 };
 
@@ -30,6 +32,7 @@ type PremiumUserRow = {
   displayName?: string;
   role?: string;
   isPremium: boolean;
+  premiumCategories?: string[];
   premiumUpdatedAt?: string | null;
 };
 
@@ -39,6 +42,24 @@ function formatPremiumUpdatedAt(value?: string | null) {
   if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString();
 }
+
+function formatPremiumCategories(categories?: string[]) {
+  if (!categories || categories.length === 0) {
+    return "All Courses";
+  }
+
+  if (categories.includes("ALL")) {
+    return "All Courses";
+  }
+
+  return categories.join(", ");
+}
+
+function normalizeCategory(value: string) {
+  return value.trim().toUpperCase();
+}
+
+const DEFAULT_COURSE_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
 
 export default function PremiumUsersPage() {
   const router = useRouter();
@@ -51,8 +72,73 @@ export default function PremiumUsersPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [emailInput, setEmailInput] = useState("");
+  const [availableCourses, setAvailableCourses] = useState<string[]>(DEFAULT_COURSE_OPTIONS);
+  const [selectedCourseToAdd, setSelectedCourseToAdd] = useState("");
+  const [newCourseInput, setNewCourseInput] = useState("");
+  const [selectedPremiumCategories, setSelectedPremiumCategories] = useState<string[]>([]);
   const [previewUser, setPreviewUser] = useState<PreviewUser | null>(null);
   const [premiumUsers, setPremiumUsers] = useState<PremiumUserRow[]>([]);
+
+  const previewCategories = (previewUser?.premiumCategories || []).map((item) => normalizeCategory(item));
+  const effectiveSelectedCategories =
+    selectedPremiumCategories.length > 0 ? selectedPremiumCategories : previewCategories;
+
+  const addCourseToSelection = (course: string) => {
+    const normalized = normalizeCategory(course);
+    if (!normalized) return;
+
+    setSelectedPremiumCategories((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+    setAvailableCourses((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+  };
+
+  const removeCourseFromSelection = (course: string) => {
+    setSelectedPremiumCategories((prev) => prev.filter((item) => item !== course));
+  };
+
+  const loadCourseOptions = async () => {
+    try {
+      const res = await authenticatedFetch("/api/exam/categories");
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const categoriesFromApi: string[] = Array.isArray(data.categories)
+        ? data.categories
+            .map((item: string) => normalizeCategory(item))
+            .filter(Boolean)
+        : [];
+
+      const merged = Array.from(new Set([...DEFAULT_COURSE_OPTIONS, ...categoriesFromApi]));
+      setAvailableCourses(merged);
+    } catch {
+      setAvailableCourses(DEFAULT_COURSE_OPTIONS);
+    }
+  };
+
+  const persistCourseOption = async (rawCourse: string) => {
+    const normalized = normalizeCategory(rawCourse);
+    if (!normalized) return null;
+
+    const res = await authenticatedFetch("/api/exam/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category: normalized }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || "Could not save course");
+    }
+
+    const data = await res.json();
+    const categoriesFromApi: string[] = Array.isArray(data.categories)
+      ? data.categories
+          .map((item: string) => normalizeCategory(item))
+          .filter(Boolean)
+      : [];
+
+    setAvailableCourses(Array.from(new Set([...DEFAULT_COURSE_OPTIONS, ...categoriesFromApi])));
+    return normalized;
+  };
 
   const loadPremiumUsers = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -80,6 +166,7 @@ export default function PremiumUsersPage() {
   useEffect(() => {
     if (authLoading || !user) return;
     loadPremiumUsers();
+    loadCourseOptions();
   }, [authLoading, user]);
 
   const handleSearch = async () => {
@@ -101,6 +188,9 @@ export default function PremiumUsersPage() {
       }
 
       setPreviewUser(data.user || null);
+      const nextCategories = (data.user?.premiumCategories || []).map((item: string) => normalizeCategory(item));
+      setSelectedPremiumCategories(nextCategories);
+      setAvailableCourses((prev) => Array.from(new Set([...prev, ...nextCategories])));
       toast({ title: "User Found", description: "User preview loaded" });
     } catch (error: any) {
       setPreviewUser(null);
@@ -117,12 +207,27 @@ export default function PremiumUsersPage() {
   const handleSetPremium = async (nextPremium: boolean) => {
     if (!previewUser) return;
 
+    const selectedCategories = effectiveSelectedCategories;
+
+    if (nextPremium && selectedCategories.length === 0) {
+      toast({
+        title: "Missing Courses",
+        description: "Enter at least one course/category before granting premium access",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await authenticatedFetch("/api/admintvk01/premium-users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: previewUser.uid, isPremium: nextPremium }),
+        body: JSON.stringify({
+          userId: previewUser.uid,
+          isPremium: nextPremium,
+          premiumCategories: selectedCategories,
+        }),
       });
 
       const data = await res.json();
@@ -135,13 +240,18 @@ export default function PremiumUsersPage() {
           ? {
               ...prev,
               isPremium: nextPremium,
+              premiumCategories: selectedCategories,
               premiumUpdatedAt: new Date().toISOString(),
             }
           : prev
       );
 
       toast({ title: "Success", description: data?.message || "Updated successfully" });
-      loadPremiumUsers(true);
+      setPreviewUser(null);
+      setSelectedPremiumCategories([]);
+      setSelectedCourseToAdd("");
+      setNewCourseInput("");
+      await loadPremiumUsers(true);
     } catch (error: any) {
       toast({
         title: "Update Failed",
@@ -159,7 +269,11 @@ export default function PremiumUsersPage() {
       const res = await authenticatedFetch("/api/admintvk01/premium-users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: target.id, isPremium: nextPremium }),
+        body: JSON.stringify({
+          userId: target.id,
+          isPremium: nextPremium,
+          premiumCategories: target.premiumCategories || [],
+        }),
       });
 
       const data = await res.json();
@@ -171,13 +285,87 @@ export default function PremiumUsersPage() {
         setPreviewUser({
           ...previewUser,
           isPremium: nextPremium,
+          premiumCategories: target.premiumCategories || [],
           premiumUpdatedAt: new Date().toISOString(),
         });
+        setSelectedPremiumCategories(nextPremium ? target.premiumCategories || [] : []);
       }
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Update failed", variant: "destructive" });
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleEditFromTable = (target: PremiumUserRow) => {
+    setPreviewUser({
+      uid: target.id,
+      email: target.email || "",
+      displayName: target.displayName || "",
+      role: target.role || "student",
+      isPremium: target.isPremium,
+      hasFirestoreProfile: true,
+      premiumCategories: target.premiumCategories || [],
+      premiumUpdatedAt: target.premiumUpdatedAt,
+    });
+    setSelectedPremiumCategories((target.premiumCategories || []).map((c) => normalizeCategory(c)));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleUpdateAccess = async () => {
+    if (!previewUser || !previewUser.isPremium) return;
+
+    const selectedCategories = effectiveSelectedCategories;
+    if (selectedCategories.length === 0) {
+      toast({
+        title: "Missing Courses",
+        description: "Select at least one course/category for premium access",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await authenticatedFetch("/api/admintvk01/premium-users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: previewUser.uid,
+          isPremium: true,
+          premiumCategories: selectedCategories,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update premium access");
+      }
+
+      setPreviewUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              premiumCategories: selectedCategories,
+              premiumUpdatedAt: new Date().toISOString(),
+            }
+          : prev
+      );
+
+      toast({ title: "Updated", description: "Premium access updated successfully" });
+      setPreviewUser(null);
+      setSelectedPremiumCategories([]);
+      setSelectedCourseToAdd("");
+      setNewCourseInput("");
+      await loadPremiumUsers(true);
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Could not update access",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -225,6 +413,93 @@ export default function PremiumUsersPage() {
             </Button>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="premium-categories">Premium Courses</Label>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <div className="md:col-span-3">
+                <Select value={selectedCourseToAdd} onValueChange={setSelectedCourseToAdd}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select course/category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCourses.map((course) => (
+                      <SelectItem key={course} value={course}>
+                        {course}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="ALL">ALL (Full Access)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (!selectedCourseToAdd) return;
+                  addCourseToSelection(selectedCourseToAdd);
+                  setSelectedCourseToAdd("");
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" /> Add
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <div className="md:col-span-3">
+                <Input
+                  id="premium-categories"
+                  placeholder="Add new course e.g. CAT"
+                  value={newCourseInput}
+                  onChange={(e) => setNewCourseInput(e.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const normalized = await persistCourseOption(newCourseInput);
+                    if (!normalized) return;
+                    addCourseToSelection(normalized);
+                    setNewCourseInput("");
+                    toast({ title: "Course Added", description: `${normalized} saved successfully` });
+                  } catch (error: any) {
+                    toast({
+                      title: "Error",
+                      description: error.message || "Could not add course",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" /> New
+              </Button>
+            </div>
+
+            {effectiveSelectedCategories.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {effectiveSelectedCategories.map((course) => (
+                  <Badge key={course} variant="secondary" className="gap-1">
+                    {course}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${course}`}
+                      onClick={() => removeCourseFromSelection(course)}
+                      className="inline-flex"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No course selected yet</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Select one or more courses. If a new exam course is created later, you can add it from this dropdown after refresh, or use New.
+            </p>
+          </div>
+
           {previewUser && (
             <div className="rounded-md border p-4 space-y-2 text-sm">
               <div className="font-semibold flex items-center gap-2">
@@ -234,6 +509,7 @@ export default function PremiumUsersPage() {
               <div>Email: {previewUser.email}</div>
               <div>UID: {previewUser.uid}</div>
               <div>Role: {previewUser.role || "student"}</div>
+              <div>Courses: {formatPremiumCategories(previewUser.premiumCategories)}</div>
               <div>
                 Status:{" "}
                 {previewUser.isPremium ? (
@@ -245,11 +521,20 @@ export default function PremiumUsersPage() {
                 )}
               </div>
               <div className="pt-2 flex gap-2">
+                {!previewUser.isPremium && (
+                  <Button
+                    onClick={() => handleSetPremium(true)}
+                    disabled={saving}
+                  >
+                    <Crown className="h-4 w-4 mr-1" /> Make Premium
+                  </Button>
+                )}
                 <Button
-                  onClick={() => handleSetPremium(true)}
-                  disabled={saving || previewUser.isPremium}
+                  variant="secondary"
+                  onClick={handleUpdateAccess}
+                  disabled={saving || !previewUser.isPremium}
                 >
-                  <Crown className="h-4 w-4 mr-1" /> Make Premium
+                  Update Access
                 </Button>
                 <Button
                   variant="outline"
@@ -293,6 +578,9 @@ export default function PremiumUsersPage() {
                     <TableCell>
                       <div className="font-medium">{u.displayName || "Unnamed"}</div>
                       <div className="text-xs text-muted-foreground">{u.email || "No email"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Courses: {formatPremiumCategories(u.premiumCategories)}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {u.isPremium ? <Badge>Premium</Badge> : <Badge variant="secondary">Non Premium</Badge>}
@@ -301,14 +589,24 @@ export default function PremiumUsersPage() {
                       {formatPremiumUpdatedAt(u.premiumUpdatedAt)}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={refreshing}
-                        onClick={() => handleInlineToggle(u, !u.isPremium)}
-                      >
-                        {u.isPremium ? "Remove" : "Make Premium"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={refreshing}
+                          onClick={() => handleEditFromTable(u)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={refreshing}
+                          onClick={() => handleInlineToggle(u, !u.isPremium)}
+                        >
+                          {u.isPremium ? "Remove" : "Make Premium"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -158,7 +158,7 @@ export default function ExamPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
-              <Badge>SEBI Exam</Badge>
+              <Badge>Course: {examInfo?.category || "Exam"}</Badge>
               {examInfo?.isPremium && <Badge variant="secondary">Premium</Badge>}
             </div>
             <CardTitle className="text-3xl">Ready to Start?</CardTitle>
@@ -324,7 +324,7 @@ export default function ExamPage() {
               <>
                 <div className="w-full p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md text-center mb-2">
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    Premium membership required to attempt this exam
+                    Premium access required for {examInfo?.category || "this course"}
                   </p>
                 </div>
                 <Button

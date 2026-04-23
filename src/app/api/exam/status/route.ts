@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import type { ExamAttempt } from "@/lib/exam-types";
-import { isPremiumUser } from "@/lib/premium-access";
+import { hasPremiumAccess, isPremiumUser, normalizePremiumCategories } from "@/lib/premium-access";
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,8 +26,11 @@ export async function GET(request: NextRequest) {
       adminDB.collection("exams").doc(examId).get(),
     ]);
 
-    const premiumUser = isPremiumUser(userSnap.exists ? userSnap.data() : undefined);
-    const isPremiumExam = examSnap.exists ? examSnap.data()?.isPremium === true : false;
+    const userData = userSnap.exists ? userSnap.data() : undefined;
+    const examData = examSnap.exists ? examSnap.data() : undefined;
+    const premiumUser = isPremiumUser(userData);
+    const premiumAccessForExam = hasPremiumAccess(userData, examData?.category);
+    const isPremiumExam = examData?.isPremium === true;
 
     // Get all attempts for this exam by this user
     const attemptsSnap = await adminDB.collection("exam_attempts")
@@ -53,8 +56,10 @@ export async function GET(request: NextRequest) {
       maxAttempts: 3,
       canRetake,
       isPremiumUser: premiumUser,
+      hasPremiumAccess: premiumAccessForExam,
+      premiumCategories: normalizePremiumCategories(userData),
       isPremiumExam,
-      canAttemptPremium: !isPremiumExam || premiumUser,
+      canAttemptPremium: !isPremiumExam || premiumAccessForExam,
       hasInProgress,
       lastAttemptId: attempts.length > 0 ? attempts[attempts.length - 1].id : null,
       attempts: attempts.map((a: any) => ({

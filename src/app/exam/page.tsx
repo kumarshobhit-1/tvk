@@ -135,7 +135,7 @@ export default function ExamsPage() {
               <CardHeader>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex gap-2">
-                    <Badge variant="outline">{exam.category}</Badge>
+                    <Badge variant="outline">Course: {exam.category}</Badge>
                     {(examStatuses[exam.id]?.isPremiumExam ?? exam.isPremium) && (
                       <Badge variant="secondary">Premium</Badge>
                     )}
