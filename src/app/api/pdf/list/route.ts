@@ -37,14 +37,12 @@ export async function GET(request: NextRequest) {
       .filter((folder) => folder.isPublished === true)
       .map((folder) => ({
         ...folder,
-        canAccess:
-          folder.isPremium === true
-            ? hasPremiumAccess(userData, folder.category)
-            : true,
+        // Folder stays browsable; access gating is enforced at file level.
+        canAccess: true,
       }))
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    const folderAccessMap = new Map(folders.map((folder) => [folder.id, folder.canAccess !== false]));
+    const folderMap = new Map(folders.map((folder) => [folder.id, folder]));
 
     // Get all published files and filter/sort in memory
     const filesSnapshot = await adminDB
@@ -57,10 +55,21 @@ export async function GET(request: NextRequest) {
         ...doc.data(),
       }) as PDFFile)
       .filter((file) => file.isPublished === true)
-      .filter((file) => folderAccessMap.get(file.folderId) === true)
-      .filter((file) => {
-        if (file.isPremium !== true) return true;
-        return hasPremiumAccess(userData, file.category);
+      .filter((file) => folderMap.has(file.folderId))
+      .map((file) => {
+        const folder = folderMap.get(file.folderId)!;
+        const effectiveCategory = file.category || folder.category || "";
+        const requiresPremium =
+          file.premiumOverridden === true
+            ? file.isPremium === true
+            : folder.isPremium === true;
+
+        return {
+          ...file,
+          category: effectiveCategory,
+          isPremium: requiresPremium,
+          canAccess: !requiresPremium || hasPremiumAccess(userData, effectiveCategory),
+        } as PDFFile;
       })
       .sort((a, b) => (a.order || 0) - (b.order || 0));
     
@@ -69,10 +78,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Group files by folder
-    const foldersWithFiles: PDFFolderWithFiles[] = folders.map((folder) => ({
-      ...folder,
-      files: folder.canAccess === false ? [] : files.filter((file) => file.folderId === folder.id),
-    }));
+    const foldersWithFiles: PDFFolderWithFiles[] = folders.map((folder) => {
+      const folderFiles = files.filter((file) => file.folderId === folder.id);
+
+      return {
+        ...folder,
+        canAccess: true,
+        files: folderFiles,
+      };
+    });
 
     return NextResponse.json({
       folders: foldersWithFiles,

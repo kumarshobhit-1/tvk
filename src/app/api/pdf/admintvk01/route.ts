@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
             name: file.name.replace(/\.pdf$/i, ""),
             category: folderData.category || "SEBI",
             isPremium: folderData.isPremium === true,
+            premiumOverridden: false,
             folderId,
             cloudinaryPublicId: cloudinaryResult.public_id,
             cloudinaryUrl: cloudinaryResult.url,
@@ -229,6 +230,11 @@ export async function PUT(request: NextRequest) {
       normalizedUpdates.category = normalizedUpdates.category.trim().toUpperCase();
     }
 
+    if (type === "file" && typeof normalizedUpdates.isPremium === "boolean") {
+      // File-level premium toggles are treated as explicit overrides.
+      normalizedUpdates.premiumOverridden = true;
+    }
+
     await docRef.update(normalizedUpdates);
 
     if (type === "folder") {
@@ -246,7 +252,12 @@ export async function PUT(request: NextRequest) {
           filesSnapshot.docs.forEach((fileDoc) => {
             const fileUpdatePayload: Record<string, any> = { updatedAt: new Date() };
             if (shouldSyncCategory) fileUpdatePayload.category = normalizedUpdates.category;
-            if (shouldSyncPremium) fileUpdatePayload.isPremium = normalizedUpdates.isPremium;
+            if (shouldSyncPremium) {
+              // Folder premium toggle should apply to all files in that folder.
+              fileUpdatePayload.isPremium = normalizedUpdates.isPremium;
+              fileUpdatePayload.premiumOverridden = false;
+            }
+
             batch.update(fileDoc.ref, fileUpdatePayload);
           });
           await batch.commit();

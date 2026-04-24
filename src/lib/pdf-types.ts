@@ -23,6 +23,7 @@ export interface PDFFile {
   description?: string;
   category?: string;
   isPremium?: boolean;
+  premiumOverridden?: boolean;
   canAccess?: boolean;
   folderId: string;
   cloudinaryPublicId: string;

@@ -90,9 +90,15 @@ export default function LibraryPage() {
   // Filter files based on search
   const getFilteredFiles = () => {
     if (!selectedFolder) return [];
-    if (!searchQuery.trim()) return selectedFolder.files;
+    const sortedFiles = [...selectedFolder.files].sort((a, b) => {
+      const orderDiff = (a.order || 0) - (b.order || 0);
+      if (orderDiff !== 0) return orderDiff;
+      return a.name.localeCompare(b.name);
+    });
+
+    if (!searchQuery.trim()) return sortedFiles;
     
-    return selectedFolder.files.filter((file) =>
+    return sortedFiles.filter((file) =>
       file.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
@@ -296,9 +302,12 @@ export default function LibraryPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
+                        {file.isPremium && <Badge variant="secondary">Premium</Badge>}
+                        {file.canAccess === false && <Badge variant="destructive">Locked</Badge>}
                         <Button
                           variant="outline"
                           size="sm"
+                          disabled={file.canAccess === false}
                           onClick={() => handleViewPDF(file)}
                         >
                           <Eye className="h-4 w-4 mr-1" />
@@ -306,6 +315,7 @@ export default function LibraryPage() {
                         </Button>
                         <Button
                           size="sm"
+                          disabled={file.canAccess === false}
                           onClick={() => handleDownloadPDF(file)}
                         >
                           <Download className="h-4 w-4 mr-1" />

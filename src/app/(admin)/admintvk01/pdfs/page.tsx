@@ -82,6 +82,7 @@ export default function AdminPDFsPage() {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
+  const [showRenameFolderDialog, setShowRenameFolderDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "folder" | "file"; id: string; name: string } | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_CATEGORY_OPTIONS);
   const [editingFolder, setEditingFolder] = useState<PDFFolder | null>(null);
@@ -99,9 +100,11 @@ export default function AdminPDFsPage() {
   const [uploading, setUploading] = useState(false);
   const [savingFolder, setSavingFolder] = useState(false);
   const [updatingFolder, setUpdatingFolder] = useState(false);
+  const [renamingFolder, setRenamingFolder] = useState(false);
 
   const [editFolderCategory, setEditFolderCategory] = useState("SEBI");
   const [editFolderIsPremium, setEditFolderIsPremium] = useState(false);
+  const [renameFolderName, setRenameFolderName] = useState("");
 
   useEffect(() => {
     document.title = "PDF Management - Admin | The Victory Key";
@@ -348,6 +351,100 @@ export default function AdminPDFsPage() {
     }
   };
 
+  const getSortedFolders = () => [...folders].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const getSortedFilesForFolder = (folderId: string) =>
+    [...getFilesForFolder(folderId)].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const handleMoveFolder = async (folderId: string, direction: "up" | "down") => {
+    const sorted = getSortedFolders();
+    const index = sorted.findIndex((item) => item.id === folderId);
+    if (index < 0) return;
+
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= sorted.length) return;
+
+    const current = sorted[index];
+    const target = sorted[swapIndex];
+
+    try {
+      await Promise.all([
+        authenticatedFetch("/api/pdf/admintvk01", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "folder", id: current.id, order: target.order ?? swapIndex }),
+        }),
+        authenticatedFetch("/api/pdf/admintvk01", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "folder", id: target.id, order: current.order ?? index }),
+        }),
+      ]);
+
+      await fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to reorder folders", variant: "destructive" });
+    }
+  };
+
+  const handleMoveFile = async (fileId: string, folderId: string, direction: "up" | "down") => {
+    const sorted = getSortedFilesForFolder(folderId);
+    const index = sorted.findIndex((item) => item.id === fileId);
+    if (index < 0) return;
+
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= sorted.length) return;
+
+    const current = sorted[index];
+    const target = sorted[swapIndex];
+
+    try {
+      await Promise.all([
+        authenticatedFetch("/api/pdf/admintvk01", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "file", id: current.id, order: target.order ?? swapIndex }),
+        }),
+        authenticatedFetch("/api/pdf/admintvk01", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "file", id: target.id, order: current.order ?? index }),
+        }),
+      ]);
+
+      await fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to reorder files", variant: "destructive" });
+    }
+  };
+
+  const handleTogglePremium = async (type: "folder" | "file", id: string, currentStatus: boolean) => {
+    try {
+      const response = await authenticatedFetch("/api/pdf/admintvk01", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type,
+          id,
+          isPremium: !currentStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data?.error || "Failed to update premium status");
+      }
+
+      toast({
+        title: "Updated",
+        description: `${type === "folder" ? "Folder" : "File"} ${!currentStatus ? "marked premium" : "made free"}`,
+      });
+      await fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to update premium", variant: "destructive" });
+    }
+  };
+
   const openEditFolderDialog = (folder: PDFFolder) => {
     setEditingFolder(folder);
     setEditFolderCategory(normalizeCategory(folder.category || "SEBI"));
@@ -392,6 +489,46 @@ export default function AdminPDFsPage() {
       });
     } finally {
       setUpdatingFolder(false);
+    }
+  };
+
+  const openRenameFolderDialog = (folder: PDFFolder) => {
+    setEditingFolder(folder);
+    setRenameFolderName(folder.name || "");
+    setShowRenameFolderDialog(true);
+  };
+
+  const handleRenameFolder = async () => {
+    if (!editingFolder) return;
+
+    const nextName = renameFolderName.trim();
+    if (!nextName) {
+      toast({ title: "Error", description: "Folder name is required", variant: "destructive" });
+      return;
+    }
+
+    setRenamingFolder(true);
+    try {
+      const response = await authenticatedFetch("/api/pdf/admintvk01", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "folder", id: editingFolder.id, name: nextName }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to rename folder");
+      }
+
+      toast({ title: "Updated", description: "Folder renamed successfully" });
+      setShowRenameFolderDialog(false);
+      setEditingFolder(null);
+      setRenameFolderName("");
+      await fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Could not rename folder", variant: "destructive" });
+    } finally {
+      setRenamingFolder(false);
     }
   };
 
@@ -522,11 +659,54 @@ export default function AdminPDFsPage() {
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    openRenameFolderDialog(folder);
+                                  }}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Rename
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     openEditFolderDialog(folder);
                                   }}
                                 >
                                   <Check className="h-4 w-4 mr-2" />
                                   Edit Access
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTogglePremium("folder", folder.id, folder.isPremium === true);
+                                  }}
+                                >
+                                  {folder.isPremium ? (
+                                    <>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      Make Free
+                                    </>
+                                  ) : (
+                                    <>
+                                      <EyeOff className="h-4 w-4 mr-2" />
+                                      Mark Premium
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveFolder(folder.id, "up");
+                                  }}
+                                >
+                                  Move Up
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveFolder(folder.id, "down");
+                                  }}
+                                >
+                                  Move Down
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={(e) => {
@@ -639,6 +819,7 @@ export default function AdminPDFsPage() {
                             <Badge variant={file.isPublished ? "default" : "secondary"}>
                               {file.isPublished ? "Published" : "Draft"}
                             </Badge>
+                            {file.isPremium && <Badge variant="secondary">Premium</Badge>}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -646,6 +827,31 @@ export default function AdminPDFsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleMoveFile(file.id, file.folderId, "up")}
+                                >
+                                  Move Up
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleMoveFile(file.id, file.folderId, "down")}
+                                >
+                                  Move Down
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleTogglePremium("file", file.id, file.isPremium === true)}
+                                >
+                                  {file.isPremium ? (
+                                    <>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      Make Free
+                                    </>
+                                  ) : (
+                                    <>
+                                      <EyeOff className="h-4 w-4 mr-2" />
+                                      Mark Premium
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                   <a 
                                     href={`https://docs.google.com/viewer?url=${encodeURIComponent(file.cloudinarySecureUrl)}&embedded=true`} 
@@ -867,6 +1073,34 @@ export default function AdminPDFsPage() {
               </Button>
               <Button onClick={handleUpdateFolderAccess} disabled={updatingFolder}>
                 {updatingFolder ? "Updating..." : "Update Access"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showRenameFolderDialog} onOpenChange={setShowRenameFolderDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rename Folder</DialogTitle>
+              <DialogDescription>
+                Update folder name for better sorting and readability.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-4">
+              <Label htmlFor="rename-folder-name">Folder Name</Label>
+              <Input
+                id="rename-folder-name"
+                value={renameFolderName}
+                onChange={(e) => setRenameFolderName(e.target.value)}
+                placeholder="Enter folder name"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRenameFolderDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleRenameFolder} disabled={renamingFolder}>
+                {renamingFolder ? "Renaming..." : "Rename"}
               </Button>
             </DialogFooter>
           </DialogContent>
