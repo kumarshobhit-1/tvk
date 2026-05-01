@@ -403,14 +403,33 @@ export function ExamRunner({
           </div>
 
           {/* Question Navigation Grid - Right Side */}
-          <div className="lg:w-80 lg:sticky lg:top-24 h-fit">
-            <div className="p-4 bg-muted rounded-lg">
+          <div className="w-72 sticky top-24 h-[calc(100vh-12rem)]">
+            <div className="question-nav-scrollbar p-4 bg-muted rounded-lg h-full overflow-y-auto">
               <h3 className="font-semibold mb-4">Question Navigation</h3>
-              
-              {/* Grid and Legend Side by Side */}
-              <div className="flex gap-3 mb-4">
-                {/* Grid */}
-                <div className="grid grid-cols-5 gap-2 flex-1">
+
+              {/* Legend under header */}
+              <div className="mb-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded border-2 border-green-500 bg-green-50"></div>
+                  <div className="text-sm">Answered</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded border-2 border-purple-500 bg-purple-50"></div>
+                  <div className="text-sm">Marked</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded border-2 border-muted-foreground bg-background"></div>
+                  <div className="text-sm">Not Ans</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded border-2 border-primary bg-primary"></div>
+                  <div className="text-sm">Current</div>
+                </div>
+              </div>
+
+              {/* Grid */}
+              <div className="mb-4">
+                <div className="grid grid-cols-5 gap-2">
                   {questions.map((_, idx) => {
                     const answer = answers[idx];
                     const isAnswered = answer.selectedOptionId !== null;
@@ -438,26 +457,6 @@ export function ExamRunner({
                       </button>
                     );
                   })}
-                </div>
-
-                {/* Legend on Right */}
-                <div className="flex flex-col justify-center gap-3 text-[10px] min-w-fit">
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-5 h-5 rounded border-2 border-green-500 bg-green-50 dark:bg-green-950"></div>
-                    <span className="text-center leading-tight">Answered</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-5 h-5 rounded border-2 border-purple-500 bg-purple-50 dark:bg-purple-950"></div>
-                    <span className="text-center leading-tight">Marked</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-5 h-5 rounded border-2 border-muted-foreground bg-background"></div>
-                    <span className="text-center leading-tight">Not Ans</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-5 h-5 rounded border-2 border-primary bg-primary"></div>
-                    <span className="text-center leading-tight">Current</span>
-                  </div>
                 </div>
               </div>
 
@@ -553,6 +552,30 @@ export function ExamRunner({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <style jsx global>{`
+        .question-nav-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(100, 116, 139, 0.75) transparent;
+        }
+
+        .question-nav-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .question-nav-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .question-nav-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(100, 116, 139, 0.75);
+          border-radius: 9999px;
+        }
+
+        .question-nav-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(71, 85, 105, 0.95);
+        }
+      `}</style>
     </div>
   );
 }
