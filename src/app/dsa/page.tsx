@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { DsaTopicList } from "@/components/dsa/dsa-topic-list";
+import { CoreConceptsButton } from "@/components/dsa/core-concepts-button";
 import type { Metadata } from "next";
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
@@ -52,6 +53,20 @@ export default async function DsaPage() {
           Curated topics and problems to sharpen your data structures and algorithms skills.
         </p>
       </div>
+
+      <div className="mb-12 rounded-2xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Quick Navigation</p>
+            <h2 className="mt-2 text-2xl font-bold font-headline">Open the full DSA core-concepts sheet</h2>
+            <p className="mt-2 text-muted-foreground max-w-2xl">
+              This sheet for Trees, Graphs, Hashing, Sorting, and algorithm design notes in one place.
+            </p>
+          </div>
+          <CoreConceptsButton />
+        </div>
+      </div>
+
       {/* Pass both lists to the client component */}
       <DsaTopicList topics={dsaTopics} allQuestions={allDsaQuestions} />
     </div>

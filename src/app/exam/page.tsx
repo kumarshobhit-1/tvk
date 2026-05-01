@@ -1,101 +1,132 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, BookOpen, Trophy, Users } from "lucide-react";
+import {
+  Banknote,
+  BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  Cpu,
+  Gavel,
+  GraduationCap,
+  Landmark,
+  ShieldCheck,
+  Sparkles,
+  Trees,
+  Wrench,
+} from "lucide-react";
 import Loading from "@/components/ui/loading";
 
-interface ExamListItem {
-  id: string;
+type CategoryMeta = {
   title: string;
-  description: string;
-  isPremium?: boolean;
-  type: string;
-  durationMinutes: number;
-  totalMarks: number;
-  passingMarks: number;
-  category: string;
-  questionCount: number;
-}
+  subtitle: string;
+  icon: typeof Landmark;
+};
 
-interface ExamStatus {
-  hasPassed: boolean;
-  attemptCount: number;
-  maxAttempts: number;
-  canRetake: boolean;
-  lastAttemptId: string | null;
-  isPremiumUser?: boolean;
-  canAttemptPremium?: boolean;
-  isPremiumExam?: boolean;
-}
+const CATEGORY_META: Record<string, CategoryMeta> = {
+  BANKING: {
+    title: "Banking & Insurance",
+    subtitle: "SBI, IBPS, LIC & Other Bank/Insurance Exams.",
+    icon: Landmark,
+  },
+  REGULATORY: {
+    title: "Regulatory",
+    subtitle: "RBI Grade B, NABARD, SEBI",
+    icon: Gavel,
+  },
+  SSC: {
+    title: "SSC/Railways",
+    subtitle: "CGL, CHSL, CPO & RRB NTPC",
+    icon: GraduationCap,
+  },
+  AGRICULTURE: {
+    title: "Agriculture Exams",
+    subtitle: "ICAR IARI",
+    icon: Trees,
+  },
+  AAI: {
+    title: "AAI Exams",
+    subtitle: "AAI JE ATC",
+    icon: Building2,
+  },
+  UPSC: {
+    title: "UPSC Exams",
+    subtitle: "EPFO APFC",
+    icon: ShieldCheck,
+  },
+  STATE: {
+    title: "State Exams",
+    subtitle: "UPSSSC VDO",
+    icon: Sparkles,
+  },
+  DEFENCE: {
+    title: "Defence Exams",
+    subtitle: "AFCAT",
+    icon: Banknote,
+  },
+  ENGINEERING: {
+    title: "Engineering Exams",
+    subtitle: "GATE ME, GATE CE, RRB JE",
+    icon: Wrench,
+  },
+  MBA: {
+    title: "MBA Exams",
+    subtitle: "CAT",
+    icon: BriefcaseBusiness,
+  },
+  JEE: {
+    title: "Engineering Exams",
+    subtitle: "GATE ME, GATE CE, RRB JE",
+    icon: Cpu,
+  },
+  OTHER: {
+    title: "Other",
+    subtitle: "Mixed-topic and uncategorized exam sets.",
+    icon: BookOpen,
+  },
+};
 
 export default function ExamsPage() {
   const { user, loading: authLoading } = useRequireAuth();
-  const [exams, setExams] = useState<ExamListItem[]>([]);
-  const [examStatuses, setExamStatuses] = useState<Record<string, ExamStatus>>({});
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showLoading, setShowLoading] = useState(true);
 
-  // Add minimum delay to show loading
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoading(false);
-    }, 500); // Show loading for at least 500ms
-    
+    const timer = setTimeout(() => setShowLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    document.title = "Available Exams | The Victory Key";
+    document.title = "Exam Categories | The Victory Key";
   }, []);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) return;
 
-    const fetchExams = async () => {
+    const fetchCategories = async () => {
       setLoading(true);
       try {
-        const response = await fetch("/api/exam/list");
+        const response = await fetch("/api/exam/categories");
         const data = await response.json();
-        
-        // Handle both success and error cases
-        if (data.exams) {
-          setExams(data.exams);
-          
-          // Fetch status for each exam
-          const statuses: Record<string, ExamStatus> = {};
-          for (const exam of data.exams) {
-            try {
-              const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`);
-              if (statusRes.ok) {
-                statuses[exam.id] = await statusRes.json();
-              }
-            } catch (err) {
-              console.error(`Error fetching status for exam ${exam.id}:`, err);
-            }
-          }
-          setExamStatuses(statuses);
-        } else {
-          setExams([]);
-        }
-        
+        setCategories(Array.isArray(data.categories) ? data.categories : []);
         setError("");
       } catch (err) {
-        console.error("Error fetching exams:", err);
+        console.error("Error fetching categories:", err);
         setError("");
-        setExams([]); // Show empty state instead of error
+        setCategories([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchExams();
+    fetchCategories();
   }, [user, authLoading]);
 
   if (authLoading || loading || showLoading) {
@@ -113,164 +144,63 @@ export default function ExamsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Available Exams</h1>
-        <p className="text-muted-foreground">
-          Choose an exam to test your knowledge and skills
-        </p>
+    <div className="container mx-auto px-4 py-6 md:py-8">
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Exam Categories</h1>
+          <p className="mt-2 text-sm text-muted-foreground md:text-base">
+            Select a category to view available exams.
+          </p>
+        </div>
+        <Badge variant="outline" className="hidden rounded-full px-3 py-1 md:inline-flex">
+          {categories.length} live categories
+        </Badge>
       </div>
 
-      {exams.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No exams available at the moment.</p>
+      {categories.length === 0 ? (
+        <Card className="mt-6 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
+              <BookOpen className="h-7 w-7" />
+            </div>
+            <h2 className="text-xl font-semibold">No categories available yet</h2>
+            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+              We couldn’t find any published exam categories right now.
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {exams.map((exam) => (
-            <Card key={exam.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex gap-2">
-                    <Badge variant="outline">Course: {exam.category}</Badge>
-                    {(examStatuses[exam.id]?.isPremiumExam ?? exam.isPremium) && (
-                      <Badge variant="secondary">Premium</Badge>
-                    )}
-                  </div>
-                  <Badge variant={exam.type === "practice" ? "secondary" : "default"}>
-                    {exam.type}
-                  </Badge>
-                </div>
-                <CardTitle className="line-clamp-2">{exam.title}</CardTitle>
-                <CardDescription className="line-clamp-3">
-                  {exam.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{exam.durationMinutes} minutes</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-muted-foreground" />
-                    <span>{exam.questionCount} questions</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-muted-foreground" />
-                    <span>{exam.totalMarks} marks (Pass: {exam.passingMarks})</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex gap-2">
-                {(() => {
-                  const status = examStatuses[exam.id];
-                  
-                  if (!status) {
-                    // Loading or no status yet
-                    return (
-                      <>
-                        <Button asChild className="flex-1">
-                          <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                          <Link href={`/exam/leaderboard/${exam.id}`}>
-                            <Users className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </>
-                    );
-                  }
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {categories.map((cat) => {
+            const key = cat.toUpperCase();
+            const meta = CATEGORY_META[key] ?? {
+              title: cat === "OTHER" ? "Other" : cat,
+              subtitle:
+                cat === "OTHER"
+                  ? "Mixed-topic and uncategorized exam sets."
+                  : `Available exams for ${cat}.`,
+              icon: BookOpen,
+            };
+            const Icon = meta.icon;
 
-                  if (status.hasPassed) {
-                    // Student passed - only show view result
-                    return (
-                      <>
-                        <Button asChild className="flex-1" variant="outline">
-                          <Link href={`/exam/result?attemptId=${status.lastAttemptId}`}>
-                            View Result
-                          </Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                          <Link href={`/exam/leaderboard/${exam.id}`}>
-                            <Users className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </>
-                    );
-                  }
-
-                  if (status.attemptCount >= status.maxAttempts) {
-                    // Max attempts reached - only show last attempt
-                    return (
-                      <>
-                        <Button asChild className="flex-1" variant="outline">
-                          <Link href={`/exam/result?attemptId=${status.lastAttemptId}`}>
-                            View Last Attempt
-                          </Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                          <Link href={`/exam/leaderboard/${exam.id}`}>
-                            <Users className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </>
-                    );
-                  }
-
-                  if (status.canAttemptPremium === false) {
-                    return (
-                      <>
-                        <Button className="flex-1" disabled>
-                          Premium Only
-                        </Button>
-                        <Button asChild variant="outline">
-                          <Link href={`/exam/leaderboard/${exam.id}`}>
-                            <Users className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </>
-                    );
-                  }
-
-                  if (status.attemptCount > 0) {
-                    // Has attempts but can retry
-                    return (
-                      <>
-                        <Button asChild className="flex-1">
-                          <Link href={`/exam/${exam.id}`}>
-                            Retry
-                          </Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                          <Link href={`/exam/leaderboard/${exam.id}`}>
-                            <Users className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </>
-                    );
-                  }
-
-                  // First attempt
-                  return (
-                    <>
-                      <Button asChild className="flex-1">
-                        <Link href={`/exam/${exam.id}`}>Start Exam</Link>
-                      </Button>
-                      <Button asChild variant="outline">
-                        <Link href={`/exam/leaderboard/${exam.id}`}>
-                          <Users className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </>
-                  );
-                })()}
-              </CardFooter>
-            </Card>
-          ))}
+            return (
+              <Link key={cat} href={`/exam/category/${encodeURIComponent(cat.toLowerCase())}`} className="group">
+                <Card className="h-full min-h-[170px] rounded-none border border-zinc-300 bg-white shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-950">
+                  <CardContent className="flex h-full flex-col items-center justify-center px-4 py-5 text-center">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-[#4b5fcc] transition-colors group-hover:border-[#4b5fcc] group-hover:bg-[#4b5fcc]/5 dark:border-zinc-700 dark:bg-zinc-950">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-base font-bold leading-tight text-zinc-900 dark:text-zinc-100">
+                      {meta.title}
+                    </h2>
+                    <p className="mt-2 max-w-[170px] text-sm leading-5 text-slate-500 dark:text-slate-400">
+                      {meta.subtitle}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

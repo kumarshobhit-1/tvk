@@ -1,295 +1,447 @@
-import { TopicCard } from "@/components/topic-card";
-import { getPlaceholderImage } from "@/lib/placeholder-images";
-import { ArrowRight, CheckCircle2, Code2, TrendingUp, Users, Zap, Trophy, Target, BookOpen, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  Banknote,
+  BarChart3,
+  BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  CheckCircle2,
+  Landmark,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Trophy,
+  Users,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 
-export default async function Home() {
-  const dsaImage = getPlaceholderImage("dsa-cover");
-  const csImage = getPlaceholderImage("cs-cover");
-  const playgroundImage = getPlaceholderImage("playground-cover");
+type FeaturedTrack = {
+  title: string;
+  category: string;
+  subtitle: string;
+  icon: LucideIcon;
+  tint: string;
+};
 
-  let dsaCount: number | string = '500+';
-  let csCount: number | string = '50+';
-  let languagesCount: number | string = '15+';
+type QuickLink = {
+  label: string;
+  href: string;
+};
+
+const FEATURED_TRACKS: FeaturedTrack[] = [
+  {
+    title: "SEBI",
+    category: "SEBI",
+    subtitle: "Grade A, IT and regulatory style papers",
+    icon: ShieldCheck,
+    tint: "from-emerald-500/15 to-emerald-500/5",
+  },
+  {
+    title: "RBI Grade B",
+    category: "RBI GRADE B",
+    subtitle: "High-value finance and policy exam prep",
+    icon: Landmark,
+    tint: "from-indigo-500/15 to-indigo-500/5",
+  },
+  {
+    title: "IBPS SO IT",
+    category: "IBPS SO IT",
+    subtitle: "Specialist officer IT mock tests",
+    icon: BriefcaseBusiness,
+    tint: "from-sky-500/15 to-sky-500/5",
+  },
+  {
+    title: "NABARD",
+    category: "NABARD",
+    subtitle: "Development banking and rural finance",
+    icon: Building2,
+    tint: "from-amber-500/15 to-amber-500/5",
+  },
+  {
+    title: "PFRDA",
+    category: "PFRDA",
+    subtitle: "Pension and retirement finance exams",
+    icon: BarChart3,
+    tint: "from-violet-500/15 to-violet-500/5",
+  },
+  {
+    title: "Banking IT",
+    category: "BANKING",
+    subtitle: "Bank exams, IT officer and technical tracks",
+    icon: Banknote,
+    tint: "from-cyan-500/15 to-cyan-500/5",
+  },
+];
+
+const quickHighlights = [
+  "Published exam collections only",
+  "Premium access flow for locked exams",
+  "Category-based navigation for fast study",
+];
+
+const QUICK_LINKS: QuickLink[] = [
+  { label: "SEBI", href: "/exam/category/sebi" },
+  { label: "RBI Grade B", href: "/exam/category/rbi%20grade%20b" },
+  { label: "IBPS SO IT", href: "/exam/category/ibps%20so%20it" },
+  { label: "NABARD", href: "/exam/category/nabard" },
+  { label: "PFRDA", href: "/exam/category/pfrda" },
+  { label: "Banking IT", href: "/exam/category/banking" },
+];
+
+const spotlightPaths = [
+  {
+    title: "SEBI Grade A",
+    href: "/exam/category/sebi",
+    note: "Regulatory and IT mock tests",
+  },
+  {
+    title: "RBI Grade B",
+    href: "/exam/category/rbi%20grade%20b",
+    note: "High priority finance prep",
+  },
+  {
+    title: "IBPS SO IT",
+    href: "/exam/category/ibps%20so%20it",
+    note: "Specialist officer IT tests",
+  },
+  {
+    title: "NABARD",
+    href: "/exam/category/nabard",
+    note: "Development banking focus",
+  },
+  {
+    title: "PFRDA",
+    href: "/exam/category/pfrda",
+    note: "Pension sector exam prep",
+  },
+  {
+    title: "Banking IT",
+    href: "/exam/category/banking",
+    note: "Bank exams and tech roles",
+  },
+];
+
+function normalizeCategory(value: string) {
+  return value.trim().toUpperCase();
+}
+
+export default async function Home() {
+  let totalPublishedExams = 0;
+  let totalFeaturedTracks = FEATURED_TRACKS.length;
+  let totalPremiumExams = 0;
+  const trackCounts = new Map<string, number>();
 
   try {
-    const [dsaSnap, csSnap, playgroundSnap] = await Promise.all([
-      adminDB.collection('dsa_questions').select().get(),
-      adminDB.collection('cs_topics').select().get(),
-      adminDB.collection('playground_problems').select().get(),
-    ]);
+    const publishedSnap = await adminDB
+      .collection("exams")
+      .where("isPublished", "==", true)
+      .select("category", "isPremium")
+      .get();
 
-    dsaCount = dsaSnap.size;
-    csCount = csSnap.size;
+    totalPublishedExams = publishedSnap.size;
 
-    const languagesSet = new Set<string>();
-    playgroundSnap.forEach((doc) => {
-      const data = doc.data() as any;
-      if (data.templates && typeof data.templates === 'object') {
-        Object.keys(data.templates).forEach((k) => languagesSet.add(k));
-      }
-      if (Array.isArray(data.languages)) {
-        data.languages.forEach((l: string) => languagesSet.add(l));
-      }
+    const uniqueCategories = new Set<string>();
+    publishedSnap.docs.forEach((doc) => {
+      const data = doc.data() as { category?: string; isPremium?: boolean };
+      const category = normalizeCategory(String(data.category || "OTHER"));
+      uniqueCategories.add(category);
+      if (data.isPremium) totalPremiumExams += 1;
     });
-    languagesCount = languagesSet.size || playgroundSnap.size || 15;
+
+    totalFeaturedTracks = Math.max(totalFeaturedTracks, uniqueCategories.size);
+
+    FEATURED_TRACKS.forEach((track) => {
+      const count = publishedSnap.docs.filter((doc) => {
+        const data = doc.data() as { category?: string };
+        return normalizeCategory(String(data.category || "OTHER")) === normalizeCategory(track.category);
+      }).length;
+      trackCounts.set(track.category, count);
+    });
   } catch (error) {
-    console.error('Failed to fetch live counts for home page:', error);
+    console.error("Failed to fetch home page exam counts:", error);
   }
 
   return (
-    <div className="bg-background">
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-purple-500/5 to-background -z-10" />
-        
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="text-center mb-12">
-            <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm animate-pulse">
-              <Sparkles className="w-4 h-4 mr-2 inline" />
-              Join 1000+ Learners Already Mastering Tech Skills
-            </Badge>
-            
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-headline mb-6 tracking-tighter">
-              Your <span className="bg-gradient-to-r from-primary via-purple-600 to-primary bg-clip-text text-transparent animate-gradient">The Victory Key</span> for
-              <br />Tech Mastery
-            </h1>
-            
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
-              Navigate the world of Data Structures, Algorithms, and Computer Science fundamentals. 
-              Track your progress, earn achievements, and conquer your learning goals with our interactive platform.
-            </p>
-            
-            <div className="flex flex-wrap justify-center gap-4 mb-12">
-              <Button asChild size="lg" className="text-base px-8 py-6 shadow-lg hover:shadow-xl transition-all">
-                <Link href="/dsa">
-                  Start DSA Sheet <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="text-base px-8 py-6">
-                <Link href="/cs">
-                  Explore CS Subjects <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
+    <main className="bg-background text-foreground">
+      <section className="relative overflow-hidden border-b">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_30%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.45),transparent_40%)]" />
+        <div className="absolute left-1/2 top-10 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+        <div className="container mx-auto px-4 py-16 md:py-20">
+          <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+            <div className="relative">
+              <Badge variant="secondary" className="mb-5 gap-2 rounded-full px-4 py-2 text-sm shadow-sm ring-1 ring-black/5">
+                <Sparkles className="h-4 w-4" />
+                Finance exam hub for serious prep
+              </Badge>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-primary mb-1">{typeof dsaCount === 'number' ? dsaCount : dsaCount}</div>
-                <div className="text-xs md:text-sm text-muted-foreground">DSA Problems</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-green-600 mb-1">{typeof csCount === 'number' ? csCount : csCount}</div>
-                <div className="text-xs md:text-sm text-muted-foreground">CS Topics</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-blue-600 mb-1">{typeof languagesCount === 'number' ? languagesCount : languagesCount}</div>
-                <div className="text-xs md:text-sm text-muted-foreground">Languages</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-orange-600 mb-1">100%</div>
-                <div className="text-xs md:text-sm text-muted-foreground">Free Forever</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              <h1 className="max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
+                Focused prep for SEBI, RBI Grade B, IBPS SO IT and banking exams.
+              </h1>
 
-      <section className="container mx-auto px-4 py-12">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <TopicCard
-              title="DSA Sheet"
-              description="A curated list of essential DSA questions to master for interviews and competitive programming."
-              href="/dsa"
-              imageUrl={dsaImage?.imageUrl} 
-            />
-            <TopicCard
-              title="CS Core Subjects"
-              description="Strengthen your fundamentals with key topics in Operating Systems, DBMS, Networks, and more."
-              href="/cs"
-              imageUrl={csImage?.imageUrl}
-            />
-            <TopicCard
-              title="Code Playground"
-              description="Practice coding in real-time with our interactive code editor supporting multiple languages."
-              href="/playground"
-              imageUrl={playgroundImage?.imageUrl}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-16 bg-muted/30">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose The Victory Key?</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to ace your tech interviews and build a strong foundation in computer science
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="border-2 hover:border-primary hover:shadow-lg transition-all">
-              <CardHeader>
-                <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">Smart Progress Tracking</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Track every problem solved, topic completed, and milestone achieved with detailed analytics and visual progress indicators.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover:border-primary hover:shadow-lg transition-all">
-              <CardHeader>
-                <div className="bg-orange-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-orange-600" />
-                </div>
-                <CardTitle className="text-xl">Daily Streak System</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Build consistency with our streak tracking. Practice daily and watch your learning momentum grow exponentially.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover:border-primary hover:shadow-lg transition-all">
-              <CardHeader>
-                <div className="bg-purple-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Trophy className="h-6 w-6 text-purple-600" />
-                </div>
-                <CardTitle className="text-xl">Achievements & Badges</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Earn badges and unlock achievements as you progress. From "First Step" to "DSA Champion" - celebrate every win!
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover:border-primary hover:shadow-lg transition-all">
-              <CardHeader>
-                <div className="bg-green-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <Code2 className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle className="text-xl">Interactive Playground</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Write, test, and debug code directly on the platform with support for 15+ programming languages. No setup needed!
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover:border-primary hover:shadow-lg transition-all">
-              <CardHeader>
-                <div className="bg-blue-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <BookOpen className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle className="text-xl">Curated Content</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Focus on what matters. Every question and topic is carefully selected based on real interview patterns from top companies.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover:border-primary hover:shadow-lg transition-all">
-              <CardHeader>
-                <div className="bg-pink-500/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                  <TrendingUp className="h-6 w-6 text-pink-600" />
-                </div>
-                <CardTitle className="text-xl">Personalized Dashboard</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Get insights into your learning patterns with charts, activity feed, and personalized recommendations.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-16">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Get started in three simple steps and begin your journey to tech mastery
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="bg-primary text-primary-foreground w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                1
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Create Your Account</h3>
-              <p className="text-muted-foreground">
-                Sign up for free using Google authentication. No credit card required, no hidden fees.
+              <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
+                Find category-wise mock tests, premium exam tracks and focused preparation routes for finance, regulatory,
+                banking, NABARD, PFRDA and other IT-led competitive exams.
               </p>
-            </div>
 
-            <div className="text-center">
-              <div className="bg-primary text-primary-foreground w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                2
+              <div className="mt-7 rounded-3xl border bg-background/80 p-4 shadow-sm backdrop-blur md:p-5">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Start here</p>
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {spotlightPaths.slice(0, 4).map((item) => (
+                    <Link
+                      key={item.title}
+                      href={item.href}
+                      className="group rounded-2xl border bg-white px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold tracking-tight">{item.title}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{item.note}</p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Choose Your Path</h3>
-              <p className="text-muted-foreground">
-                Start with DSA problems or dive into CS fundamentals. Track your progress as you learn.
-              </p>
-            </div>
 
-            <div className="text-center">
-              <div className="bg-primary text-primary-foreground w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                3
+              <div className="mt-7 flex flex-wrap gap-2.5">
+                {QUICK_LINKS.map((item) => (
+                  <Button key={item.label} asChild variant="outline" className="h-10 rounded-full border-zinc-200 bg-background/90 px-4 text-sm font-medium shadow-sm hover:border-primary hover:bg-primary/5">
+                    <Link href={item.href}>{item.label}</Link>
+                  </Button>
+                ))}
               </div>
-              <h3 className="text-xl font-semibold mb-2">Master & Achieve</h3>
-              <p className="text-muted-foreground">
-                Practice consistently, earn achievements, and prepare yourself for top tech interviews.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          <Card className="bg-gradient-to-br from-primary/10 via-purple-500/10 to-primary/10 border-primary/20">
-            <CardContent className="pt-12 pb-12 text-center">
-              <Trophy className="h-16 w-16 text-primary mx-auto mb-6" />
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Start Your Journey?</h2>
-              <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
-                Join thousands of learners who are already mastering DSA and CS concepts. 
-                Start tracking your progress today and take your first step towards landing your dream job!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" className="text-base px-8">
-                  <Link href="/login">
-                    Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg" className="h-12 rounded-full px-6 text-base font-semibold shadow-lg">
+                  <Link href="/exam">
+                    Explore Exams
+                    <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="text-base px-8">
-                  <Link href="/about">
-                    Learn More
-                  </Link>
+                <Button asChild size="lg" variant="outline" className="h-12 rounded-full px-6 text-base font-medium">
+                  <Link href="/contact">Contact Us</Link>
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                {quickHighlights.map((item) => (
+                  <div key={item} className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-4 py-2 text-sm shadow-sm backdrop-blur">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white shadow-2xl">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,197,94,0.16),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.14),transparent_30%)]" />
+              <CardContent className="relative space-y-5 p-6 md:p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
+                    <Trophy className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.24em] text-white/60">Live platform stats</p>
+                    <h2 className="text-2xl font-semibold">Everything organized for your next exam</h2>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/55">Published exams</p>
+                    <p className="mt-2 text-3xl font-bold">{totalPublishedExams}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/55">Premium tests</p>
+                    <p className="mt-2 text-3xl font-bold">{totalPremiumExams}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/55">Study tracks</p>
+                    <p className="mt-2 text-3xl font-bold">{totalFeaturedTracks}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/55">IT focus</p>
+                    <p className="mt-2 text-3xl font-bold">SEBI+</p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/55">Popular exam routes</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {spotlightPaths.slice(4).map((item) => (
+                      <Link
+                        key={item.title}
+                        href={item.href}
+                        className="rounded-xl border border-white/10 bg-white/10 px-3 py-3 transition-colors hover:bg-white/15"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{item.title}</p>
+                            <p className="mt-1 text-xs leading-5 text-white/65">{item.note}</p>
+                          </div>
+                          <ArrowRight className="mt-0.5 h-4 w-4 text-white/70" />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                  <div className="flex items-start gap-3">
+                    <Target className="mt-0.5 h-5 w-5 text-emerald-300" />
+                    <div>
+                      <p className="font-semibold">Built for focused category navigation</p>
+                      <p className="mt-1 text-sm leading-6 text-white/70">
+                        Move from category to exam card in one step, with premium gates and direct support when needed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
-      
-    </div>
+
+      <section className="container mx-auto px-4 py-12 md:py-16">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Featured tracks</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Choose your exam lane</h2>
+          </div>
+          <Button asChild variant="ghost" className="hidden rounded-full md:inline-flex">
+            <Link href="/exam">View all categories</Link>
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {FEATURED_TRACKS.map((track) => {
+            const Icon = track.icon;
+            const count = trackCounts.get(track.category) ?? 0;
+            return (
+              <Link key={track.category} href={`/exam/category/${encodeURIComponent(track.category.toLowerCase())}`} className="group">
+                <Card className="h-full overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+                  <CardContent className="p-5">
+                    <div className={`rounded-2xl bg-gradient-to-br ${track.tint} p-5 transition-transform group-hover:scale-[1.01]`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-slate-900 shadow-sm">
+                            <Icon className="h-6 w-6" />
+                          </div>
+                          <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-950">{track.title}</h3>
+                          <p className="mt-2 max-w-xs text-sm leading-6 text-slate-700">{track.subtitle}</p>
+                        </div>
+
+                        <div className="rounded-full border border-white/60 bg-white/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-sm">
+                          {count} live
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between rounded-2xl bg-white/75 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm backdrop-blur">
+                        <span>Open exams</span>
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="border-y bg-muted/30">
+        <div className="container mx-auto px-4 py-12 md:py-16">
+          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+            <Card className="rounded-3xl border bg-background shadow-sm">
+              <CardContent className="space-y-4 p-6 md:p-8">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Why this landing page works</p>
+                <h3 className="text-2xl font-bold tracking-tight">Fast access to the exact exam families your users care about</h3>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  Users can immediately jump to SEBI, RBI Grade B, IBPS SO IT, NABARD, PFRDA and related banking/IT tracks
+                  without extra noise.
+                </p>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                {
+                  title: "Clear entry points",
+                  text: "The homepage starts with the strongest exam families and avoids generic clutter.",
+                  icon: BookOpen,
+                },
+                {
+                  title: "Premium-friendly flow",
+                  text: "Premium access stays visible and easy to understand from the first screen.",
+                  icon: ShieldCheck,
+                },
+                {
+                  title: "Better exam discovery",
+                  text: "Every tile opens a category page with its published exams immediately visible.",
+                  icon: Users,
+                },
+                {
+                  title: "Built for conversion",
+                  text: "Buy now and contact support actions stay available from the key exam paths.",
+                  icon: Sparkles,
+                },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Card key={item.title} className="rounded-3xl border bg-background shadow-sm">
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-semibold">{item.title}</h4>
+                          <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.text}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 py-12 md:py-16">
+        <Card className="overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/10 via-background to-emerald-500/10 shadow-sm">
+          <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-8">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Next step</p>
+              <h3 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
+                Go straight to the category that matches your exam goal.
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                From SEBI to IBPS SO IT, each category page is ready with live tests and a premium gate where needed.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg" className="h-11 rounded-full px-6">
+                <Link href="/exam">
+                  Browse categories
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="h-11 rounded-full px-6">
+                <Link href="/contact">Contact support</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    </main>
   );
 }

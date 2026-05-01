@@ -27,35 +27,38 @@ async function verifyAnyCategoryPermission(request: NextRequest) {
 }
 
 async function getCategoryState() {
-  const [configSnap, examsSnap] = await Promise.all([
-    adminDB.collection("system_config").doc("exam_categories").get(),
-    adminDB.collection("exams").select("category").get(),
-  ]);
+  // Get only published exams
+  const publishedExamsSnap = await adminDB
+    .collection("exams")
+    .where("isPublished", "==", true)
+    .select("category")
+    .get();
 
-  const storedCategories = Array.isArray(configSnap.data()?.categories)
-    ? configSnap
-        .data()!
-        .categories.map((item: unknown) => normalizeCategory(String(item || "")))
-        .filter(Boolean)
-    : [];
+  // Get all exams (including unpublished) to check for uncategorized
+  const allExamsSnap = await adminDB.collection("exams").select("category").get();
 
-  const examCategories = examsSnap.docs
+  // Extract unique categories from published exams only
+  const examCategories = publishedExamsSnap.docs
     .map((doc) => normalizeCategory(String(doc.data()?.category || "")))
     .filter(Boolean);
 
-  const categories = Array.from(
-    new Set([...DEFAULT_CATEGORY_OPTIONS, ...storedCategories, ...examCategories])
+  // Check if there are any uncategorized exams (published or unpublished)
+  const hasUncategorized = allExamsSnap.docs.some(
+    doc => !doc.data()?.category || doc.data()?.category === "" || doc.data()?.category?.toUpperCase() === "OTHER"
   );
+
+  // Only include categories that have published exams
+  const categories = Array.from(new Set(examCategories));
+
+  // Add "OTHER" category if there are uncategorized exams and it'"'"'s not already in the list
+  if (hasUncategorized && !categories.includes("OTHER")) {
+    categories.push("OTHER");
+  }
 
   return categories;
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await verifyAnyCategoryPermission(request);
-  if (!auth.isValid) {
-    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
-  }
-
   try {
     const categories = await getCategoryState();
     return NextResponse.json({ categories });

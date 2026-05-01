@@ -56,12 +56,31 @@ export async function GET(request: NextRequest) {
     }
 
     const exams = await cacheAside(
-      CacheKeys.examList(category || "all"),
+      CacheKeys.examList((category?.toUpperCase()) || "all"),
       async () => {
         let examsQuery = adminDB.collection("exams").where("isPublished", "==", true);
 
-        if (category) {
-          examsQuery = examsQuery.where("category", "==", category);
+        if (category && category !== "other") {
+          // Filter by specific category (case-insensitive - convert to uppercase)
+          const normalizedCategory = category.toUpperCase();
+          examsQuery = examsQuery.where("category", "==", normalizedCategory);
+        } else if (category === "other") {
+          // For "other" category, fetch all and filter those without a category or with "OTHER"
+          const querySnapshot = await adminDB.collection("exams").where("isPublished", "==", true).get();
+          const list = querySnapshot.docs
+            .filter(doc => {
+              const docCategory = doc.data()?.category;
+              return !docCategory || docCategory === "" || docCategory?.toUpperCase() === "OTHER";
+            })
+            .map((doc) => toPublicExamSummary(doc.id, doc.data()));
+
+          list.sort((a: any, b: any) => {
+            const aTime = a.createdAt?.toMillis?.() || 0;
+            const bTime = b.createdAt?.toMillis?.() || 0;
+            return bTime - aTime;
+          });
+
+          return list;
         }
 
         const querySnapshot = await examsQuery.get();

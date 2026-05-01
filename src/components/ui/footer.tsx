@@ -1,27 +1,32 @@
-import { Github, Linkedin, Twitter, BookOpen, Code, Trophy, Users, FileText, Shield } from 'lucide-react'; 
+import { Github, Linkedin, Twitter, BookOpen, Code, Trophy, Users, ShieldCheck } from 'lucide-react'; 
 import Link from 'next/link';
+
+const examLinks = [
+  { label: "SEBI", href: "/exam/category/sebi" },
+  { label: "RBI Grade B", href: "/exam/category/rbi%20grade%20b" },
+  { label: "IBPS SO IT", href: "/exam/category/ibps%20so%20it" },
+  { label: "NABARD", href: "/exam/category/nabard" },
+  { label: "PFRDA", href: "/exam/category/pfrda" },
+  { label: "Banking IT", href: "/exam/category/banking" },
+];
 
 export function Footer() {
   return (
     <footer className="bg-background border-t">
       <div className="container mx-auto px-6 py-12">
-        {/* Updated grid to support 5 columns on larger screens */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 text-center sm:text-left">
-          
-          {/* Column 1: The Victory Key & Description */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 text-center sm:text-left">
           <div className="sm:col-span-2 lg:col-span-1">
             <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
               <span className="text-2xl">🔑</span> The Victory Key
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Master programming concepts with our comprehensive DSA sheets, CS subjects, interactive coding playground, and skill assessment exams.
+              Master finance and regulatory exam prep with category-wise mock tests for SEBI, RBI Grade B, IBPS SO IT, NABARD, PFRDA, and banking IT tracks.
             </p>
             <p className="text-xs text-muted-foreground">
               © {new Date().getFullYear()} The Victory Key. All Rights Reserved.
             </p>
           </div>
 
-          {/* Column 2: Learning Resources */}
           <div>
             <h3 className="font-semibold tracking-wider uppercase mb-4 flex items-center justify-center sm:justify-start gap-2">
               <BookOpen size={16} />
@@ -35,7 +40,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Assessment */}
           <div>
             <h3 className="font-semibold tracking-wider uppercase mb-4 flex items-center justify-center sm:justify-start gap-2">
               <Trophy size={16} />
@@ -47,8 +51,23 @@ export function Footer() {
               <li><Link href="/profile" className="text-muted-foreground hover:text-foreground transition-colors">My Progress</Link></li>
             </ul>
           </div>
+
+          <div>
+            <h3 className="font-semibold tracking-wider uppercase mb-4 flex items-center justify-center sm:justify-start gap-2">
+              <ShieldCheck size={16} />
+              Exams
+            </h3>
+            <ul className="space-y-2">
+              {examLinks.map((item) => (
+                <li key={item.label}>
+                  <Link href={item.href} className="text-muted-foreground hover:text-foreground transition-colors">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
           
-          {/* Column 4: Company & Legal */}
           <div>
             <h3 className="font-semibold tracking-wider uppercase mb-4 flex items-center justify-center sm:justify-start gap-2">
               <Users size={16} />
@@ -62,7 +81,6 @@ export function Footer() {
             </ul>
           </div>
           
-          {/* Column 5: Connect */}
           <div>
             <h3 className="font-semibold tracking-wider uppercase mb-4 flex items-center justify-center sm:justify-start gap-2">
               <Code size={16} />
@@ -89,7 +107,6 @@ export function Footer() {
           
         </div>
 
-        {/* Bottom Section */}
         <div className="border-t border-border mt-8 pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">

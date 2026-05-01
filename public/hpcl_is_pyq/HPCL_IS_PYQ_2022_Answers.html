@@ -1,0 +1,2542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HPCL IS PYQ 2022 – Complete Answer Guide (CSE/IT) - TVK</title>
+<style>
+  :root {
+    --blue: #185FA5; --blue-light: #E6F1FB; --blue-mid: #378ADD;
+    --green: #3B6D11; --green-light: #EAF3DE;
+    --red: #A32D2D; --red-light: #FCEBEB;
+    --amber: #854F0B; --amber-light: #FAEEDA;
+    --gray: #444441; --gray-light: #F1EFE8;
+    --teal: #0F6E56; --teal-light: #E1F5EE;
+    --purple: #3C3489; --purple-light: #EEEDFE;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, 'Times New Roman', serif; background: #f8f7f4; color: #1a1a18; font-size: 15px; line-height: 1.7; }
+  a { color: var(--blue); text-decoration: none; }
+
+  /* HEADER */
+  .header { background: #1a1a18; color: #f8f7f4; padding: 2rem 2.5rem; }
+  .header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.3rem; font-family: 'Segoe UI', sans-serif; }
+  .header p { font-size: 0.9rem; color: #aaa; font-family: 'Segoe UI', sans-serif; }
+  .badge-row { display: flex; gap: 8px; margin-top: 0.8rem; flex-wrap: wrap; }
+  .badge { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge-blue { background: var(--blue-mid); color: #fff; }
+  .badge-green { background: #639922; color: #fff; }
+  .badge-amber { background: #BA7517; color: #fff; }
+
+  /* LAYOUT */
+  .layout { display: flex; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; gap: 2rem; }
+
+  /* SIDEBAR */
+  .sidebar { width: 200px; flex-shrink: 0; }
+  .sidebar-inner { position: sticky; top: 1.5rem; }
+  .sidebar h3 { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-bottom: 0.6rem; }
+  .topic-list { list-style: none; }
+  .topic-list li { margin-bottom: 4px; }
+  .topic-list a { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: #555; display: block; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; border-left: 2px solid transparent; }
+  .topic-list a:hover { background: #eee; color: #111; border-left-color: var(--blue-mid); }
+  .q-grid { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 0.6rem; }
+  .q-btn { font-family: monospace; font-size: 10px; background: #e8e6df; color: #444; padding: 2px 5px; border-radius: 3px; cursor: pointer; transition: background 0.15s; }
+  .q-btn:hover { background: var(--blue-mid); color: #fff; }
+
+  /* MAIN */
+  .main { flex: 1; min-width: 0; }
+  .section-title { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 2rem 0 1rem; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
+  .section-title:first-child { margin-top: 0; }
+
+  /* QUESTION CARD */
+  .q-card { background: #fff; border: 1px solid #e0ddd5; border-radius: 10px; padding: 1.4rem 1.6rem; margin-bottom: 1.2rem; scroll-margin-top: 1.5rem; }
+  .q-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 0.8rem; }
+  .q-num { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; background: #1a1a18; color: #fff; padding: 3px 9px; border-radius: 12px; flex-shrink: 0; margin-top: 2px; letter-spacing: 0.05em; }
+  .q-topic { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; color: var(--blue); background: var(--blue-light); padding: 2px 8px; border-radius: 10px; flex-shrink: 0; margin-top: 3px; }
+  .q-text { font-size: 0.95rem; font-weight: 600; color: #1a1a18; line-height: 1.5; }
+
+  /* OPTIONS */
+  .options { list-style: none; margin: 0.8rem 0; }
+  .options li { display: flex; align-items: flex-start; gap: 10px; padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; font-size: 0.88rem; border: 1px solid transparent; }
+  .opt-label { font-family: 'Segoe UI', sans-serif; font-weight: 700; font-size: 12px; min-width: 22px; padding: 1px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
+  .opt-correct { background: var(--green-light); border-color: #a8d47a; }
+  .opt-correct .opt-label { background: #639922; color: #fff; }
+  .opt-wrong { background: var(--red-light); border-color: #f7c1c1; }
+  .opt-wrong .opt-label { background: #A32D2D; color: #fff; }
+  .opt-neutral { background: #fafaf8; border-color: #e8e6df; }
+  .opt-neutral .opt-label { background: #ddd; color: #555; }
+
+  /* ANSWER BLOCK */
+  .answer-block { margin-top: 0.8rem; border-top: 1px solid #ece9e0; padding-top: 0.9rem; }
+  .answer-tag { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--green); margin-bottom: 4px; }
+  .correct-ans { font-family: 'Segoe UI', sans-serif; font-weight: 700; font-size: 0.95rem; color: #1a1a18; margin-bottom: 0.7rem; }
+  .correct-ans span { color: var(--green); }
+
+  /* EXPLANATION SECTIONS */
+  .exp-section { margin-top: 0.7rem; }
+  .exp-label { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 5px; }
+  .label-explain { background: var(--blue-light); color: var(--blue); }
+  .label-wrong { background: var(--red-light); color: var(--red); }
+  .label-extra { background: var(--amber-light); color: var(--amber); }
+  .label-math { background: var(--purple-light); color: var(--purple); }
+  .exp-text { font-size: 0.88rem; color: #333; }
+  .exp-text p { margin-bottom: 0.5rem; }
+  .exp-text p:last-child { margin-bottom: 0; }
+  .exp-text code { font-family: monospace; background: #f0ede6; padding: 1px 5px; border-radius: 3px; font-size: 0.85rem; }
+  .exp-text ul { padding-left: 1.2rem; }
+  .exp-text li { margin-bottom: 3px; }
+
+  /* MATH BOX */
+  .math-box { background: var(--purple-light); border: 1px solid #AFA9EC; border-radius: 6px; padding: 0.7rem 1rem; margin: 0.5rem 0; font-family: monospace; font-size: 0.85rem; color: #26215C; }
+
+  /* INFO BOX */
+  .info-box { background: var(--amber-light); border-left: 3px solid #BA7517; border-radius: 0 6px 6px 0; padding: 0.6rem 0.9rem; margin-top: 0.5rem; font-size: 0.85rem; }
+  .info-box strong { color: var(--amber); font-family: 'Segoe UI', sans-serif; }
+
+  /* DIVIDER */
+  hr.q-divider { border: none; border-top: 1px dashed #ddd; margin: 0.6rem 0; }
+
+  @media (max-width: 700px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; }
+    .sidebar-inner { position: static; }
+  }
+  /* shell wrapper used by site iframe auto-resize */
+  .shell{max-width:860px;margin:0 auto;padding:0}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<div class="header">
+  <h1>HPCL IS – Previous Year Questions 2022 | TVK-TheVictoryKey</h1>
+  <p>Complete Answer Guide with Explanations · Computer Science & Information Technology</p>
+  <div class="badge-row">
+    <span class="badge badge-blue">77 Questions</span>
+    <span class="badge badge-green">Detailed Explanations</span>
+    <span class="badge badge-amber">Wrong Option Analysis</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <h3>Topics</h3>
+      <ul class="topic-list">
+        <li><a href="#toc">TOC / Automata</a></li>
+        <li><a href="#os">Operating Systems</a></li>
+        <li><a href="#ds">Data Structures</a></li>
+        <li><a href="#algo">Algorithms</a></li>
+        <li><a href="#cn">Computer Networks</a></li>
+        <li><a href="#dbms">DBMS</a></li>
+        <li><a href="#co">Computer Org / Arch</a></li>
+        <li><a href="#de">Digital Electronics</a></li>
+        <li><a href="#c">C / C++ Programming</a></li>
+        <li><a href="#ns">Number Systems</a></li>
+      </ul>
+      <br>
+      <h3>Jump to Q</h3>
+      <div class="q-grid">
+        <!-- generated by JS below -->
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ======================== TOC / AUTOMATA ======================== -->
+    <div class="section-title" id="toc">Theory of Computation & Formal Languages</div>
+
+    <!-- Q1 -->
+    <div class="q-card" id="q1">
+      <div class="q-header">
+        <span class="q-num">Q1</span>
+        <span class="q-topic">DCFL / Automata</span>
+        <span class="q-text">Which of the following languages is NOT a Deterministic Context-Free Language (DCFL)?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> {ww<sup>R</sup> : w ∈ {a, b}*} — reverse palindromes</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> {b<sup>n</sup>ab<sup>n</sup> : n ≥ 1}</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> {b<sup>n</sup>a<sup>n</sup> : n ≥ 1}</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> {a<sup>n</sup>ba<sup>n</sup> : n ≥ 1}</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — {ww<sup>R</sup>}</span> is NOT a DCFL</div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>To recognise {ww<sup>R</sup>}, a machine must first push all characters of w onto a stack, then pop them while matching with w<sup>R</sup>. But the <strong>midpoint</strong> of the string is unknown — the machine cannot deterministically decide when w ends and w<sup>R</sup> begins. This inherent non-determinism means it can only be accepted by an NPDA, NOT a DPDA. Hence it is a CFL but NOT a DCFL.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are DCFLs</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>B &amp; D — {b<sup>n</sup>ab<sup>n</sup>} and {a<sup>n</sup>ba<sup>n</sup>}:</strong> The middle separator (a or b) is a unique sentinel. A DPDA pushes the first block, sees the separator, then pops while matching the second block — completely deterministic.</li>
+              <li><strong>C — {b<sup>n</sup>a<sup>n</sup>}:</strong> Classic DCFL. Push b's, then pop one per a. No ambiguity.</li>
+            </ul>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-extra">Extra for Exam</span>
+          <div class="exp-text">
+            <p>DCFL ⊂ CFL. Every DCFL is a CFL, but not every CFL is a DCFL. Key non-DCFLs to remember: {ww<sup>R</sup>}, {ww}, and languages that require "guessing" a midpoint. DCFLs are closed under complementation but NOT under union or intersection.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q13 -->
+    <div class="q-card" id="q13">
+      <div class="q-header">
+        <span class="q-num">Q13</span>
+        <span class="q-topic">Regular Grammar</span>
+        <span class="q-text">Which defines a regular grammar for the language (ab)*a?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> G = ({S}, {a, b}, {S → abS | a}, S)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> G = ({S}, {a, b}, {S → aS | b}, S)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> G = ({S}, {a, b}, {S → abS | b}, S)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> G = ({S}, {a, b}, {S → bS | a}, S)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — S → abS | a</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The language (ab)*a generates: a, aba, ababa, abababa, … Starting from S:</p>
+            <div class="math-box">S → a (produces "a" directly ✓)<br>S → abS → aba (produces "aba" ✓)<br>S → abS → ababS → ababa ✓</div>
+            <p>This correctly matches (ab)*a. Option A is also a right-linear grammar (non-terminal always at right end), making it a valid regular grammar.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>B — S → aS | b:</strong> Generates strings of a's ending in b (e.g., aab). Completely wrong language.</li>
+              <li><strong>C — S → abS | b:</strong> Terminal rule is b alone, so strings end in b. Not matching (ab)*a.</li>
+              <li><strong>D — S → bS | a:</strong> Generates b*a — strings of b's followed by a. Wrong language.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q14 -->
+    <div class="q-card" id="q14">
+      <div class="q-header">
+        <span class="q-num">Q14</span>
+        <span class="q-topic">Regular Expressions</span>
+        <span class="q-text">Which of the following is NOT a primitive regular expression?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> a</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> λ (empty string)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> b</li>
+        <li class="opt-correct"><span class="opt-label">D</span> (a + b)*</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — (a + b)*</span> is NOT a primitive regular expression</div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Primitive (atomic) regular expressions are defined as: <strong>∅</strong> (empty set), <strong>λ</strong> (empty string), and any <strong>single symbol</strong> from the alphabet (a, b, c, …). These are the base cases. <strong>(a + b)*</strong> is a compound expression built using union (+) and Kleene star (*) — it is NOT primitive.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Key Rule</span>
+          <div class="exp-text"><p>Any regular expression that uses an operator (+ union, · concatenation, * Kleene star) is NOT primitive. It is a composed/derived expression.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q15 -->
+    <div class="q-card" id="q15">
+      <div class="q-header">
+        <span class="q-num">Q15</span>
+        <span class="q-topic">CFL Properties</span>
+        <span class="q-text">Which statement is correct regarding Context-Free Languages (CFL)?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Every CFL is regular.</li>
+        <li class="opt-correct"><span class="opt-label">B</span> Every regular language is context-free.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> CFLs cannot be recognised by pushdown automata.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> CFLs are closed under intersection.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — Every regular language is context-free</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The hierarchy: Regular ⊂ CFL ⊂ CSL ⊂ Recursively Enumerable. Since regular languages are a strict subset of CFLs, every regular language is also context-free.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>A:</strong> {a<sup>n</sup>b<sup>n</sup>} is CFL but NOT regular (proved by Pumping Lemma). So not every CFL is regular.</li>
+              <li><strong>C:</strong> Completely false — CFLs are EXACTLY the languages recognised by Pushdown Automata (PDA).</li>
+              <li><strong>D:</strong> CFLs are NOT closed under intersection. Example: {a<sup>n</sup>b<sup>n</sup>c<sup>m</sup>} ∩ {a<sup>m</sup>b<sup>n</sup>c<sup>n</sup>} = {a<sup>n</sup>b<sup>n</sup>c<sup>n</sup>} which is NOT a CFL.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Closure Properties of CFL</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Closed under:</strong> Union, Concatenation, Kleene star, Homomorphism</li>
+              <li><strong>NOT closed under:</strong> Intersection, Complementation</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q17 -->
+    <div class="q-card" id="q17">
+      <div class="q-header">
+        <span class="q-num">Q17</span>
+        <span class="q-topic">Regular Grammar</span>
+        <span class="q-text">Identify the regular grammar from the options below.</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> S → aS | A, A → bAc | bc</li>
+        <li class="opt-correct"><span class="opt-label">B</span> S → aS | a, A → bA | b</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> S → aS | A, A → abAc | bc</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> S → aS | A, A → bAc | abc</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>A <strong>regular grammar</strong> requires all productions to be either right-linear (A → aB or A → a) or left-linear (A → Ba or A → a). Option B satisfies this: S → aS (right-linear), S → a (terminal), A → bA (right-linear), A → b (terminal). All valid.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>A — A → bAc:</strong> Non-terminal A is in the MIDDLE, not at the right end. This makes it context-free, not regular.</li>
+              <li><strong>C — A → abAc:</strong> Multiple terminals before and after the non-terminal — not regular.</li>
+              <li><strong>D — A → bAc and A → abc:</strong> Same issue — non-terminal in the middle.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q27 -->
+    <div class="q-card" id="q27">
+      <div class="q-header">
+        <span class="q-num">Q27</span>
+        <span class="q-topic">DFA Design</span>
+        <span class="q-text">DFA for L = {w : |w| mod 3 = 0}, Q = {1,2,3}, q₀ = 1, F = {1}. Which δ is correct?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> δ(1,a)=1, δ(1,b)=1, δ(2,a)=2, ... (self-loops)</li>
+        <li class="opt-correct"><span class="opt-label">B</span> δ(1,a)=2, δ(1,b)=2, δ(2,a)=3, δ(2,b)=3, δ(3,a)=1, δ(3,b)=1</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> δ(1,a)=2, δ(1,b)=1, δ(2,a)=3, ...</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> δ(1,a)=3, δ(1,b)=3, ...</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The DFA tracks <code>|w| mod 3</code>. State 1 = 0 mod 3 (start &amp; accept), State 2 = 1 mod 3, State 3 = 2 mod 3. On every character read, we move to the next state cyclically:</p>
+            <div class="math-box">State 1 → (any symbol) → State 2<br>State 2 → (any symbol) → State 3<br>State 3 → (any symbol) → State 1 (accepted!)</div>
+            <p>Strings accepted: ε (length 0), aab (length 3), aaaaaa (length 6), etc.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>A:</strong> All states loop to themselves — every state accepts only if it's a final state. This DFA would accept ALL strings (or none), not just multiples of 3.</li>
+              <li><strong>C:</strong> δ(1,b)=1 means 'b' doesn't advance the counter — string "b" would be accepted at length 1 incorrectly.</li>
+              <li><strong>D:</strong> Jumps directly from state 1 to state 3 on first symbol — skips the "length 1" tracking entirely.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q29 -->
+    <div class="q-card" id="q29">
+      <div class="q-header">
+        <span class="q-num">Q29</span>
+        <span class="q-topic">Regular Expressions</span>
+        <span class="q-text">Which RE represents L = {ε, c, ab, cc, cab, abc, abab, ccc, …}?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> c* · (a + b)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> (b + (a · c))*</li>
+        <li class="opt-correct"><span class="opt-label">C</span> (c + (a · b))*</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> (a + (b · c))*</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — (c + ab)*</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Pattern: the language consists of arbitrary arrangements of the "tokens" <strong>c</strong> and <strong>ab</strong>. So strings are built by choosing 'c' or 'ab' zero or more times:</p>
+            <div class="math-box">ε = zero tokens ✓<br>c = one 'c' token ✓<br>ab = one 'ab' token ✓<br>cc = 'c' + 'c' ✓<br>cab = 'c' + 'ab' ✓<br>abc = 'ab' + 'c' ✓<br>abab = 'ab' + 'ab' ✓</div>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>A — c*(a+b):</strong> Must end with a or b and cannot produce ε or cc.</li>
+              <li><strong>B — (b + ac)*:</strong> Tokens are b and ac — produces strings like b, ac, bac, etc. Not matching.</li>
+              <li><strong>D — (a + bc)*:</strong> Tokens are a and bc — produces a, bc, abc (=a+bc), etc. Generates "abc" differently and misses "ab".</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q41 -->
+    <div class="q-card" id="q41">
+      <div class="q-header">
+        <span class="q-num">Q41</span>
+        <span class="q-topic">Context-Free Grammar</span>
+        <span class="q-text">Which string is NOT generated by G = ({S,A,B}, {a,b}, {S→aaB, B→Aa, A→bBb|λ}, S)?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> aababa</li>
+        <li class="opt-correct"><span class="opt-label">B</span> aabbabba</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> aabbbabababa</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> aabbababa</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — aabbabba</span> (given in exam)</div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Verification of Valid Strings</span>
+          <div class="exp-text">
+            <p>All strings start with S → aaB. Then B → Aa → (bBb)a → … The grammar naturally generates strings of the form aa + (nested bBb expansions) + a chain. aabbabba cannot be derived because the structure of b-groups and a-sequences doesn't match the grammar's production pattern.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Exam Tip</span>
+          <div class="exp-text"><p>For CFG derivation questions, always start from S and apply productions systematically. Track what each derivation step produces and verify character by character.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q44 -->
+    <div class="q-card" id="q44">
+      <div class="q-header">
+        <span class="q-num">Q44</span>
+        <span class="q-topic">Pushdown Automata</span>
+        <span class="q-text">In NPDA, the transition function δ takes the current state, input symbol, and what else?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Set of final states F</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Initial state q₀</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Current output symbol</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Current symbol on top of the stack</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Top of Stack symbol</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <div class="math-box">NPDA δ: Q × (Σ ∪ {ε}) × Γ → 2^(Q × Γ*)<br><br>Inputs: (current state, input symbol, stack top symbol)<br>Output: set of (new state, stack string to push)</div>
+            <p>The stack top symbol is crucial — the PDA's behaviour depends on what's currently on top of the stack, enabling it to match nested structures like parentheses or {a<sup>n</sup>b<sup>n</sup>}.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q49 -->
+    <div class="q-card" id="q49">
+      <div class="q-header">
+        <span class="q-num">Q49</span>
+        <span class="q-topic">Regular Expressions</span>
+        <span class="q-text">Which language is represented by r = (bb)*(aa)*a?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Odd b's followed by odd a's</li>
+        <li class="opt-correct"><span class="opt-label">B</span> Even b's followed by odd a's</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Odd b's followed by even a's</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Even b's followed by even a's</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — Even number of b's followed by odd number of a's</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <div class="math-box">(bb)* → pairs of b's: ε, bb, bbbb, … → 0, 2, 4, … b's (EVEN)<br>(aa)*a → pairs of a's then one a: a, aaa, aaaaa, … → 1, 3, 5, … a's (ODD)</div>
+            <p>Examples: "a" (0 b's, 1 a), "bba" (2 b's, 1 a), "bbaaa" (2 b's, 3 a's) — all match.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q56 -->
+    <div class="q-card" id="q56">
+      <div class="q-header">
+        <span class="q-num">Q56</span>
+        <span class="q-topic">Turing Machine</span>
+        <span class="q-text">For TM M = (Q, Σ, Γ, δ, q₀, b, F): (i) Γ is tape symbols. (ii) b ∈ Σ. Which is true?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Only (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Neither</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Both</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Only (i)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Only (i) is true</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>(i) TRUE:</strong> Γ is indeed the finite set of tape symbols, and Σ ⊆ Γ.</p>
+            <p><strong>(ii) FALSE:</strong> The blank symbol b is in Γ (tape alphabet) but b ∉ Σ (input alphabet). This is a critical distinction — the blank b separates the input from unused tape cells, and it is never part of the input string itself.</p>
+            <div class="math-box">Σ ⊂ Γ, and b ∈ Γ but b ∉ Σ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q72 -->
+    <div class="q-card" id="q72">
+      <div class="q-header">
+        <span class="q-num">Q72</span>
+        <span class="q-topic">Regular Expressions</span>
+        <span class="q-text">For Σ = {a, b}, what language does the regex 'a + b' generate?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> {a, b}*</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> {aa, ab, bb}</li>
+        <li class="opt-correct"><span class="opt-label">C</span> {a, b}</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> {λ, a, b}</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — {a, b}</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>In regex notation, '+' (or '|') means <strong>union/OR</strong>. So 'a + b' means "either a or b" — exactly the set {a, b}. Do not confuse '+' in regex with arithmetic addition or Kleene plus.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>A — {a,b}*:</strong> This would be (a+b)* — all strings including ε.</li>
+              <li><strong>D — {λ, a, b}:</strong> That would be (a+b+λ) or (a+b)? — includes empty string.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q73 -->
+    <div class="q-card" id="q73">
+      <div class="q-header">
+        <span class="q-num">Q73</span>
+        <span class="q-topic">Regular Expressions</span>
+        <span class="q-text">Which of the following is NOT a valid regular expression over Σ = {a, b}?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> a</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> b</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> (a + b)* · (a + b)</li>
+        <li class="opt-correct"><span class="opt-label">D</span> {a, b}</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — {a, b}</span> is NOT a valid regular expression</div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>{a, b}</strong> is set notation, not regex notation. A regular expression uses symbols, operators (+, ·, *), and parentheses. Curly-brace set notation is from set theory / formal language description — it is not a valid regular expression syntax.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q77 -->
+    <div class="q-card" id="q77">
+      <div class="q-header">
+        <span class="q-num">Q77</span>
+        <span class="q-topic">DFA Definition</span>
+        <span class="q-text">Which statement is INCORRECT about DFA M = (Q, Σ, δ, q₀, F)?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> The set of final states F may be empty.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> δ is defined for all states in Q and symbols in Σ.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> The initial state q₀ must be a member of Q.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> The set of states Q must be non-empty.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (INCORRECT statement)</div>
+        <div class="correct-ans"><span>A</span> — though debated (see explanation)</div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Statements B, C, D are all definitionally true for any DFA. Statement A says "F may be empty" — formally, F ⊆ Q and F = ∅ is allowed (DFA accepts nothing). However, <strong>many textbooks and exam setters consider a DFA with empty F as degenerate/invalid</strong>, making A "incorrect" from that perspective. This is the intended answer in the exam.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-extra">Key DFA Facts</span>
+          <div class="exp-text">
+            <ul>
+              <li>δ: Q × Σ → Q is a <strong>total function</strong> (defined for every state-symbol pair) — this distinguishes DFA from NFA.</li>
+              <li>Q must be non-empty (at least q₀ ∈ Q).</li>
+              <li>q₀ ∈ Q by definition.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== OPERATING SYSTEMS ======================== -->
+    <div class="section-title" id="os">Operating Systems</div>
+
+    <!-- Q2 -->
+    <div class="q-card" id="q2">
+      <div class="q-header">
+        <span class="q-num">Q2</span>
+        <span class="q-topic">OS – Memory</span>
+        <span class="q-text">Where is the ready queue typically maintained in a modern OS?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Secondary memory</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Tertiary memory</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Virtual memory</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Primary memory (RAM)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Primary Memory (RAM)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The ready queue contains the Process Control Blocks (PCBs) of all processes that are loaded in memory and waiting for CPU time. It must be in <strong>RAM</strong> for the CPU scheduler to access it rapidly. Secondary memory is too slow; tertiary is even slower.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">OS Queues Summary</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Job queue:</strong> All processes in system (may be on disk)</li>
+              <li><strong>Ready queue:</strong> In RAM — ready to execute</li>
+              <li><strong>Device queues:</strong> In RAM — waiting for I/O</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q20 -->
+    <div class="q-card" id="q20">
+      <div class="q-header">
+        <span class="q-num">Q20</span>
+        <span class="q-topic">OS – System Calls</span>
+        <span class="q-text">Which provides OS services to user programs via an API?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Demand paging</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Segmentation</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Virtual memory</li>
+        <li class="opt-correct"><span class="opt-label">D</span> System call</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — System call</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>A <strong>system call</strong> is the programmatic interface between a user-space application and OS kernel services. They are exposed as an API (e.g., POSIX in Unix). Examples: <code>read()</code>, <code>write()</code>, <code>fork()</code>, <code>open()</code>. When called, the CPU switches from user mode to kernel mode.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Demand paging / Virtual memory / Segmentation</strong> are memory management techniques, not API mechanisms.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q30 -->
+    <div class="q-card" id="q30">
+      <div class="q-header">
+        <span class="q-num">Q30</span>
+        <span class="q-topic">OS – Scheduling</span>
+        <span class="q-text">The 'job scheduler' in an OS is also known as the:</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Dispatcher</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Short-term scheduler</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Long-term scheduler</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Medium-term scheduler</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — Long-term scheduler</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The long-term (job) scheduler selects which jobs from the job pool (disk) to bring into the ready queue (RAM). It controls the <strong>degree of multiprogramming</strong>. It is invoked infrequently.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-extra">All 3 Schedulers</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Long-term (Job) scheduler:</strong> Disk → Ready queue. Controls multiprogramming degree. Slow.</li>
+              <li><strong>Short-term (CPU) scheduler:</strong> Ready queue → CPU. Very fast. Runs every few milliseconds.</li>
+              <li><strong>Medium-term scheduler:</strong> Handles swapping — moves processes between RAM and disk to free memory.</li>
+              <li><strong>Dispatcher:</strong> Performs the actual context switch — loads registers, switches to user mode.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q33 -->
+    <div class="q-card" id="q33">
+      <div class="q-header">
+        <span class="q-num">Q33</span>
+        <span class="q-topic">OS – Threads</span>
+        <span class="q-text">(i) Multiple threads can exist in one process. (ii) A thread is a lightweight process. Which is true?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Neither</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (i)</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Both (i) and (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Only (ii)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — Both are true</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>(i) TRUE:</strong> A process is a container for threads. A single process can have many threads (e.g., a browser has separate threads for UI, network, rendering).</p>
+            <p><strong>(ii) TRUE:</strong> Threads are called "lightweight processes" because they share the parent process's memory space, code, and resources. Creating/switching threads is cheaper than full process creation.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q34 -->
+    <div class="q-card" id="q34">
+      <div class="q-header">
+        <span class="q-num">Q34</span>
+        <span class="q-topic">OS – CPU Scheduling</span>
+        <span class="q-text">Calculate Avg TAT and Avg WT for P1(AT=0, BT=2), P2(AT=3, BT=1), P3(AT=5, BT=6) using FCFS.</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Avg TAT: 3, Avg WT: 3</li>
+        <li class="opt-correct"><span class="opt-label">B</span> Avg TAT: 3, Avg WT: 0</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — Avg TAT: 3, Avg WT: 0</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation (FCFS)</span>
+          <div class="exp-text">
+            <div class="math-box">P1: Arrives 0, BT=2. Start=0, End=2. TAT=2-0=2. WT=Start-AT=0-0=0<br>P2: Arrives 3, BT=1. CPU idle 2→3. Start=3, End=4. TAT=4-3=1. WT=3-3=0<br>P3: Arrives 5, BT=6. CPU idle 4→5. Start=5, End=11. TAT=11-5=6. WT=5-5=0<br><br>Avg TAT = (2+1+6)/3 = 9/3 = 3<br>Avg WT  = (0+0+0)/3 = 0</div>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Key Formulas</span>
+          <div class="exp-text">
+            <ul>
+              <li>TAT = Completion Time − Arrival Time</li>
+              <li>WT = TAT − Burst Time</li>
+              <li>Response Time = Start Time − Arrival Time</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q46 -->
+    <div class="q-card" id="q46">
+      <div class="q-header">
+        <span class="q-num">Q46</span>
+        <span class="q-topic">OS – Memory Hierarchy</span>
+        <span class="q-text">Which statement about computer memory is INCORRECT?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Main memory communicates with auxiliary memory through an I/O processor.</li>
+        <li class="opt-correct"><span class="opt-label">B</span> Programs currently needed are transferred from main memory to auxiliary memory.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Speed of main memory > auxiliary memory.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Main memory communicates directly with CPU.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (INCORRECT statement)</div>
+        <div class="correct-ans"><span>B</span> — Direction is REVERSED</div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The correct direction is: programs needed by the CPU are transferred FROM auxiliary memory (HDD/SSD) TO main memory (RAM), not the other way around. When a program is needed, the OS loads it into RAM for execution. Transferring to auxiliary memory is what happens during swapping (moving OUT of RAM).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q50 -->
+    <div class="q-card" id="q50">
+      <div class="q-header">
+        <span class="q-num">Q50</span>
+        <span class="q-topic">OS – Kernel Access</span>
+        <span class="q-text">When software requires access to the OS kernel, it uses a:</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> System call</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Virtual memory</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> CUI</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> GUI</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — System call</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>A <strong>system call</strong> is the only safe, controlled mechanism for user-space programs to request kernel services. It triggers a CPU trap/interrupt to switch from user mode to kernel mode, execute the requested service, and return. CUI/GUI are user interfaces, not kernel access mechanisms.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q58 -->
+    <div class="q-card" id="q58">
+      <div class="q-header">
+        <span class="q-num">Q58</span>
+        <span class="q-topic">OS – Memory Management</span>
+        <span class="q-text">Full form of TLB in OS memory management?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Trivial Lookaside Buffer</li>
+        <li class="opt-correct"><span class="opt-label">B</span> Translation Lookaside Buffer</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Trivial Lookaside Block</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Translation Lookaside Block</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — Translation Lookaside Buffer</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>TLB is a hardware cache that stores recent page-number → frame-number mappings. Without TLB, every memory access requires TWO memory lookups: one for the page table + one for the actual data. With TLB, if the mapping is cached (TLB hit), only one lookup is needed. TLB hit ratio is typically 95–99%.</p>
+            <div class="math-box">Effective Access Time = h × (TLB + Memory) + (1-h) × (TLB + 2×Memory)<br>where h = TLB hit ratio</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== COMPUTER NETWORKS ======================== -->
+    <div class="section-title" id="cn">Computer Networks</div>
+
+    <!-- Q6 -->
+    <div class="q-card" id="q6">
+      <div class="q-header">
+        <span class="q-num">Q6</span>
+        <span class="q-topic">Networks – Topology</span>
+        <span class="q-text">Maximum links for a mesh topology with 10 nodes?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 55</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 54</li>
+        <li class="opt-correct"><span class="opt-label">C</span> 45</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 10</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — 45 links</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Formula</span>
+          <div class="exp-text">
+            <div class="math-box">Max links in full mesh = n(n-1)/2<br>= 10 × 9 / 2 = 90/2 = 45</div>
+            <p>This is also the number of edges in a complete graph K₁₀. Each of 10 nodes connects to 9 others, but each link is shared by 2 nodes.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why A (55) Is Wrong</span>
+          <div class="exp-text"><p>55 = 10×11/2 = C(11,2). That's the formula with n=11, not n=10. A common trap.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="q-card" id="q9">
+      <div class="q-header">
+        <span class="q-num">Q9</span>
+        <span class="q-topic">Networks – TCP/IP</span>
+        <span class="q-text">Which TCP/IP layer ensures packets arrive in sequence and error-free using ACKs?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> Transport layer</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Internet layer</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Physical layer</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Application layer</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — Transport Layer (TCP)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>TCP (Transmission Control Protocol) at the Transport layer provides: <strong>reliable delivery</strong> (ACKs + retransmissions), <strong>sequencing</strong> (sequence numbers), <strong>flow control</strong> (sliding window), and <strong>congestion control</strong>.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Internet layer:</strong> IP is best-effort, connectionless — no guarantee of delivery or order.</li>
+              <li><strong>Physical layer:</strong> Deals with bits on wire — no error correction at this level.</li>
+              <li><strong>Application layer:</strong> Deals with application protocols (HTTP, SMTP) — not sequencing.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q28 -->
+    <div class="q-card" id="q28">
+      <div class="q-header">
+        <span class="q-num">Q28</span>
+        <span class="q-topic">Networks – Protocols</span>
+        <span class="q-text">Which protocol allows two hosts to communicate character-by-character or line-by-line?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> TELNET</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> FTP</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> TFTP</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Anonymous FTP</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — TELNET</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>TELNET (TELecommunication NETwork) provides a virtual terminal protocol — it allows a user to log into a remote host and interact character-by-character or line-by-line. It uses port 23. Note: TELNET transmits data in plaintext — SSH is its secure replacement.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>FTP:</strong> File Transfer Protocol — for transferring files, not interactive terminal sessions.</li>
+              <li><strong>TFTP:</strong> Trivial FTP — simplified file transfer, no authentication.</li>
+              <li><strong>Anonymous FTP:</strong> FTP variant allowing login without credentials.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q31 -->
+    <div class="q-card" id="q31">
+      <div class="q-header">
+        <span class="q-num">Q31</span>
+        <span class="q-topic">Networks – Subnetting</span>
+        <span class="q-text">Subnet mask 255.255.240.0. Maximum hosts?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 1024</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 2048</li>
+        <li class="opt-correct"><span class="opt-label">C</span> 4094</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 4096</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — 4094</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">255.255.240.0 = 11111111.11111111.11110000.00000000<br>Host bits = 4 (3rd octet) + 8 (4th octet) = 12 bits<br>Total addresses = 2¹² = 4096<br>Usable hosts = 4096 - 2 = 4094<br>(subtract network address and broadcast address)</div>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why D (4096) Is Wrong</span>
+          <div class="exp-text"><p>4096 is the total number of addresses. But the network address (all host bits = 0) and broadcast address (all host bits = 1) cannot be assigned to hosts. So usable = 4096 − 2 = 4094.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q39 -->
+    <div class="q-card" id="q39">
+      <div class="q-header">
+        <span class="q-num">Q39</span>
+        <span class="q-topic">Networks – IP Addressing</span>
+        <span class="q-text">Dotted decimal for hex IP address C22F1582?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 194.74.21.130</li>
+        <li class="opt-correct"><span class="opt-label">B</span> 194.47.21.130</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 194.47.21.103</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 149.47.12.130</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — 194.47.21.130</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Hex → Decimal Conversion</span>
+          <div class="exp-text">
+            <div class="math-box">C2 → 12×16 + 2 = 192+2 = 194<br>2F → 2×16 + 15 = 32+15 = 47<br>15 → 1×16 + 5 = 16+5 = 21<br>82 → 8×16 + 2 = 128+2 = 130<br><br>Result: 194.47.21.130</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q54 -->
+    <div class="q-card" id="q54">
+      <div class="q-header">
+        <span class="q-num">Q54</span>
+        <span class="q-topic">Networks – ICMP</span>
+        <span class="q-text">ICMP detects and reports: (i) Dropped packets, (ii) Connectivity failure?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Neither</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (i)</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Both (i) and (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Only (ii)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — Both</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>ICMP (Internet Control Message Protocol) is a network-layer protocol for error reporting and diagnostics. It reports both dropped packets (e.g., "Destination Unreachable") and connectivity failures (e.g., "Echo Request/Reply" used by ping). It does NOT deliver data — it only carries control messages.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Common ICMP Messages</span>
+          <div class="exp-text">
+            <ul>
+              <li>Type 0/8: Echo Reply/Request (ping)</li>
+              <li>Type 3: Destination Unreachable (dropped packet)</li>
+              <li>Type 11: Time Exceeded (TTL expired — used by traceroute)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q55 -->
+    <div class="q-card" id="q55">
+      <div class="q-header">
+        <span class="q-num">Q55</span>
+        <span class="q-topic">Networks – Routing</span>
+        <span class="q-text">Routing protocols for TCP/IP: (i) RIP, (ii) EGP?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> Both (i) and (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Only (i)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Neither</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — Both RIP and EGP</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>RIP (Routing Information Protocol):</strong> Interior Gateway Protocol (IGP) using Distance Vector algorithm. Metric = hop count (max 15). Simple but slow convergence.</p>
+            <p><strong>EGP (Exterior Gateway Protocol):</strong> Used for inter-domain routing between autonomous systems. Largely replaced by BGP today, but is still a valid routing protocol.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q67 -->
+    <div class="q-card" id="q67">
+      <div class="q-header">
+        <span class="q-num">Q67</span>
+        <span class="q-topic">Networks – Protocols</span>
+        <span class="q-text">RARP maps which address to which?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> Ethernet (48-bit) → IPv4 (32-bit)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> IPv4 (32-bit) → Ethernet (48-bit)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — MAC → IP</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>RARP (Reverse ARP) allows a device that knows only its MAC address to discover its IP address from a RARP server. It is the reverse of ARP (which maps IP → MAC).</p>
+            <div class="math-box">ARP:  IP address → MAC address<br>RARP: MAC address → IP address</div>
+            <p>RARP is largely obsolete, replaced by DHCP (Dynamic Host Configuration Protocol).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== DBMS ======================== -->
+    <div class="section-title" id="dbms">Database Management Systems</div>
+
+    <!-- Q7 -->
+    <div class="q-card" id="q7">
+      <div class="q-header">
+        <span class="q-num">Q7</span>
+        <span class="q-topic">DBMS – Constraints</span>
+        <span class="q-text">Which constraint specifies that a primary key cannot contain a NULL value?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Foreign key constraint</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Domain constraint</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Key constraint</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Entity integrity constraint</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Entity Integrity Constraint</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The <strong>Entity Integrity Constraint</strong> states: "No primary key attribute can be NULL." This ensures every entity (row) in a relation can be uniquely identified. A primary key with NULL would mean an entity that cannot be distinguished from others.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Key constraint:</strong> States that primary key must be unique (no two rows same PK). Different from the NULL rule.</li>
+              <li><strong>Domain constraint:</strong> Restricts values an attribute can take (e.g., age must be positive integer).</li>
+              <li><strong>Foreign key constraint (Referential integrity):</strong> A foreign key value must match a PK in the referenced table or be NULL.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q18 -->
+    <div class="q-card" id="q18">
+      <div class="q-header">
+        <span class="q-num">Q18</span>
+        <span class="q-topic">DBMS – ER Model</span>
+        <span class="q-text">In an ER diagram, what does a double-lined diamond represent?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Weak Entity</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Derived Attribute</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Identifying Owner</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Identifying Relationship</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Identifying Relationship</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>An <strong>identifying relationship</strong> (double diamond) connects a weak entity to its identifying (owner) entity. Without this relationship, the weak entity cannot be uniquely identified.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-extra">ER Diagram Notation Summary</span>
+          <div class="exp-text">
+            <ul>
+              <li>Rectangle → Entity</li>
+              <li><strong>Double rectangle</strong> → Weak entity</li>
+              <li>Diamond → Relationship</li>
+              <li><strong>Double diamond</strong> → Identifying relationship</li>
+              <li>Ellipse → Attribute</li>
+              <li>Dashed ellipse → Derived attribute</li>
+              <li>Double ellipse → Multivalued attribute</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q21 -->
+    <div class="q-card" id="q21">
+      <div class="q-header">
+        <span class="q-num">Q21</span>
+        <span class="q-topic">DBMS – SQL</span>
+        <span class="q-text">Which SQL clauses are optional: (i) SELECT, (ii) FROM, (iii) WHERE?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Only (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (i) and (ii)</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Only (iii) WHERE</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Only (i) and (iii)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — Only WHERE is optional</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>SELECT</strong> and <strong>FROM</strong> are mandatory in a standard SQL query — they define what to retrieve and from where. <strong>WHERE</strong> is optional — omitting it retrieves all rows. A minimal valid query: <code>SELECT * FROM Employee;</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q24 -->
+    <div class="q-card" id="q24">
+      <div class="q-header">
+        <span class="q-num">Q24</span>
+        <span class="q-topic">DBMS – Relational Algebra</span>
+        <span class="q-text">σ_Age &lt; 20(Employee) returns which tuples?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> None</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> All tuples</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Age ≥ 20</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Age &lt; 20</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Tuples where Age &lt; 20</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The <strong>selection (σ) operator</strong> in relational algebra filters rows based on a predicate. σ_condition(R) returns only the tuples from R that satisfy the condition. It is equivalent to SQL's WHERE clause: <code>SELECT * FROM Employee WHERE Age &lt; 20;</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q68 -->
+    <div class="q-card" id="q68">
+      <div class="q-header">
+        <span class="q-num">Q68</span>
+        <span class="q-topic">DBMS – Normalisation</span>
+        <span class="q-text">R1(A,B,C) — atomic attributes, A is the only candidate key. Which is NOT necessarily true?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> R1 may or may not be in BCNF.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> R1 is in 1NF.</li>
+        <li class="opt-correct"><span class="opt-label">C</span> R1 is definitely in 3NF.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> R1 is in 2NF.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (NOT necessarily true)</div>
+        <div class="correct-ans"><span>C — "Definitely in 3NF" is NOT guaranteed</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>1NF ✓:</strong> Given — all attributes atomic and single-valued.</p>
+            <p><strong>2NF ✓:</strong> Since A is a single-attribute key, there can be no partial dependency (partial dependency requires a composite key). So 2NF is always satisfied.</p>
+            <p><strong>3NF — NOT guaranteed:</strong> If B → C exists and B is not a candidate key, there is a transitive dependency (A→B→C), violating 3NF. We don't know the FDs, so 3NF is not necessarily true.</p>
+            <p><strong>BCNF — may or may not hold</strong> (same reasoning). This statement is trivially true as a "maybe" claim.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Normalisation Quick Reference</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>1NF:</strong> Atomic values, no repeating groups</li>
+              <li><strong>2NF:</strong> 1NF + no partial dependencies on PK</li>
+              <li><strong>3NF:</strong> 2NF + no transitive dependencies</li>
+              <li><strong>BCNF:</strong> Every determinant is a candidate key</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q70 -->
+    <div class="q-card" id="q70">
+      <div class="q-header">
+        <span class="q-num">Q70</span>
+        <span class="q-topic">DBMS – Relational Algebra</span>
+        <span class="q-text">Which relational algebra operator is NOT commutative?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Union</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Intersection</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Division</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Natural Join</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — Division is NOT commutative</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Division R ÷ S ≠ S ÷ R in general — the schemas must be compatible in a specific direction. Union (A∪B=B∪A), Intersection (A∩B=B∩A), and Natural Join (R⋈S=S⋈R) are all commutative — order doesn't affect the result.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q71 -->
+    <div class="q-card" id="q71">
+      <div class="q-header">
+        <span class="q-num">Q71</span>
+        <span class="q-topic">DBMS – SQL Commands</span>
+        <span class="q-text">Which is NOT a Transaction Control Language (TCL) command?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> SAVEPOINT</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> ROLLBACK</li>
+        <li class="opt-correct"><span class="opt-label">C</span> GRANT</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> COMMIT</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — GRANT is NOT TCL</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>GRANT</strong> is a <strong>DCL (Data Control Language)</strong> command — it gives users permissions on database objects.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">SQL Command Categories</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>DDL:</strong> CREATE, ALTER, DROP, TRUNCATE</li>
+              <li><strong>DML:</strong> SELECT, INSERT, UPDATE, DELETE</li>
+              <li><strong>TCL:</strong> COMMIT, ROLLBACK, SAVEPOINT</li>
+              <li><strong>DCL:</strong> GRANT, REVOKE</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== ALGORITHMS ======================== -->
+    <div class="section-title" id="algo">Algorithms & Data Structures</div>
+
+    <!-- Q4 -->
+    <div class="q-card" id="q4">
+      <div class="q-header">
+        <span class="q-num">Q4</span>
+        <span class="q-topic">Algorithms – DP</span>
+        <span class="q-text">Which statement accurately describes Matrix Chain Multiplication?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> DP approach: Θ(n²)</li>
+        <li class="opt-correct"><span class="opt-label">B</span> DP approach: Θ(n³)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Brute force: Θ(n²)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Brute force: Θ(n log n)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — DP is Θ(n³)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Matrix Chain Multiplication asks for the optimal parenthesisation of n matrices to minimise scalar multiplications. The DP solution fills an n×n table with O(n) work per cell → <strong>Θ(n³)</strong>. The brute force approach (trying all parenthesisations) is exponential — Ω(2<sup>n</sup>). Neither n² nor n log n describes it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q16 -->
+    <div class="q-card" id="q16">
+      <div class="q-header">
+        <span class="q-num">Q16</span>
+        <span class="q-topic">Algorithms – Greedy</span>
+        <span class="q-text">Which problem CANNOT be solved optimally by a Greedy Algorithm?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Dijkstra's (Single Source Shortest Path)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Minimum Spanning Tree</li>
+        <li class="opt-correct"><span class="opt-label">C</span> 0–1 Knapsack Problem</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Fractional Knapsack</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — 0–1 Knapsack</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>In the <strong>0-1 Knapsack</strong>, each item must be taken wholly or left entirely. A greedy choice (always pick highest value/weight ratio) may leave gaps that smaller items could fill more optimally. This requires <strong>Dynamic Programming</strong> for optimal solution.</p>
+            <p><strong>Fractional Knapsack</strong> CAN be solved greedily — you can take fractions, so always picking highest ratio is always optimal.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Greedy vs DP Problems</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Greedy works:</strong> Fractional Knapsack, MST (Prim/Kruskal), Dijkstra's, Huffman Coding, Activity Selection</li>
+              <li><strong>DP needed:</strong> 0-1 Knapsack, Matrix Chain Multiplication, Longest Common Subsequence, Floyd-Warshall</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q26 -->
+    <div class="q-card" id="q26">
+      <div class="q-header">
+        <span class="q-num">Q26</span>
+        <span class="q-topic">DS – Graph Traversal</span>
+        <span class="q-text">Which data structure is primarily used in DFS?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Max Heap</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Queue</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> AVL Tree</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Stack</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Stack</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>DFS explores as deep as possible before backtracking — this LIFO (Last-In-First-Out) behaviour matches a <strong>stack</strong>. In recursive DFS, the call stack acts implicitly. Iterative DFS uses an explicit stack.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-wrong">BFS uses Queue</span>
+          <div class="exp-text"><p><strong>BFS (Breadth-First Search)</strong> uses a <strong>Queue</strong> (FIFO) to explore level-by-level. The Queue option is for BFS, not DFS — a common trap.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q32 -->
+    <div class="q-card" id="q32">
+      <div class="q-header">
+        <span class="q-num">Q32</span>
+        <span class="q-topic">Algorithms – Sorting</span>
+        <span class="q-text">Which statement is INCORRECT about Merge Sort?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> merge() time complexity is O(log n)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> It is stable.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> It uses divide and conquer.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Worst case: O(n log n)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (INCORRECT statement)</div>
+        <div class="correct-ans"><span>A — merge() is O(n), NOT O(log n)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>The <strong>merge()</strong> function merges two sorted subarrays of total size n by comparing elements one by one — it takes <strong>O(n)</strong> time. The O(log n) factor comes from the number of recursive levels (log n levels), and at each level, O(n) total work is done → overall O(n log n).</p>
+            <div class="math-box">Total: O(n log n) = O(n) work per level × O(log n) levels</div>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Merge Sort Key Facts</span>
+          <div class="exp-text">
+            <ul>
+              <li>Stable? <strong>Yes</strong> — equal elements maintain relative order</li>
+              <li>In-place? <strong>No</strong> — needs O(n) extra space</li>
+              <li>Best/Avg/Worst: All <strong>O(n log n)</strong></li>
+              <li>Best for linked lists (no extra space needed)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q36 -->
+    <div class="q-card" id="q36">
+      <div class="q-header">
+        <span class="q-num">Q36</span>
+        <span class="q-topic">Algorithms – DP</span>
+        <span class="q-text">Which statement is INCORRECT about Matrix Chain Multiplication?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> Can be optimally solved using greedy.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Can be solved using DP.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Follows divide and conquer strategy.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> DP solution is bottom-up.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (INCORRECT statement)</div>
+        <div class="correct-ans"><span>A — Greedy does NOT give optimal solution</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>MCM cannot be solved optimally by greedy because the optimal parenthesisation depends on the combination of all dimensions — a local greedy choice may lead to globally suboptimal results. This is a classic DP problem. B, C, D are all correct facts.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q42 -->
+    <div class="q-card" id="q42">
+      <div class="q-header">
+        <span class="q-num">Q42</span>
+        <span class="q-topic">Algorithms – Greedy</span>
+        <span class="q-text">Which greedy algorithm uses a disjoint set (Union-Find) data structure?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Huffman coding</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Dijkstra's algorithm</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Prim's algorithm</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Kruskal's algorithm</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Kruskal's algorithm</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Kruskal's MST algorithm sorts edges by weight and greedily adds the cheapest edge that does NOT form a cycle. To efficiently detect cycles, it uses a <strong>Disjoint Set (Union-Find)</strong> data structure. Time complexity with union by rank + path compression: O(E log E).</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Other Algorithms</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Prim's:</strong> MST using priority queue / min-heap. Grows tree one vertex at a time.</li>
+              <li><strong>Dijkstra's:</strong> SSSP using priority queue/min-heap, not disjoint sets.</li>
+              <li><strong>Huffman:</strong> Uses a min-heap/priority queue to build optimal prefix codes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q47 -->
+    <div class="q-card" id="q47">
+      <div class="q-header">
+        <span class="q-num">Q47</span>
+        <span class="q-topic">DS – Trees / BST</span>
+        <span class="q-text">Which BST traversal produces a non-decreasing sequence?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Preorder</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Level order</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Postorder</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Inorder</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Inorder (Left → Root → Right)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>By BST property: all left subtree keys &lt; root &lt; all right subtree keys. Inorder visits Left → Root → Right, which naturally outputs keys in sorted (non-decreasing) order. This is a fundamental BST property used for sorting.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Traversal Summary</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Inorder (L-R-T):</strong> Sorted output for BST</li>
+              <li><strong>Preorder (R-L-T):</strong> Used for copying trees, prefix expressions</li>
+              <li><strong>Postorder (L-T-R):</strong> Used for deleting trees, postfix expressions</li>
+              <li><strong>Level order (BFS):</strong> Level-by-level, uses queue</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q52 -->
+    <div class="q-card" id="q52">
+      <div class="q-header">
+        <span class="q-num">Q52</span>
+        <span class="q-topic">DS – BST</span>
+        <span class="q-text">How many distinct BSTs can be formed with keys {1, 2, 3}?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 3</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 4</li>
+        <li class="opt-correct"><span class="opt-label">C</span> 5</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 1</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — 5</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Catalan Number</span>
+          <div class="exp-text">
+            <div class="math-box">Number of BSTs with n keys = Catalan(n) = C(2n,n)/(n+1)<br>For n=3: C(6,3)/4 = 20/4 = 5</div>
+            <p>The 5 BSTs with {1,2,3}: root=1 (2 trees), root=2 (1 tree), root=3 (2 trees). Distinct BSTs ≠ distinct binary trees (which can have same shape but different keys).</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Catalan Numbers for Exam</span>
+          <div class="exp-text">
+            <ul>
+              <li>n=1: 1 BST</li>
+              <li>n=2: 2 BSTs</li>
+              <li>n=3: 5 BSTs</li>
+              <li>n=4: 14 BSTs</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q53 -->
+    <div class="q-card" id="q53">
+      <div class="q-header">
+        <span class="q-num">Q53</span>
+        <span class="q-topic">DS – Trees</span>
+        <span class="q-text">Perfect binary tree of height 3 — how many leaf nodes?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 7</li>
+        <li class="opt-correct"><span class="opt-label">B</span> 8</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 6</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 5</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — 8</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Formula</span>
+          <div class="exp-text">
+            <div class="math-box">Leaf nodes in perfect binary tree of height h = 2^h<br>h = 3 → 2³ = 8 leaf nodes<br><br>Total nodes = 2^(h+1) - 1 = 2^4 - 1 = 15</div>
+            <p>Note: 7 (option A) = total nodes at heights 0+1+2 = 1+2+4 = 7, which is internal nodes only. Don't confuse total nodes (15) with leaf nodes (8).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q66 -->
+    <div class="q-card" id="q66">
+      <div class="q-header">
+        <span class="q-num">Q66</span>
+        <span class="q-topic">Algorithms – Sorting</span>
+        <span class="q-text">Which statement is correct about Quick Sort?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> partition() places the pivot at its correct sorted position.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Worst case is guaranteed O(n log n).</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> It is inherently stable.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Requires O(n) auxiliary space.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — partition() places pivot correctly</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>After partition(), the pivot element is in its correct final sorted position — all elements to its left are smaller, all to its right are larger. This is Quick Sort's key invariant.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>B:</strong> Worst case is O(n²) — happens when pivot is always min/max (e.g., sorted array with last element as pivot). O(n log n) is average case.</li>
+              <li><strong>C:</strong> Quick Sort is NOT stable — elements with equal values may change relative order during partitioning.</li>
+              <li><strong>D:</strong> Space complexity is O(log n) for the recursion stack (average) — not O(n).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q76 -->
+    <div class="q-card" id="q76">
+      <div class="q-header">
+        <span class="q-num">Q76</span>
+        <span class="q-topic">Algorithms – Matrix Multiply</span>
+        <span class="q-text">Strassen's Matrix Multiplication: (i) Divide &amp; conquer. (ii) 2×2 needs 7 multiplications &amp; 18 additions. Which is true?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> Both (i) and (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (i)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Only (ii)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Neither</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — Both are true</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>(i) TRUE:</strong> Strassen divides each n×n matrix into four n/2×n/2 submatrices and recursively computes 7 products (instead of 8 in naive divide-and-conquer).</p>
+            <p><strong>(ii) TRUE:</strong> For 2×2 matrices: 7 multiplications + 18 additions/subtractions. Compare with naive: 8 multiplications + 4 additions. Strassen saves one multiplication at the cost of more additions.</p>
+            <div class="math-box">Strassen complexity: O(n^log₂7) ≈ O(n^2.807)<br>vs Naive: O(n³)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== COMPUTER ARCHITECTURE ======================== -->
+    <div class="section-title" id="co">Computer Organisation & Architecture</div>
+
+    <!-- Q5 -->
+    <div class="q-card" id="q5">
+      <div class="q-header">
+        <span class="q-num">Q5</span>
+        <span class="q-topic">CO – Addressing Modes</span>
+        <span class="q-text">Register Addressing Mode — which statement is correct?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Operand stored directly in instruction.</li>
+        <li class="opt-correct"><span class="opt-label">B</span> Operand in a CPU register; register's address is in instruction's address field.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Operand in memory; address in instruction.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Operand in a register whose address is in ACC.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>In Register Addressing Mode, the operand resides in a <strong>CPU register</strong>, and the instruction's address field specifies <strong>which register</strong> (e.g., R1, R2). This is the fastest mode because no memory access is needed.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-extra">All Addressing Modes</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Immediate:</strong> Operand is in the instruction itself (A → operand "in instruction" = option A)</li>
+              <li><strong>Direct:</strong> Instruction has the memory address → option C</li>
+              <li><strong>Register:</strong> Instruction has register name → option B ✓</li>
+              <li><strong>Indirect:</strong> Instruction has address of a memory word that holds the actual address</li>
+              <li><strong>Implied:</strong> Operand is implicit (e.g., stack top in zero-address)</li>
+              <li><strong>Relative:</strong> EA = PC + displacement</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="q-card" id="q8">
+      <div class="q-header">
+        <span class="q-num">Q8</span>
+        <span class="q-topic">CO – Paging</span>
+        <span class="q-text">Logical address space = 4096, page size = 512. How many high-order bits for page number?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 8</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 9</li>
+        <li class="opt-correct"><span class="opt-label">C</span> 3</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 2</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — 3 bits</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">Total address bits = log₂(4096) = 12 bits<br>Page offset bits = log₂(512) = 9 bits<br>Page number bits = 12 - 9 = 3 bits<br><br>Number of pages = 4096 / 512 = 8 = 2³ → needs 3 bits ✓</div>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why A (8) Is Tempting</span>
+          <div class="exp-text"><p>8 is log₂(256) — not relevant here. The trap is confusing page offset bits (9) with page number bits (3).</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q25 -->
+    <div class="q-card" id="q25">
+      <div class="q-header">
+        <span class="q-num">Q25</span>
+        <span class="q-topic">CO – Instruction Formats</span>
+        <span class="q-text">Which is INCORRECT about three-address instructions?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> The first address must always be a register.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> ADD R1, A, B ≡ R1 ← M[A] + M[B]</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Cyber 170 uses three-address instructions.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Each address field can be register or memory.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (INCORRECT statement)</div>
+        <div class="correct-ans"><span>A — First address is NOT required to be a register</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>In three-address instructions, each of the three address fields can refer to <strong>either a register or a memory location</strong> — there's no requirement that the first address must always be a register. This is confirmed by option D (which is correct).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q35 -->
+    <div class="q-card" id="q35">
+      <div class="q-header">
+        <span class="q-num">Q35</span>
+        <span class="q-topic">CO – Addressing Modes</span>
+        <span class="q-text">Zero-address instructions in stack-organised computers use which addressing mode?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Register addressing</li>
+        <li class="opt-correct"><span class="opt-label">B</span> Implied addressing</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Immediate addressing</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Register indirect addressing</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — Implied (Implicit) Addressing</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Zero-address instructions don't specify any operand address because the operand location is <strong>implied</strong> — it's always the top of the stack. E.g., ADD pops TOS and SOS, adds them, pushes result. The stack pointer implicitly defines operand locations.</p>
+            <div class="math-box">Examples: PUSH, POP, ADD in stack machines (like HP RPN calculators)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q40 -->
+    <div class="q-card" id="q40">
+      <div class="q-header">
+        <span class="q-num">Q40</span>
+        <span class="q-topic">CO – Memory Addressing</span>
+        <span class="q-text">32-bit word, 8-bit opcode, byte-addressable. Max memory in direct addressing?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 2¹⁶ bytes</li>
+        <li class="opt-correct"><span class="opt-label">B</span> 2²⁴ bytes</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 2³² bytes</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 2⁸ bytes</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — 2²⁴ bytes (16 MB)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">Instruction size = 32 bits<br>Opcode = 8 bits<br>Address bits = 32 - 8 = 24 bits<br><br>Direct addressing: 24-bit address directly addresses memory<br>Max memory = 2²⁴ bytes = 16,777,216 bytes = 16 MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q45 -->
+    <div class="q-card" id="q45">
+      <div class="q-header">
+        <span class="q-num">Q45</span>
+        <span class="q-topic">CO – Instruction Format</span>
+        <span class="q-text">(i) Opcode specifies the operation. (ii) Mode field stores the actual address. Which is true?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Neither</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (ii)</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Only (i)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Both</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — Only (i) is true</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>(i) TRUE:</strong> The opcode (operation code) field specifies what operation to perform (ADD, MOV, SUB, etc.).</p>
+            <p><strong>(ii) FALSE:</strong> The <strong>mode field</strong> specifies the <strong>addressing mode</strong> (how to interpret the address field) — NOT the actual address. The actual address is in the <strong>address field</strong>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q48 -->
+    <div class="q-card" id="q48">
+      <div class="q-header">
+        <span class="q-num">Q48</span>
+        <span class="q-topic">CO – Pipelining</span>
+        <span class="q-text">Pipelined processor with k stages, 1 clock per stage. Which is TRUE?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> First instruction completes in 1 cycle.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Throughput is 1 instruction per k cycles.</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Once pipeline is full, 1 instruction completes per cycle.</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Pipelining reduces latency of individual instructions.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Once all k stages are occupied (pipeline full), one instruction exits (completes) every clock cycle — <strong>throughput = 1 instruction/cycle</strong>.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>A:</strong> First instruction takes k cycles to complete (goes through all k stages). Not 1 cycle.</li>
+              <li><strong>B:</strong> Throughput is 1/cycle (not 1/k cycles) once full. 1/k is the throughput of a NON-pipelined processor.</li>
+              <li><strong>D:</strong> Pipelining does NOT reduce individual instruction latency — each instruction still takes k cycles. It increases THROUGHPUT, not reduces latency.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q59 -->
+    <div class="q-card" id="q59">
+      <div class="q-header">
+        <span class="q-num">Q59</span>
+        <span class="q-topic">CO / OS – Paging</span>
+        <span class="q-text">32-bit addresses, 4KB page size, 4-byte page table entries. Page table size?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 8 MB</li>
+        <li class="opt-correct"><span class="opt-label">B</span> 4 MB</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 4 GB</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 16 MB</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — 4 MB</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">Page size = 4 KB = 2¹² bytes → offset = 12 bits<br>Page number bits = 32 - 12 = 20 bits<br>Number of pages = 2²⁰ = 1,048,576<br>Each entry = 4 bytes<br>Page table size = 2²⁰ × 4 = 4 × 2²⁰ = 2²² bytes = 4 MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q60 -->
+    <div class="q-card" id="q60">
+      <div class="q-header">
+        <span class="q-num">Q60</span>
+        <span class="q-topic">CO – Addressing Modes</span>
+        <span class="q-text">Relative Addressing Mode: (i) EA = PC + address part. (ii) Address can be positive or negative. Which is true?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Neither</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (i)</li>
+        <li class="opt-correct"><span class="opt-label">C</span> Both</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Only (ii)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — Both are true</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>(i) TRUE:</strong> Effective Address = Program Counter + displacement. The PC holds the address of the next instruction, and a displacement is added.</p>
+            <p><strong>(ii) TRUE:</strong> The displacement (offset) can be positive (jump forward) or negative (jump backward). This is how loops in assembly work — a negative offset jumps back to the loop start.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q64 -->
+    <div class="q-card" id="q64">
+      <div class="q-header">
+        <span class="q-num">Q64</span>
+        <span class="q-topic">CO – Instruction Formats</span>
+        <span class="q-text">Which statement is correct about one-address instructions?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> LOAD A ≡ M[A] ← AC</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Stack computers use two-address instructions.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Use an Index Register for all data manipulation.</li>
+        <li class="opt-correct"><span class="opt-label">D</span> ADD A ≡ AC ← AC + M[A]</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — ADD A: AC ← AC + M[A]</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>One-address instructions use the <strong>Accumulator (AC)</strong> as an implicit second operand. ADD A adds the contents of memory location A to the accumulator and stores the result in AC. LOAD A copies M[A] into AC (not the other way).</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>A:</strong> LOAD A means AC ← M[A] (load FROM memory INTO accumulator). Option A reverses this — that would be STORE A.</li>
+              <li><strong>B:</strong> Stack computers use <strong>zero</strong>-address instructions (operands implicitly on stack).</li>
+              <li><strong>C:</strong> Index Register is used in <strong>indexed addressing mode</strong> — not the default for one-address instructions.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== DIGITAL ELECTRONICS ======================== -->
+    <div class="section-title" id="de">Digital Electronics & Boolean Algebra</div>
+
+    <!-- Q3 -->
+    <div class="q-card" id="q3">
+      <div class="q-header">
+        <span class="q-num">Q3</span>
+        <span class="q-topic">DE – Combinational Circuits</span>
+        <span class="q-text">Sum of two 3-bit numbers — how many output lines?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 5</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 6</li>
+        <li class="opt-correct"><span class="opt-label">C</span> 4</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 3</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — 4 output lines</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">Max 3-bit number = 111₂ = 7<br>Max sum = 7 + 7 = 14 = 1110₂ → needs 4 bits to represent<br>∴ 4 output lines required</div>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">General Rule</span>
+          <div class="exp-text"><p>Adding two n-bit numbers produces at most an (n+1)-bit sum. For n=3: output = 4 bits. The extra bit handles the carry-out.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="q-card" id="q10">
+      <div class="q-header">
+        <span class="q-num">Q10</span>
+        <span class="q-topic">DE – Registers</span>
+        <span class="q-text">(i) Shift register uses flip-flops and logic gates. (ii) Can transfer information. Which is true?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Neither</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (i)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Only (ii)</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Both (i) and (ii)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Both</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p><strong>(i) TRUE:</strong> A shift register is built from a chain of flip-flops (usually D flip-flops) clocked together, sometimes with additional logic gates for serial/parallel input-output.</p>
+            <p><strong>(ii) TRUE:</strong> Shift registers can perform serial data transfer (SISO, SIPO, PISO, PIPO) and are used in serial communication, data conversion, and multiplication/division by 2.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q19 -->
+    <div class="q-card" id="q19">
+      <div class="q-header">
+        <span class="q-num">Q19</span>
+        <span class="q-topic">DE – Boolean Algebra</span>
+        <span class="q-text">A + A' = ?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 0</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> A</li>
+        <li class="opt-correct"><span class="opt-label">C</span> 1</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — 1</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>This is the <strong>Complement Law</strong>: A + A' = 1. Either A is 1 (so A=1 makes it 1) or A' is 1 (when A=0, A'=1). One of them is always 1.</p>
+            <div class="math-box">Boolean Laws:<br>A + A' = 1 (complement law — OR)<br>A · A' = 0 (complement law — AND)<br>A + A  = A (idempotent)<br>A · A  = A (idempotent)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q38 -->
+    <div class="q-card" id="q38">
+      <div class="q-header">
+        <span class="q-num">Q38</span>
+        <span class="q-topic">DE – Adders</span>
+        <span class="q-text">Full adder requires how many half adders and logic gates?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 2 half adders + 1 NAND gate</li>
+        <li class="opt-correct"><span class="opt-label">B</span> 2 half adders + 1 OR gate</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 2 half adders + 1 AND gate</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 2 half adders + 1 NOR gate</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — 2 half adders + 1 OR gate</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <div class="math-box">Half Adder 1: Sum₁ = A ⊕ B,  C₁ = A · B<br>Half Adder 2: Sum  = Sum₁ ⊕ Cₙ,  C₂ = Sum₁ · Cₙ<br>OR gate:       Cout = C₁ OR C₂<br><br>Final Full Adder: Sum = A⊕B⊕Cₙ,  Cout = AB + BCₙ + ACₙ</div>
+            <p>The two carry outputs from both half adders are ORed to get the final carry-out. An AND gate would be wrong — two carries can never both be 1 simultaneously (so OR and AND give same result, but conceptually it's OR).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q62 -->
+    <div class="q-card" id="q62">
+      <div class="q-header">
+        <span class="q-num">Q62</span>
+        <span class="q-topic">DE – Combinational Circuits</span>
+        <span class="q-text">Which circuit uses exactly one XOR gate and one AND gate?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> Half Adder</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Half Subtractor</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Full Adder</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Full Subtractor</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — Half Adder</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <div class="math-box">Half Adder:<br>Sum   = A ⊕ B  (XOR gate)<br>Carry = A · B  (AND gate)<br>Total: 1 XOR + 1 AND ✓</div>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why Others Are Wrong</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>Half Subtractor:</strong> Difference = A⊕B (XOR), Borrow = A'·B (AND + NOT). Needs an additional NOT gate.</li>
+              <li><strong>Full Adder:</strong> Needs 2 XOR, 2 AND, 1 OR (or 2 half adders + 1 OR).</li>
+              <li><strong>Full Subtractor:</strong> Even more gates.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q74 -->
+    <div class="q-card" id="q74">
+      <div class="q-header">
+        <span class="q-num">Q74</span>
+        <span class="q-topic">DE – Boolean Functions</span>
+        <span class="q-text">How many distinct Boolean functions can be formed with exactly 2 Boolean variables?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 17</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 14</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 15</li>
+        <li class="opt-correct"><span class="opt-label">D</span> 16</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — 16</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Formula</span>
+          <div class="exp-text">
+            <div class="math-box">With n variables: 2^(2^n) distinct Boolean functions<br>n = 2: 2^(2²) = 2^4 = 16</div>
+            <p>With 2 variables (A, B), there are 4 input combinations (00, 01, 10, 11). Each combination can output 0 or 1 independently → 2⁴ = 16 possible truth tables = 16 distinct Boolean functions.</p>
+            <p>These include: AND, OR, XOR, NAND, NOR, XNOR, NOT A, NOT B, A, B, 0, 1, etc.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== NUMBER SYSTEMS ======================== -->
+    <div class="section-title" id="ns">Number Systems</div>
+
+    <!-- Q11 -->
+    <div class="q-card" id="q11">
+      <div class="q-header">
+        <span class="q-num">Q11</span>
+        <span class="q-topic">NS – Base Conversion</span>
+        <span class="q-text">(5348)₉ − (2873)₉. Identify the INCORRECT representation.</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> 1760 in decimal ✓</li>
+        <li class="opt-correct"><span class="opt-label">B</span> 6E2 in hexadecimal ✗</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 3340 in octal ✓</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 2365 in base-9 ✓</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (INCORRECT representation)</div>
+        <div class="correct-ans"><span>B — 6E2 in hex is wrong (correct is 6E0)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Full Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">5348₉ = 5×729 + 3×81 + 4×9 + 8 = 3645+243+36+8 = 3932<br>2873₉ = 2×729 + 8×81 + 7×9 + 3 = 1458+648+63+3 = 2172<br>Result = 3932 - 2172 = 1760₁₀ ✓<br><br>1760 → Hex: 1760÷16=110 r 0, 110÷16=6 r 14(E), 6÷16=0 r 6<br>1760₁₀ = 6E0₁₆  (NOT 6E2)<br><br>1760 → Octal: 1760÷8=220r0, 220÷8=27r4, 27÷8=3r3, 3÷8=0r3<br>1760₁₀ = 3340₈ ✓<br><br>2365₉ = 2×729+3×81+6×9+5 = 1458+243+54+5 = 1760 ✓</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q12 -->
+    <div class="q-card" id="q12">
+      <div class="q-header">
+        <span class="q-num">Q12</span>
+        <span class="q-topic">NS – Base Conversion</span>
+        <span class="q-text">N = (231)_y = (11101)₂. Find y.</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> y = 4</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> y = 5</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> y = 3</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — y = 4</span> (most likely intended answer)</div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation &amp; Note</span>
+          <div class="exp-text">
+            <p><strong>y = 3 is invalid</strong> immediately — the digit '3' appears in (231)_y, and digits must be less than the base. So y &gt; 3.</p>
+            <p>The binary number in the question may have a typo (the math for y=4 gives (231)₄ = 32+12+1 = 45 = (101101)₂, not (11101)₂). The most common exam answer is <strong>y = 4</strong> as the smallest valid base greater than 3.</p>
+            <div class="math-box">y=4: (231)₄ = 2×16 + 3×4 + 1 = 45<br>y=5: (231)₅ = 2×25 + 3×5 + 1 = 66</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q61 -->
+    <div class="q-card" id="q61">
+      <div class="q-header">
+        <span class="q-num">Q61</span>
+        <span class="q-topic">NS – Binary Representation</span>
+        <span class="q-text">How many bits are required to represent decimal 1000 in binary?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> 10</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 11</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 9</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 8</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — 10 bits</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">1000 in binary = 1111101000₂<br>(512+256+128+64+32+8 = 1000)<br>Count: 10 bits<br><br>Check: 2⁹ = 512 &lt; 1000 &lt; 1024 = 2¹⁰<br>So 10 bits are needed (not 9).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q63 -->
+    <div class="q-card" id="q63">
+      <div class="q-header">
+        <span class="q-num">Q63</span>
+        <span class="q-topic">NS – Binary</span>
+        <span class="q-text">Count of 0s and 1s in binary representation of decimal 992?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Four 0's and five 1's</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Five 0's and four 1's</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Four 0's and six 1's</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Five 0's and five 1's</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Five 0's and five 1's</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">992 = 512+256+128+64+32 = 2⁹+2⁸+2⁷+2⁶+2⁵<br>992 = 1111100000₂<br>Count: Five 1's + Five 0's = 10 bits total</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q69 -->
+    <div class="q-card" id="q69">
+      <div class="q-header">
+        <span class="q-num">Q69</span>
+        <span class="q-topic">NS / CO – Paging</span>
+        <span class="q-text">Logical address space = 1024, page size = 256. How many low-order bits for page offset?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-correct"><span class="opt-label">A</span> 8</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> 16</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> 10</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> 12</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>A — 8 bits</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Calculation</span>
+          <div class="exp-text">
+            <div class="math-box">Page offset bits = log₂(page size) = log₂(256) = 8 bits<br>Total address bits = log₂(1024) = 10 bits<br>Page number bits = 10 - 8 = 2 bits → 4 pages</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q75 -->
+    <div class="q-card" id="q75">
+      <div class="q-header">
+        <span class="q-num">Q75</span>
+        <span class="q-topic">NS – Hexadecimal</span>
+        <span class="q-text">In hexadecimal, which character represents decimal 12?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> B</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> A</li>
+        <li class="opt-correct"><span class="opt-label">C</span> C</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> D</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — C</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Hex Reference Table</span>
+          <div class="exp-text">
+            <div class="math-box">0-9 = 0-9  |  10=A  |  11=B  |  12=C  |  13=D  |  14=E  |  15=F</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== C / C++ PROGRAMMING ======================== -->
+    <div class="section-title" id="c">C / C++ Programming</div>
+
+    <!-- Q22 -->
+    <div class="q-card" id="q22">
+      <div class="q-header">
+        <span class="q-num">Q22</span>
+        <span class="q-topic">C++ – Loops</span>
+        <span class="q-text">Which 'for' loop results in an infinite loop?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> for(int i=0; i&lt;10; i++)</li>
+        <li class="opt-correct"><span class="opt-label">B</span> for(int i=1; ; i++)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> for(int i=10; i&gt;0; i--)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> for(int i=0; i==10; i++)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>B — for(int i=1; ; i++)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>An empty condition in a <code>for</code> loop is treated as <strong>always true</strong> in C++. So <code>for(int i=1; ; i++)</code> never stops — it's an infinite loop.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why D Is NOT Infinite (Tricky!)</span>
+          <div class="exp-text">
+            <p><code>for(int i=0; i==10; i++)</code> — i starts at 0, condition <code>i==10</code> is immediately FALSE (0≠10), so the loop body executes <strong>zero times</strong> and exits. Not infinite, but a zero-iteration loop.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q37 -->
+    <div class="q-card" id="q37">
+      <div class="q-header">
+        <span class="q-num">Q37</span>
+        <span class="q-topic">C++ – Loops</span>
+        <span class="q-text">Which C++ segment does NOT correctly print 1 to 10?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> for(int a=1; a&lt;=10; a++) { cout &lt;&lt; a; } ✓</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> int a=1; while(a&lt;=10) { cout &lt;&lt; a; a++; } ✓</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> int a=1; do { cout &lt;&lt; a; a++; } while(a&lt;=10); ✓</li>
+        <li class="opt-correct"><span class="opt-label">D</span> int a=1; while(a&lt;10) { a++; cout &lt;&lt; a; } ✗</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer (does NOT work correctly)</div>
+        <div class="correct-ans"><span>D</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Option D: starts at a=1, condition a&lt;10 is true, then <strong>increments a before printing</strong>: prints 2, 3, 4, ..., 10. Misses 1! The condition also stops before a=10 can re-enter — wait, let's trace: when a=9, condition true, a becomes 10, prints 10. Then condition a&lt;10 is false (10&lt;10 = false), exits. Prints 2–10, missing 1.</p>
+          </div>
+        </div>
+        <hr class="q-divider">
+        <div class="exp-section">
+          <span class="exp-label label-wrong">Why C (do-while) Works Correctly</span>
+          <div class="exp-text">
+            <p>The do-while: prints a=1, increments to 2, checks 2≤10 (true)... continues until printing 10, increments to 11, checks 11≤10 (false), stops. Prints 1–10 correctly ✓</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q51 -->
+    <div class="q-card" id="q51">
+      <div class="q-header">
+        <span class="q-num">Q51</span>
+        <span class="q-topic">C – File I/O</span>
+        <span class="q-text">Which statement about fopen() in C is correct?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Return type is void.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Accepts filename + integer mode.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Accepts three parameters.</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Accepts two parameters, both char*.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — Two char* parameters</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <div class="math-box">FILE *fopen(const char *filename, const char *mode);<br><br>Example: fopen("data.txt", "r");<br>Returns: FILE* pointer (NULL on failure)</div>
+            <p>Both parameters are strings: <code>filename</code> (path to file) and <code>mode</code> ("r", "w", "a", "rb", etc.). Return type is <code>FILE*</code>, not void.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q57 -->
+    <div class="q-card" id="q57">
+      <div class="q-header">
+        <span class="q-num">Q57</span>
+        <span class="q-topic">C – Data Types</span>
+        <span class="q-text">char x = 130; printf("x = %d", x); — What is the output?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> x = 386</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> x = 130</li>
+        <li class="opt-correct"><span class="opt-label">C</span> x = -126</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> x = 256</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — x = -126</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-math">Signed Overflow</span>
+          <div class="exp-text">
+            <div class="math-box">signed char range: -128 to +127<br>130 > 127 → overflow!<br><br>130 in binary: 10000010<br>Interpreted as signed: -(128-2) = -126<br><br>Alternatively: 130 - 256 = -126</div>
+            <p>In C, assigning 130 to a signed char causes implementation-defined behaviour (overflow), but on most systems with two's complement, the result is -126.</p>
+          </div>
+        </div>
+        <div class="exp-section">
+          <span class="exp-label label-extra">Key Point</span>
+          <div class="exp-text"><p>If <code>char</code> is <strong>unsigned</strong> (0 to 255), x=130 would print 130. If <strong>signed</strong> (-128 to 127), 130 overflows to -126. By default in most compilers, char is signed.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== REMAINING ======================== -->
+    <div class="section-title">Remaining Questions</div>
+
+    <!-- Q23 Cache -->
+    <div class="q-card" id="q23">
+      <div class="q-header">
+        <span class="q-num">Q23</span>
+        <span class="q-topic">CO – Cache Memory</span>
+        <span class="q-text">Which statement about Cache Memory is correct?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Speed lower than main memory.</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> It is auxiliary memory.</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Communicates directly with input devices.</li>
+        <li class="opt-correct"><span class="opt-label">D</span> Small, high-speed memory between CPU and main memory.</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>Cache is the fastest memory in the hierarchy, sitting between CPU registers and RAM. It stores frequently/recently accessed data so the CPU doesn't always have to access slow RAM.</p>
+            <div class="math-box">Speed: Registers &gt; L1 Cache &gt; L2 Cache &gt; L3 Cache &gt; RAM &gt; SSD &gt; HDD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q43 FAT -->
+    <div class="q-card" id="q43">
+      <div class="q-header">
+        <span class="q-num">Q43</span>
+        <span class="q-topic">OS – File Systems</span>
+        <span class="q-text">Which maintains one entry for each disk block, indexed by block number?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Virtual memory</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Memory page</li>
+        <li class="opt-correct"><span class="opt-label">C</span> File Allocation Table (FAT)</li>
+        <li class="opt-wrong"><span class="opt-label">D</span> Memory segment</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>C — File Allocation Table (FAT)</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <p>FAT is a file system structure where each entry corresponds to a disk block (cluster). Each FAT entry contains either the next block in a file chain, or a special marker (EOF, free, bad). The FAT is indexed by block number, making it a disk-wide lookup table for block allocation.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q65 Connection-oriented -->
+    <div class="q-card" id="q65">
+      <div class="q-header">
+        <span class="q-num">Q65</span>
+        <span class="q-topic">Networks – Protocols</span>
+        <span class="q-text">Connection-oriented approach: (i) File transfer (ii) Remote login (iii) PSTN?</span>
+      </div>
+      <ul class="options">
+        <li class="opt-wrong"><span class="opt-label">A</span> Only (ii) and (iii)</li>
+        <li class="opt-wrong"><span class="opt-label">B</span> Only (i) and (iii)</li>
+        <li class="opt-wrong"><span class="opt-label">C</span> Only (i) and (ii)</li>
+        <li class="opt-correct"><span class="opt-label">D</span> All three: (i), (ii), and (iii)</li>
+      </ul>
+      <div class="answer-block">
+        <div class="answer-tag">✔ Correct Answer</div>
+        <div class="correct-ans"><span>D — All three</span></div>
+        <div class="exp-section">
+          <span class="exp-label label-explain">Explanation</span>
+          <div class="exp-text">
+            <ul>
+              <li><strong>File transfer (FTP):</strong> Uses TCP (connection-oriented) — ensures complete, ordered file delivery ✓</li>
+              <li><strong>Remote login (Telnet/SSH):</strong> Uses TCP — interactive sessions need reliable, ordered delivery ✓</li>
+              <li><strong>PSTN (Public Switched Telephone Network):</strong> Circuit-switched — establishes a dedicated physical connection before communication ✓</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q76 already done above -->
+
+    <!-- Q12 already done -->
+
+  </main>
+</div>
+
+<script>
+const qGrid = document.querySelector('.q-grid');
+for (let i = 1; i <= 77; i++) {
+  const btn = document.createElement('a');
+  btn.className = 'q-btn';
+  btn.textContent = i;
+  btn.href = '#q' + i;
+  qGrid.appendChild(btn);
+}
+</script>
+</body>
+
+</div> <!-- /.shell -->
+
+</body>
+</html>

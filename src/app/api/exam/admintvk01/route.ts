@@ -4,6 +4,21 @@ import type { Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { CacheKeys, getCache } from "@/lib/cache-strategy";
 
+function normalizeCategory(value: unknown) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function normalizeBoolean(value: unknown, defaultValue = false) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
+  }
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+  return defaultValue;
+}
+
 function invalidateExamCaches(examId?: string) {
   const cache = getCache();
   if (examId) {
@@ -13,7 +28,6 @@ function invalidateExamCaches(examId?: string) {
 }
 
 export async function POST(request: NextRequest) {
-  // Exam create permission
   const auth = await verifyAdminPermission(request, "canCreateExam");
   if (!auth.isValid) {
     return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
@@ -22,12 +36,10 @@ export async function POST(request: NextRequest) {
   try {
     const examData = await request.json();
 
-    // Validate required fields
     if (!examData.title || !examData.questions || examData.questions.length === 0) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Validate questions and options
     for (let i = 0; i < examData.questions.length; i++) {
       const q = examData.questions[i];
       if (!q.options || q.options.length < 2 || q.options.length > 5) {
@@ -56,26 +68,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use authenticated user ID
     const userId = auth.userId!;
 
-    // Create exam
     const newExam: Omit<Exam, "id"> = {
       title: examData.title,
       description: examData.description || "",
-      isPremium: examData.isPremium === true,
+      isPremium: normalizeBoolean(examData.isPremium),
       type: examData.type || "timed",
       durationMinutes: examData.durationMinutes || 60,
-      totalMarks: examData.totalMarks || examData.questions.reduce((sum: number, q: any) => sum + (q.marks || 1), 0),
+      totalMarks:
+        examData.totalMarks ||
+        examData.questions.reduce((sum: number, q: any) => sum + (q.marks || 1), 0),
       passingMarks: examData.passingMarks || 0,
       negativeMarking: examData.negativeMarking || 0,
       shuffleQuestions: examData.shuffleQuestions || false,
       shuffleOptions: examData.shuffleOptions || false,
       instructions: examData.instructions || [],
       questions: examData.questions,
-      isPublished: examData.isPublished ?? true,
-      isActive: true, // New exams are active by default
-      category: examData.category || "SEBI",
+      isPublished: normalizeBoolean(examData.isPublished, true),
+      isActive: true,
+      category: normalizeCategory(examData.category) || "SEBI",
       createdBy: userId,
       createdAt: new Date() as any,
     };
@@ -88,13 +100,12 @@ export async function POST(request: NextRequest) {
     console.error("Error creating exam:", error);
     console.error("Error message:", error.message);
     console.error("Error code:", error.code);
-    
-    // Return detailed error for debugging
+
     return NextResponse.json(
-      { 
-        error: error.message || "Failed to create exam", 
+      {
+        error: error.message || "Failed to create exam",
         code: error.code,
-        details: error.toString()
+        details: error.toString(),
       },
       { status: 500 }
     );
@@ -102,7 +113,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  // Exam edit permission
   const auth = await verifyAdminPermission(request, "canEditExam");
   if (!auth.isValid) {
     return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
@@ -116,12 +126,10 @@ export async function PUT(request: NextRequest) {
     }
 
     const examSnap = await adminDB.collection("exams").doc(examId).get();
-
     if (!examSnap.exists) {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
     }
 
-    // Validate questions and options
     if (examData.questions && Array.isArray(examData.questions)) {
       for (let i = 0; i < examData.questions.length; i++) {
         const q = examData.questions[i];
@@ -152,15 +160,29 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Keep premium flag explicit so false updates are always persisted.
-    const normalizedIsPremium = examData.isPremium === true;
+    const normalizedIsPremium = normalizeBoolean(examData.isPremium, examSnap.data()?.isPremium === true);
+    const normalizedIsPublished = normalizeBoolean(examData.isPublished, examSnap.data()?.isPublished === true);
+    const normalizedCategory = normalizeCategory(examData.category) || normalizeCategory(examSnap.data()?.category) || "SEBI";
 
-    // Update exam
-    await adminDB.collection("exams").doc(examId).update({
-      ...examData,
+    // Only update metadata fields, NOT questions (which can be very large)
+    const updateData: any = {
+      title: examData.title,
+      description: examData.description || "",
+      category: normalizedCategory,
       isPremium: normalizedIsPremium,
+      isPublished: normalizedIsPublished,
+      type: examData.type || "timed",
+      durationMinutes: examData.durationMinutes || 60,
+      totalMarks: examData.totalMarks || 0,
+      passingMarks: examData.passingMarks || 0,
+      negativeMarking: examData.negativeMarking || 0,
+      shuffleQuestions: examData.shuffleQuestions || false,
+      shuffleOptions: examData.shuffleOptions || false,
+      instructions: examData.instructions || [],
       updatedAt: new Date(),
-    });
+    };
+
+    await adminDB.collection("exams").doc(examId).update(updateData);
 
     invalidateExamCaches(examId);
 
@@ -175,7 +197,6 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Exam read for admin edit/view
   const auth = await verifyAdminPermission(request, "canEditExam");
   if (!auth.isValid) {
     return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });

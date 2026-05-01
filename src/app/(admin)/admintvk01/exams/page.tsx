@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { authenticatedFetch } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/ui/loading";
 import type { ExamQuestion, ExamOption, DifficultyLevel } from "@/lib/exam-types";
+import BulkQuestionImportDialog from "@/components/admin/bulk-question-import-dialog";
 
 const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
 
@@ -28,6 +29,7 @@ export default function AdminExamsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useRequireAuth();
   const { toast } = useToast();
+  const questionsContainerRef = useRef<HTMLDivElement>(null);
   
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -137,6 +139,18 @@ export default function AdminExamsPage() {
       subject: "",
     };
     setQuestions([...questions, newQuestion]);
+    
+    // Scroll to the newly added question
+    setTimeout(() => {
+      const questionsContainer = questionsContainerRef.current;
+      if (questionsContainer) {
+        // Find the last question card and scroll to it
+        const lastQuestionCard = questionsContainer.querySelector(".question-card:last-child");
+        if (lastQuestionCard) {
+          lastQuestionCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    }, 100);
   };
 
   const addOption = (questionIndex: number) => {
@@ -554,9 +568,41 @@ export default function AdminExamsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="questions" className="space-y-4">
+          <TabsContent value="questions" className="space-y-4" ref={questionsContainerRef}>
+            <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">Question Bank</p>
+                <p className="text-sm text-muted-foreground">
+                  Add questions manually or import them in bulk from JSON, CSV, or Excel.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <BulkQuestionImportDialog
+                  existingCount={questions.length}
+                  onImport={(importedQuestions, mode) => {
+                    setQuestions((currentQuestions) => {
+                      const newQuestions = mode === "replace"
+                        ? importedQuestions
+                        : [...currentQuestions, ...importedQuestions];
+                      
+                      // Scroll to questions section after a brief delay to ensure state update
+                      setTimeout(() => {
+                        questionsContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 100);
+                      
+                      return newQuestions;
+                    });
+                  }}
+                />
+                <Button onClick={addQuestion} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Question
+                </Button>
+              </div>
+            </div>
+
             {questions.map((question, qIndex) => (
-              <Card key={qIndex}>
+              <Card key={qIndex} className="question-card">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Question {qIndex + 1}</CardTitle>
@@ -694,10 +740,6 @@ export default function AdminExamsPage() {
               </Card>
             ))}
 
-            <Button onClick={addQuestion} variant="outline" className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Question
-            </Button>
           </TabsContent>
         </Tabs>
       </div>

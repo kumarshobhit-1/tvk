@@ -149,7 +149,13 @@ export default function ExamPage() {
       <div className="max-w-3xl mx-auto">
         <Button
           variant="outline"
-          onClick={() => router.push("/exam")}
+          onClick={() => {
+            if (examInfo?.category) {
+              router.push(`/exam/category/${examInfo.category.toLowerCase()}`);
+            } else {
+              router.push("/exam");
+            }
+          }}
           className="mb-4"
         >
           ← Back to Exams

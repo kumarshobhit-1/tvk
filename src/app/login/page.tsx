@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,15 @@ import { Logo } from "@/components/logo";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/";
   const { user, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && user) {
-      router.push("/");
+      router.push(redirectPath);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, redirectPath]);
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
@@ -40,7 +42,7 @@ export default function LoginPage() {
       // Wait a moment for cookie to be set
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      router.push("/");
+      router.push(redirectPath);
     } catch (error) {
       console.error("Error during Google sign-in:", error);
     }

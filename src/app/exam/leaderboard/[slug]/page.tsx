@@ -23,6 +23,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [examCategory, setExamCategory] = useState<string | null>(null);
   const itemsPerPage = 25;
 
   useEffect(() => {
@@ -36,6 +37,14 @@ export default function LeaderboardPage() {
     const fetchLeaderboard = async () => {
       setLoading(true);
       try {
+        // Fetch exam info to get category
+        const examResponse = await fetch(`/api/exam/list?examId=${examId}`);
+        const examData = await examResponse.json();
+        if (examData.exams && examData.exams[0]) {
+          setExamCategory(examData.exams[0].category);
+        }
+
+        // Fetch leaderboard
         const response = await fetch(`/api/exam/leaderboard?examId=${examId}`);
         const data = await response.json();
         
@@ -118,7 +127,13 @@ export default function LeaderboardPage() {
       <div className="max-w-4xl mx-auto">
         <Button
           variant="outline"
-          onClick={() => router.push("/exam")}
+          onClick={() => {
+            if (examCategory) {
+              router.push(`/exam/category/${examCategory.toLowerCase()}`);
+            } else {
+              router.push("/exam");
+            }
+          }}
           className="mb-4"
         >
           ← Back to Exams

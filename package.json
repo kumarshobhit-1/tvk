@@ -14,7 +14,8 @@
     "loadtest:100": "node load-tests/run-k6.mjs run -e BASE_URL=http://localhost:9002 -e TARGET_VUS=100 -e HOLD_DURATION=8m load-tests/k6/exam-load.js",
     "loadtest:200": "node load-tests/run-k6.mjs run -e BASE_URL=http://localhost:9002 -e TARGET_VUS=200 -e HOLD_DURATION=8m load-tests/k6/exam-load.js",
     "loadtest:300": "node load-tests/run-k6.mjs run -e BASE_URL=http://localhost:9002 -e TARGET_VUS=300 -e HOLD_DURATION=8m load-tests/k6/exam-load.js",
-    "loadtest:500": "node load-tests/run-k6.mjs run -e BASE_URL=http://localhost:9002 -e TARGET_VUS=500 -e HOLD_DURATION=8m load-tests/k6/exam-load.js",
+    "loadtest:500": "node load-tests/run-k6.mjs run -e BASE_URL=http://localhost:9002 -e TARGET_VUS=500 -e RAMP_UP_DURATION=5m -e HOLD_DURATION=12m -e RAMP_DOWN_DURATION=2m -e TEST_MODE=mixed load-tests/k6/exam-load.js",
+    "loadtest:500:exam": "node load-tests/run-k6.mjs run -e BASE_URL=http://localhost:9002 -e TARGET_VUS=500 -e RAMP_UP_DURATION=5m -e HOLD_DURATION=12m -e RAMP_DOWN_DURATION=2m -e TEST_MODE=exam load-tests/k6/exam-load.js",
     "loadtest:report": "node load-tests/analyze-k6.mjs"
   },
   "dependencies": {
@@ -65,6 +66,7 @@
     "recharts": "^2.15.4",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
