@@ -24,11 +24,21 @@ const store: RateLimitStore = {};
  */
 export class RateLimiter {
   private config: RateLimitConfig;
+  private cleanupInterval: NodeJS.Timer | null = null;
 
   constructor(config: RateLimitConfig) {
     this.config = config;
-    // Cleanup old entries every minute
-    setInterval(() => this.cleanup(), 60 * 1000);
+    // Cleanup old entries every minute - use proper timeout handling
+    if (typeof setInterval !== 'undefined') {
+      this.cleanupInterval = setInterval(() => this.cleanup(), 60 * 1000);
+    }
+  }
+
+  destroy() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 
   /**
@@ -118,11 +128,22 @@ export class RateLimiter {
    * Cleanup old entries
    */
   private cleanup() {
-    const now = Date.now();
-    for (const clientId in store) {
-      if (now > store[clientId].resetTime + this.config.windowMs) {
-        delete store[clientId];
+    try {
+      const now = Date.now();
+      for (const clientId in store) {
+        // Add safety check: ensure resetTime is a valid number
+        const resetTime = store[clientId]?.resetTime;
+        if (typeof resetTime !== 'number' || isNaN(resetTime)) {
+          delete store[clientId];
+          continue;
+        }
+        // Use 2x window for cleanup to be safe
+        if (now > resetTime + (this.config.windowMs * 2)) {
+          delete store[clientId];
+        }
       }
+    } catch (error) {
+      console.error('Rate limiter cleanup error:', error);
     }
   }
 }

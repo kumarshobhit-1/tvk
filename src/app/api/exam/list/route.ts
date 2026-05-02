@@ -16,6 +16,15 @@ function toPublicExamSummary(id: string, examData: any) {
     passingMarks: examData.passingMarks,
     category: examData.category,
     questionCount: examData.questions?.length || 0,
+    // Sections summary: if exam has sections, expose section-level summary; else derive single section
+    sections: (examData.sections && Array.isArray(examData.sections) && examData.sections.length > 0)
+      ? examData.sections.map((s: any, idx: number) => ({
+          id: s.id || `s${idx+1}`,
+          title: s.title || `Section ${idx+1}`,
+          durationMinutes: s.durationMinutes || Math.round((examData.durationMinutes || 0) / (examData.sections.length || 1)),
+          questionCount: s.questionIds ? s.questionIds.length : (s.questions ? s.questions.length : 0)
+        }))
+      : [{ id: 's1', title: 'Section 1', durationMinutes: examData.durationMinutes || 0, questionCount: examData.questions?.length || 0 }],
     negativeMarking: examData.negativeMarking,
     instructions: examData.instructions,
     isPublished: examData.isPublished,

@@ -292,15 +292,15 @@ export default function AdminHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {canManageAdmins && (
         <Link href="/admintvk01/admin-users">
-          <Card className="hover:bg-amber-300 hover:border-amber-300 transition-all cursor-pointer border-border group">
+          <Card className="hover:bg-amber-300 hover:border-amber-300 transition-all cursor-pointer border-border bg-background dark:bg-slate-950 group dark:hover:bg-amber-900/30 dark:hover:border-amber-700">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-50 group-hover:bg-white/20 rounded-full transition-colors">
-                  <Shield className="h-5 w-5 text-amber-600 group-hover:text-gray-900" />
+                <div className="p-2 bg-amber-50 rounded-full transition-colors dark:bg-amber-950/40 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/60">
+                  <Shield className="h-5 w-5 text-amber-600 dark:text-amber-300 group-hover:text-gray-900 dark:group-hover:text-amber-100" />
                 </div>
                 <div>
-                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Manage Admins</CardTitle>
-                  <CardDescription className="text-sm group-hover:text-gray-700">Control admin roles</CardDescription>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-white">Manage Admins</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700 dark:text-slate-400 dark:group-hover:text-slate-200">Control admin roles</CardDescription>
                 </div>
               </div>
             </CardContent>
@@ -310,15 +310,15 @@ export default function AdminHomePage() {
 
         {canManagePremiumUsers && (
         <Link href="/admintvk01/premium-users">
-          <Card className="hover:bg-yellow-300 hover:border-yellow-300 transition-all cursor-pointer border-border group">
+          <Card className="hover:bg-yellow-300 hover:border-yellow-300 transition-all cursor-pointer border-border bg-background dark:bg-slate-950 group dark:hover:bg-yellow-900/30 dark:hover:border-yellow-700">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-50 group-hover:bg-white/20 rounded-full transition-colors">
-                  <Crown className="h-5 w-5 text-yellow-600 group-hover:text-gray-900" />
+                <div className="p-2 bg-yellow-50 rounded-full transition-colors dark:bg-yellow-950/40 group-hover:bg-yellow-100 dark:group-hover:bg-yellow-900/60">
+                  <Crown className="h-5 w-5 text-yellow-600 dark:text-yellow-300 group-hover:text-gray-900 dark:group-hover:text-yellow-100" />
                 </div>
                 <div>
-                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Premium Users</CardTitle>
-                  <CardDescription className="text-sm group-hover:text-gray-700">Grant premium access</CardDescription>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-white">Premium Users</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700 dark:text-slate-400 dark:group-hover:text-slate-200">Grant premium access</CardDescription>
                 </div>
               </div>
             </CardContent>
@@ -328,15 +328,15 @@ export default function AdminHomePage() {
 
         {canManageExams && (
         <Link href="/admintvk01/exams">
-          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
+          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border bg-background dark:bg-slate-950 group dark:hover:bg-teal-900/30 dark:hover:border-teal-700">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 group-hover:bg-white/20 rounded-full transition-colors">
-                  <PlusCircle className="h-5 w-5 text-gray-700 group-hover:text-gray-900" />
+                <div className="p-2 bg-gray-100 rounded-full transition-colors dark:bg-slate-800 group-hover:bg-gray-200 dark:group-hover:bg-slate-700">
+                  <PlusCircle className="h-5 w-5 text-gray-700 dark:text-slate-300 group-hover:text-gray-900 dark:group-hover:text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Create Exam</CardTitle>
-                  <CardDescription className="text-sm group-hover:text-gray-700">Add new exam</CardDescription>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-white">Create Exam</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700 dark:text-slate-400 dark:group-hover:text-slate-200">Add new exam</CardDescription>
                 </div>
               </div>
             </CardContent>
@@ -346,15 +346,15 @@ export default function AdminHomePage() {
 
         {canManageExams && (
         <Link href="/admintvk01/exams/list">
-          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
+          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border bg-background dark:bg-slate-950 group dark:hover:bg-teal-900/30 dark:hover:border-teal-700">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 group-hover:bg-white/20 rounded-full transition-colors">
-                  <ClipboardList className="h-5 w-5 text-blue-500 group-hover:text-gray-900" />
+                <div className="p-2 bg-blue-50 rounded-full transition-colors dark:bg-blue-950/40 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60">
+                  <ClipboardList className="h-5 w-5 text-blue-500 dark:text-blue-300 group-hover:text-gray-900 dark:group-hover:text-blue-100" />
                 </div>
                 <div>
-                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Manage Exams</CardTitle>
-                  <CardDescription className="text-sm group-hover:text-gray-700">Edit or delete exams</CardDescription>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-white">Manage Exams</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700 dark:text-slate-400 dark:group-hover:text-slate-200">Edit or delete exams</CardDescription>
                 </div>
               </div>
             </CardContent>
@@ -364,15 +364,15 @@ export default function AdminHomePage() {
 
         {canManageExams && (
         <Link href="/admintvk01/exams/manage">
-          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
+          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border bg-background dark:bg-slate-950 group dark:hover:bg-teal-900/30 dark:hover:border-teal-700">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-50 group-hover:bg-white/20 rounded-full transition-colors">
-                  <Activity className="h-5 w-5 text-orange-500 group-hover:text-gray-900" />
+                <div className="p-2 bg-orange-50 rounded-full transition-colors dark:bg-orange-950/40 group-hover:bg-orange-100 dark:group-hover:bg-orange-900/60">
+                  <Activity className="h-5 w-5 text-orange-500 dark:text-orange-300 group-hover:text-gray-900 dark:group-hover:text-orange-100" />
                 </div>
                 <div>
-                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Active Exams</CardTitle>
-                  <CardDescription className="text-sm group-hover:text-gray-700">Monitor ongoing exams</CardDescription>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-white">Active Exams</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700 dark:text-slate-400 dark:group-hover:text-slate-200">Monitor ongoing exams</CardDescription>
                 </div>
               </div>
             </CardContent>
@@ -382,15 +382,15 @@ export default function AdminHomePage() {
 
         {canManageExams && (
         <Link href="/admintvk01/exams/recalculate">
-          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border group">
+          <Card className="hover:bg-teal-400 hover:border-teal-400 transition-all cursor-pointer border-border bg-background dark:bg-slate-950 group dark:hover:bg-teal-900/30 dark:hover:border-teal-700">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 group-hover:bg-white/20 rounded-full transition-colors">
-                  <RefreshCw className="h-5 w-5 text-blue-500 group-hover:text-gray-900" />
+                <div className="p-2 bg-blue-50 rounded-full transition-colors dark:bg-blue-950/40 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60">
+                  <RefreshCw className="h-5 w-5 text-blue-500 dark:text-blue-300 group-hover:text-gray-900 dark:group-hover:text-blue-100" />
                 </div>
                 <div>
-                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">Recalculate Result</CardTitle>
-                  <CardDescription className="text-sm group-hover:text-gray-700">Refresh Exam Result</CardDescription>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-white">Recalculate Result</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700 dark:text-slate-400 dark:group-hover:text-slate-200">Refresh Exam Result</CardDescription>
                 </div>
               </div>
             </CardContent>
@@ -400,15 +400,15 @@ export default function AdminHomePage() {
 
         {canManagePDFs && (
         <Link href="/admintvk01/pdfs">
-          <Card className="hover:bg-purple-400 hover:border-purple-400 transition-all cursor-pointer border-border group">
+          <Card className="hover:bg-purple-400 hover:border-purple-400 transition-all cursor-pointer border-border bg-background dark:bg-slate-950 group dark:hover:bg-purple-900/30 dark:hover:border-purple-700">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-50 group-hover:bg-white/20 rounded-full transition-colors">
-                  <FileText className="h-5 w-5 text-purple-500 group-hover:text-gray-900" />
+                <div className="p-2 bg-purple-50 rounded-full transition-colors dark:bg-purple-950/40 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/60">
+                  <FileText className="h-5 w-5 text-purple-500 dark:text-purple-300 group-hover:text-gray-900 dark:group-hover:text-purple-100" />
                 </div>
                 <div>
-                  <CardTitle className="text-base mb-0 group-hover:text-gray-900">PDF Library</CardTitle>
-                  <CardDescription className="text-sm group-hover:text-gray-700">Upload & manage PDFs</CardDescription>
+                  <CardTitle className="text-base mb-0 group-hover:text-gray-900 dark:text-slate-100 dark:group-hover:text-white">PDF Library</CardTitle>
+                  <CardDescription className="text-sm group-hover:text-gray-700 dark:text-slate-400 dark:group-hover:text-slate-200">Upload & manage PDFs</CardDescription>
                 </div>
               </div>
             </CardContent>

@@ -99,9 +99,7 @@ export default function CategoryExamsPage() {
           for (const exam of data.exams) {
             try {
               const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`);
-              if (statusRes.ok) {
-                statuses[exam.id] = await statusRes.json();
-              }
+              statuses[exam.id] = await statusRes.json();
             } catch (err) {
               console.error(`Error fetching status for exam ${exam.id}:`, err);
             }

@@ -158,9 +158,9 @@ export default function ExamsPage() {
       </div>
 
       {categories.length === 0 ? (
-        <Card className="mt-6 border-dashed">
+        <Card className="mt-6 border-dashed bg-background dark:border-zinc-700 dark:bg-slate-950">
           <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 text-muted-foreground dark:bg-slate-800 dark:text-slate-200">
               <BookOpen className="h-7 w-7" />
             </div>
             <h2 className="text-xl font-semibold">No categories available yet</h2>
@@ -185,9 +185,9 @@ export default function ExamsPage() {
 
             return (
               <Link key={cat} href={`/exam/category/${encodeURIComponent(cat.toLowerCase())}`} className="group">
-                <Card className="h-full min-h-[170px] rounded-none border border-zinc-300 bg-white shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-950">
+                <Card className="h-full min-h-[170px] rounded-none border border-zinc-300 bg-white shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-700 dark:bg-slate-950">
                   <CardContent className="flex h-full flex-col items-center justify-center px-4 py-5 text-center">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-[#4b5fcc] transition-colors group-hover:border-[#4b5fcc] group-hover:bg-[#4b5fcc]/5 dark:border-zinc-700 dark:bg-zinc-950">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-[#4b5fcc] transition-colors group-hover:border-[#4b5fcc] group-hover:bg-[#4b5fcc]/5 dark:border-zinc-700 dark:bg-slate-900 dark:text-slate-100">
                       <Icon className="h-5 w-5" />
                     </div>
                     <h2 className="text-base font-bold leading-tight text-zinc-900 dark:text-zinc-100">

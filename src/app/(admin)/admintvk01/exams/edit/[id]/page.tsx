@@ -2,7 +2,7 @@
 
 import { authenticatedFetch } from "@/lib/api-client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,12 @@ import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/ui/loading";
 import type { ExamQuestion, ExamOption, DifficultyLevel, Exam } from "@/lib/exam-types";
 import BulkQuestionImportDialog from "@/components/admin/bulk-question-import-dialog";
+import dynamic from "next/dynamic";
+
+const SectionEditorWrapper = dynamic(
+  () => import("@/components/admin/section-editor").then((mod) => ({ default: (props: any) => React.createElement(mod.default, props) })),
+  { ssr: false }
+);
 
 const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
 
@@ -44,7 +50,6 @@ export default function EditExamPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("SEBI");
-  const [durationMinutes, setDurationMinutes] = useState(60);
   const [passingMarks, setPassingMarks] = useState(40);
   const [negativeMarking, setNegativeMarking] = useState(0.25);
   const [isPremium, setIsPremium] = useState(false);
@@ -53,6 +58,13 @@ export default function EditExamPage() {
   const [isPublished, setIsPublished] = useState(false);
   const [instructions, setInstructions] = useState<string[]>([]);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+  const [selectedSectionIdForAdd, setSelectedSectionIdForAdd] = useState("");
+
+  const totalSectionDuration = useMemo(
+    () => sections.reduce((sum, s) => sum + (Number.isFinite(s?.durationMinutes) ? s.durationMinutes : 0), 0),
+    [sections]
+  );
 
   const loadCategoryOptions = async () => {
     try {
@@ -134,7 +146,6 @@ export default function EditExamPage() {
       setCategoryOptions((prev) =>
         prev.includes(exam.category) ? prev : [...prev, exam.category]
       );
-      setDurationMinutes(exam.durationMinutes);
       setPassingMarks(exam.passingMarks);
       setNegativeMarking(exam.negativeMarking);
       setIsPremium(exam.isPremium === true);
@@ -143,6 +154,8 @@ export default function EditExamPage() {
       setIsPublished(exam.isPublished);
       setInstructions(exam.instructions || []);
       setQuestions(exam.questions || []);
+      setSections(exam.sections || []);
+      setSelectedSectionIdForAdd((exam.sections && exam.sections[0]?.id) || "");
     } catch (error) {
       toast({
         title: "Error",
@@ -154,8 +167,14 @@ export default function EditExamPage() {
   };
 
   const addQuestion = () => {
+    if (!selectedSectionIdForAdd) {
+      toast({ title: "Section Required", description: "Please create/select a section first, then add questions.", variant: "destructive" });
+      return;
+    }
+
+    const newId = `q${questions.length + 1}_${Date.now()}`;
     const newQuestion: ExamQuestion = {
-      id: `q${questions.length + 1}_${Date.now()}`,
+      id: newId,
       text: "",
       options: [
         { id: "a", text: "" },
@@ -182,6 +201,7 @@ export default function EditExamPage() {
         }
       }
     }, 100);
+    setSections((prev) => prev.map((s) => s.id === selectedSectionIdForAdd ? { ...s, questionIds: Array.from(new Set([...(s.questionIds||[]), newId])) } : s));
   };
 
   const addOption = (questionIndex: number) => {
@@ -286,6 +306,18 @@ export default function EditExamPage() {
       return false;
     }
 
+    // Sections must be present and cover at least one question
+    if (!sections || sections.length === 0) {
+      toast({ title: "Validation Error", description: "At least one section is required", variant: "destructive" });
+      return false;
+    }
+
+    const allSectionQIds = sections.flatMap((s: any) => s.questionIds || []);
+    if (allSectionQIds.length === 0) {
+      toast({ title: "Validation Error", description: "Sections must include question assignments", variant: "destructive" });
+      return false;
+    }
+
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       if (!q.text.trim()) {
@@ -324,7 +356,7 @@ export default function EditExamPage() {
         description,
         category,
         isPremium,
-        durationMinutes,
+        durationMinutes: totalSectionDuration,
         totalMarks,
         passingMarks,
         negativeMarking,
@@ -333,6 +365,7 @@ export default function EditExamPage() {
         isPublished,
         instructions,
         questions,
+        sections,
       };
 
       const response = await authenticatedFetch("/api/exam/admintvk01", {
@@ -478,14 +511,16 @@ export default function EditExamPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (minutes)</Label>
+                    <Label htmlFor="duration">Total Duration (auto from sections)</Label>
                     <Input
                       id="duration"
                       type="number"
-                      min="1"
-                      value={durationMinutes}
-                      onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 60)}
+                      value={totalSectionDuration}
+                      readOnly
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Set time in the Sections card below. This total updates automatically.
+                    </p>
                   </div>
                 </div>
 
@@ -516,6 +551,20 @@ export default function EditExamPage() {
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Sections</CardTitle>
+                <CardDescription>Define per-section duration and assign questions to each section</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Lazy-load SectionEditor to avoid increasing initial bundle size in other admin pages */}
+                <React.Suspense fallback={<div>Loading sections editor...</div>}>
+                  {/* @ts-ignore - dynamic import for client component */}
+                  <SectionEditorWrapper sections={sections} questions={questions} onChange={setSections} />
+                </React.Suspense>
               </CardContent>
             </Card>
 
@@ -560,25 +609,54 @@ export default function EditExamPage() {
                   Add more questions manually or import from JSON, CSV, or Excel.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[220px]">
+                  <Label className="text-xs text-muted-foreground">Add/Import Into Section</Label>
+                  <Select value={selectedSectionIdForAdd} onValueChange={setSelectedSectionIdForAdd}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sections.map((section) => (
+                        <SelectItem key={section.id} value={section.id}>{section.title || section.id}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <BulkQuestionImportDialog
                   existingCount={questions.length}
-                  onImport={(importedQuestions, mode) => {
+                  sections={sections}
+                  initialSectionId={selectedSectionIdForAdd}
+                  disabled={!selectedSectionIdForAdd}
+                  onImport={(importedQuestions, mode, sectionId) => {
+                    const target = sectionId || selectedSectionIdForAdd;
+                    if (!target) {
+                      toast({ title: "Section Required", description: "Please create/select a section first, then import questions.", variant: "destructive" });
+                      return;
+                    }
+
                     setQuestions((currentQuestions) => {
                       const newQuestions = mode === "replace"
                         ? importedQuestions
                         : [...currentQuestions, ...importedQuestions];
-                      
-                      // Scroll to questions section after a brief delay to ensure state update
                       setTimeout(() => {
                         questionsContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }, 100);
-                      
                       return newQuestions;
+                    });
+
+                    const importedIds = importedQuestions.map((q) => q.id).filter(Boolean);
+                    setSections((prev) => {
+                      if (mode === "replace") {
+                        return prev.map((s) => ({ ...s, questionIds: s.id === target ? importedIds : (s.questionIds || []) }));
+                      }
+                      return prev.map((s) => s.id === target ? { ...s, questionIds: Array.from(new Set([...(s.questionIds||[]), ...importedIds])) } : s);
                     });
                   }}
                 />
-                <Button onClick={addQuestion} variant="outline">
+
+                <Button onClick={addQuestion} variant="outline" disabled={!selectedSectionIdForAdd}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Question
                 </Button>
@@ -811,7 +889,7 @@ export default function EditExamPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Duration:</span>
-                  <span className="font-medium">{durationMinutes} minutes</span>
+                  <span className="font-medium">{totalSectionDuration} minutes</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Access:</span>

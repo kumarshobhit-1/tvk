@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { 
   FileText, 
   FolderOpen, 
@@ -26,9 +27,8 @@ export default function LibraryPage() {
   const router = useRouter();
   const [folders, setFolders] = useState<PDFFolderWithFiles[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFolder, setSelectedFolder] = useState<PDFFolderWithFiles | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"folders" | "files">("folders");
+  const [selectedFolder, setSelectedFolder] = useState<PDFFolderWithFiles | null>(null);
 
   useEffect(() => {
     document.title = "PDF Library | The Victory Key";
@@ -87,17 +87,15 @@ export default function LibraryPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Filter files based on search
-  const getFilteredFiles = () => {
-    if (!selectedFolder) return [];
-    const sortedFiles = [...selectedFolder.files].sort((a, b) => {
+  // Filter files for a given folder based on search
+  const getFilteredFiles = (folder: PDFFolderWithFiles) => {
+    const sortedFiles = [...folder.files].sort((a, b) => {
       const orderDiff = (a.order || 0) - (b.order || 0);
       if (orderDiff !== 0) return orderDiff;
       return a.name.localeCompare(b.name);
     });
 
     if (!searchQuery.trim()) return sortedFiles;
-    
     return sortedFiles.filter((file) =>
       file.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -148,7 +146,7 @@ export default function LibraryPage() {
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={selectedFolder ? "Search files..." : "Search folders..."}
+              placeholder={"Search folders or files..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -156,179 +154,127 @@ export default function LibraryPage() {
           </div>
         </div>
 
-        {/* Breadcrumb Navigation */}
-        {selectedFolder && (
-          <div className="flex items-center gap-2 mb-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedFolder(null);
-                setSearchQuery("");
-              }}
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Folders
-            </Button>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium flex items-center gap-2">
-              <span>{selectedFolder.icon}</span>
-              {selectedFolder.name}
-            </span>
-          </div>
-        )}
-
-        {/* Content */}
-        {!selectedFolder ? (
-          // Folders View
-          <>
-            {getFilteredFolders().length === 0 ? (
-              <div className="text-center py-16">
-                <FolderOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No folders available</h3>
-                <p className="text-muted-foreground">
-                  {searchQuery 
-                    ? "No folders match your search" 
-                    : "Check back later for study materials"
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {getFilteredFolders().map((folder) => (
-                  <Card
-                    key={folder.id}
-                    className={`transition-shadow ${folder.canAccess === false ? "opacity-80" : "cursor-pointer hover:shadow-md"}`}
-                    onClick={() => {
-                      if (folder.canAccess === false) return;
-                      setSelectedFolder(folder);
-                      setSearchQuery("");
-                    }}
+        {/* Topkaroo-style layout: sidebar accordion + main content */}
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
+          {/* Left sidebar - Accordion with folders - hide on mobile when folder selected */}
+          <aside className={selectedFolder ? "hidden md:block" : "block"} style={selectedFolder ? undefined : { display: "block" }}>
+            <div className="bg-secondary/40 rounded-lg p-4 max-h-[70vh] overflow-auto">
+            <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Folders
+            </h3>
+            <Accordion type="single" collapsible className="w-full">
+              {getFilteredFolders().map((folder, idx) => (
+                <AccordionItem key={folder.id} value={folder.id}>
+                  <AccordionTrigger
+                    className="py-2 hover:no-underline data-[state=open]:font-semibold cursor-pointer"
+                    onClick={() => setSelectedFolder(folder)}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div 
-                          className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl"
-                          style={{ backgroundColor: `${folder.color}20` }}
-                        >
-                          {folder.icon}
-                        </div>
-                        <Badge variant="secondary">
-                          {folder.files.length} files
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-lg mt-3">{folder.name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          Course: {folder.category || "GENERAL"}
-                        </Badge>
-                        {folder.isPremium && (
-                          <Badge variant="secondary" className="text-xs">Premium</Badge>
-                        )}
-                        {folder.canAccess === false && (
-                          <Badge variant="destructive" className="text-xs">Locked</Badge>
-                        )}
-                      </div>
-                      {folder.description && (
-                        <CardDescription className="line-clamp-2">
-                          {folder.description}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      {folder.canAccess === false ? (
-                        <Button variant="outline" className="w-full" disabled>
-                          <EyeOff className="h-4 w-4 mr-2" />
-                          Premium Locked
-                        </Button>
-                      ) : (
-                        <Button variant="outline" className="w-full">
-                          <FolderOpen className="h-4 w-4 mr-2" />
-                          Open Folder
-                          <ChevronRight className="h-4 w-4 ml-auto" />
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          // Files View
-          <>
-            {selectedFolder.description && (
-              <Card className="mb-6">
-                <CardContent className="py-4">
-                  <p className="text-muted-foreground">{selectedFolder.description}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {getFilteredFiles().length === 0 ? (
-              <div className="text-center py-16">
-                <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No files available</h3>
-                <p className="text-muted-foreground">
-                  {searchQuery 
-                    ? "No files match your search" 
-                    : "This folder is empty"
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {getFilteredFiles().map((file) => (
-                  <Card key={file.id} className="overflow-hidden">
-                    <div className="flex items-center p-4">
-                      <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center mr-4">
-                        <FileText className="h-7 w-7 text-red-600 dark:text-red-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">{file.name}</h3>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                          <span>{formatFileSize(file.fileSize)}</span>
-                          {file.pageCount && (
-                            <span>{file.pageCount} pages</span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" />
-                            {file.viewCount}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Download className="h-3 w-3" />
-                            {file.downloadCount}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        {file.isPremium && <Badge variant="secondary">Premium</Badge>}
-                        {file.canAccess === false && <Badge variant="destructive">Locked</Badge>}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={file.canAccess === false}
-                          onClick={() => handleViewPDF(file)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={file.canAccess === false}
-                          onClick={() => handleDownloadPDF(file)}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
+                    <div className="flex items-center gap-2">
+                      <span>{folder.icon}</span>
+                      <div className="text-left min-w-0">
+                        <div className="font-medium text-sm">{folder.name}</div>
+                        <div className="text-xs text-muted-foreground">{folder.files.length} files</div>
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-0 hidden">
+                    <div className="space-y-2 pl-4 py-2">
+                      {getFilteredFiles(folder).map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center gap-2 p-2 rounded hover:bg-primary/10 cursor-pointer group"
+                          onClick={() => setSelectedFolder(folder)}
+                        >
+                          <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          <div className="text-left min-w-0 flex-1">
+                            <div className="text-sm truncate">{file.name}</div>
+                            <div className="text-xs text-muted-foreground">{file.pageCount ? `${file.pageCount} pages` : formatFileSize(file.fileSize)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+            </div>
+          </aside>
+
+          {/* Main content area - show on md+ always, on mobile only when folder selected */}
+          <main className={selectedFolder ? "block" : "hidden md:block"}>
+            {!selectedFolder ? (
+              <div className="text-center py-16">
+                <FolderOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-30" />
+                <h3 className="text-lg font-medium mb-2">Select a folder</h3>
+                <p className="text-muted-foreground">Click a folder on the left to view PDFs</p>
+              </div>
+            ) : (
+              <div>
+                {/* Folder header */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Button variant="ghost" size="sm" className="md:hidden mr-2" onClick={() => setSelectedFolder(null)}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ backgroundColor: `${selectedFolder.color}20` }}>
+                      {selectedFolder.icon}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">{selectedFolder.name}</h2>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {selectedFolder.files.length} files · {selectedFolder.category || "GENERAL"}
+                        {selectedFolder.isPremium && " · Premium"}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedFolder.description && (
+                    <p className="text-muted-foreground">{selectedFolder.description}</p>
+                  )}
+                </div>
+
+                {/* Files list */}
+                <div className="space-y-2">
+                  {getFilteredFiles(selectedFolder).length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No files in this folder</div>
+                  ) : (
+                    getFilteredFiles(selectedFolder).map((file) => (
+                      <div key={file.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-secondary/50 transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                            <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm truncate">{file.name}</div>
+                            <div className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}{file.pageCount ? ` · ${file.pageCount} pages` : ""}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs text-muted-foreground min-w-fit ml-2 flex items-center gap-3">
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              {file.viewCount}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Download className="h-3 w-3" />
+                              {file.downloadCount}
+                            </span>
+                          </div>
+                          <Button variant="ghost" size="sm" disabled={file.canAccess === false} onClick={() => handleViewPDF(file)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" disabled={file.canAccess === false} onClick={() => handleDownloadPDF(file)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
-          </>
-        )}
+          </main>
+        </div>
       </div>
     </div>
   );

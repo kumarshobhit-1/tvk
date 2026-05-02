@@ -404,26 +404,29 @@ export function ExamRunner({
 
           {/* Question Navigation Grid - Right Side */}
           <div className="w-72 sticky top-24 h-[calc(100vh-12rem)]">
-            <div className="question-nav-scrollbar p-4 bg-muted rounded-lg h-full overflow-y-auto">
-              <h3 className="font-semibold mb-4">Question Navigation</h3>
+            <div className="question-nav-scrollbar p-4 bg-white dark:bg-slate-900 border-2 border-gray-300 dark:border-gray-700 rounded-lg h-full overflow-y-auto">
+              <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-4 text-lg">Question Navigation</h3>
 
-              {/* Legend under header */}
-              <div className="mb-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-green-500 bg-green-50"></div>
-                  <div className="text-sm">Answered</div>
+              {/* Legend with government exam palette */}
+              <div className="mb-6 space-y-2 text-sm">
+                <div className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                  <div className="w-6 h-6 rounded border-2 border-gray-400 dark:border-gray-500 flex items-center justify-center text-xs font-bold">1</div>
+                  <span className="text-gray-700 dark:text-gray-300"><strong>Not Visited:</strong> You have not visited this question yet</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-purple-500 bg-purple-50"></div>
-                  <div className="text-sm">Marked</div>
+
+                <div className="flex items-center gap-3 p-2 bg-red-50 dark:bg-red-950 rounded">
+                  <div className="w-6 h-6 rounded bg-red-500 flex items-center justify-center text-xs font-bold text-white">3</div>
+                  <span className="text-gray-700 dark:text-gray-300"><strong>Not Answered (Red):</strong> You have visited but not answered</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-muted-foreground bg-background"></div>
-                  <div className="text-sm">Not Ans</div>
+
+                <div className="flex items-center gap-3 p-2 bg-green-50 dark:bg-green-950 rounded">
+                  <div className="w-6 h-6 rounded bg-green-500 flex items-center justify-center text-xs font-bold text-white">5</div>
+                  <span className="text-gray-700 dark:text-gray-300"><strong>Answered (Green):</strong> You have answered this question</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-primary bg-primary"></div>
-                  <div className="text-sm">Current</div>
+
+                <div className="flex items-center gap-3 p-2 bg-purple-50 dark:bg-purple-950 rounded">
+                  <div className="w-6 h-6 rounded bg-purple-500 flex items-center justify-center text-xs font-bold text-white">7</div>
+                  <span className="text-gray-700 dark:text-gray-300"><strong>Marked for Review (Purple):</strong> Question flagged for later review</span>
                 </div>
               </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,7 @@ import { Plus, Trash2, Save, X, List } from "lucide-react";
 import { authenticatedFetch } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/ui/loading";
-import type { ExamQuestion, ExamOption, DifficultyLevel } from "@/lib/exam-types";
+import type { ExamQuestion, ExamOption, DifficultyLevel, ExamSection } from "@/lib/exam-types";
 import BulkQuestionImportDialog from "@/components/admin/bulk-question-import-dialog";
 
 const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
@@ -24,6 +25,11 @@ const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
 function normalizeCategory(value: string) {
   return value.trim().toUpperCase();
 }
+
+const SectionEditorWrapper = dynamic(
+  () => import("@/components/admin/section-editor").then((mod) => ({ default: (props: any) => React.createElement(mod.default, props) })),
+  { ssr: false }
+);
 
 export default function AdminExamsPage() {
   const router = useRouter();
@@ -41,7 +47,6 @@ export default function AdminExamsPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("SEBI");
-  const [durationMinutes, setDurationMinutes] = useState(60);
   const [passingMarks, setPassingMarks] = useState(40);
   const [negativeMarking, setNegativeMarking] = useState(0.25);
   const [isPremium, setIsPremium] = useState(false);
@@ -55,6 +60,19 @@ export default function AdminExamsPage() {
     "Negative marking applies for wrong answers",
   ]);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+  const [sections, setSections] = useState<ExamSection[]>([]);
+  const [selectedSectionIdForAdd, setSelectedSectionIdForAdd] = useState("");
+
+  const totalSectionDuration = useMemo(
+    () => sections.reduce((sum, s) => sum + (Number.isFinite(s.durationMinutes) ? s.durationMinutes : 0), 0),
+    [sections]
+  );
+
+  const normalizeDurationMinutes = (value: unknown) => {
+    const numeric = typeof value === "number" ? value : Number(String(value ?? "").trim());
+    if (!Number.isFinite(numeric) || numeric < 0) return 0;
+    return Math.round(numeric);
+  };
 
   const loadCategoryOptions = async () => {
     try {
@@ -71,6 +89,18 @@ export default function AdminExamsPage() {
       setCategoryOptions(DEFAULT_CATEGORY_OPTIONS);
     }
   };
+
+  useEffect(() => {
+    if (sections.length === 0) {
+      setSelectedSectionIdForAdd("");
+      return;
+    }
+
+    const stillExists = sections.some((s) => s.id === selectedSectionIdForAdd);
+    if (!stillExists) {
+      setSelectedSectionIdForAdd(sections[0]?.id || "");
+    }
+  }, [sections, selectedSectionIdForAdd]);
 
   const persistCategoryOption = async (rawCategory: string) => {
     const normalized = normalizeCategory(rawCategory);
@@ -123,8 +153,18 @@ export default function AdminExamsPage() {
   }, [user, authLoading, router]);
 
   const addQuestion = () => {
+    if (!selectedSectionIdForAdd) {
+      toast({
+        title: "Section Required",
+        description: "Please create/select a section first, then add questions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newQuestionId = `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newQuestion: ExamQuestion = {
-      id: `q${questions.length + 1}`,
+      id: newQuestionId,
       text: "",
       options: [
         { id: "a", text: "" },
@@ -139,6 +179,13 @@ export default function AdminExamsPage() {
       subject: "",
     };
     setQuestions([...questions, newQuestion]);
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === selectedSectionIdForAdd
+          ? { ...s, questionIds: Array.from(new Set([...(s.questionIds || []), newQuestionId])) }
+          : s
+      )
+    );
     
     // Scroll to the newly added question
     setTimeout(() => {
@@ -191,7 +238,11 @@ export default function AdminExamsPage() {
   };
 
   const removeQuestion = (index: number) => {
+    const removed = questions[index];
     setQuestions(questions.filter((_, i) => i !== index));
+    if (removed?.id) {
+      setSections((prev) => prev.map((s) => ({ ...s, questionIds: (s.questionIds || []).filter((id) => id !== removed.id) })));
+    }
   };
 
   const updateQuestion = (index: number, updates: Partial<ExamQuestion>) => {
@@ -268,6 +319,32 @@ export default function AdminExamsPage() {
     setSaving(true);
 
     try {
+      // Sections validation: require at least one section and ensure each has questions
+      if (!Array.isArray(sections) || sections.length === 0) {
+        toast({ title: "Validation Error", description: "At least one section is required", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      const normalizedSections = sections.map((section, index) => ({
+        ...section,
+        durationMinutes: normalizeDurationMinutes(section.durationMinutes),
+        questionIds: Array.isArray(section.questionIds) ? section.questionIds.filter(Boolean) : [],
+      }));
+
+      for (let si = 0; si < normalizedSections.length; si++) {
+        const s = normalizedSections[si] as any;
+        if (!Array.isArray(s.questionIds) || s.questionIds.length === 0) {
+          toast({ title: "Validation Error", description: `Section ${si + 1} must have at least one question`, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+        if (s.durationMinutes <= 0) {
+          toast({ title: "Validation Error", description: `Section ${si + 1} must have a valid duration`, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+      }
       const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
 
       const examData = {
@@ -276,7 +353,7 @@ export default function AdminExamsPage() {
         category,
         isPremium,
         type: "timed",
-        durationMinutes,
+        durationMinutes: normalizedSections.reduce((sum, s) => sum + s.durationMinutes, 0),
         totalMarks,
         passingMarks,
         negativeMarking,
@@ -284,6 +361,7 @@ export default function AdminExamsPage() {
         shuffleOptions,
         instructions,
         questions,
+        sections: normalizedSections,
         isPublished,
       };
 
@@ -347,9 +425,10 @@ export default function AdminExamsPage() {
         </div>
 
         <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="sections">Sections</TabsTrigger>
             <TabsTrigger value="questions">
               Questions ({questions.length})
             </TabsTrigger>
@@ -428,14 +507,16 @@ export default function AdminExamsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (minutes)</Label>
+                    <Label htmlFor="duration">Total Duration (auto from sections)</Label>
                     <Input
                       id="duration"
                       type="number"
-                      value={durationMinutes}
-                      onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 0)}
-                      min={1}
+                      value={totalSectionDuration}
+                      readOnly
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Set time in the Sections tab. This total updates automatically.
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -568,6 +649,18 @@ export default function AdminExamsPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="sections" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sections</CardTitle>
+                <CardDescription>Define exam sections, per-section durations and assign questions.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SectionEditorWrapper sections={sections} questions={questions} onChange={setSections} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="questions" className="space-y-4" ref={questionsContainerRef}>
             <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -576,21 +669,60 @@ export default function AdminExamsPage() {
                   Add questions manually or import them in bulk from JSON, CSV, or Excel.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[220px]">
+                  <Label className="text-xs text-muted-foreground">Add/Import Into Section</Label>
+                  <Select value={selectedSectionIdForAdd} onValueChange={setSelectedSectionIdForAdd}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sections.map((section) => (
+                        <SelectItem key={section.id} value={section.id}>
+                          {section.title || section.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <BulkQuestionImportDialog
                   existingCount={questions.length}
-                  onImport={(importedQuestions, mode) => {
+                  sections={sections}
+                  initialSectionId={selectedSectionIdForAdd}
+                  disabled={!selectedSectionIdForAdd}
+                  onImport={(importedQuestions, mode, sectionId) => {
+                    const targetSection = sectionId || selectedSectionIdForAdd;
+                    if (!targetSection) {
+                      toast({ title: "Section Required", description: "Please create/select a section first, then import questions.", variant: "destructive" });
+                      return;
+                    }
+
                     setQuestions((currentQuestions) => {
                       const newQuestions = mode === "replace"
                         ? importedQuestions
                         : [...currentQuestions, ...importedQuestions];
-                      
-                      // Scroll to questions section after a brief delay to ensure state update
+
                       setTimeout(() => {
                         questionsContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }, 100);
-                      
+
                       return newQuestions;
+                    });
+
+                    const importedIds = importedQuestions.map((q) => q.id).filter(Boolean);
+                    setSections((prevSections) => {
+                      if (mode === "replace") {
+                        return prevSections.map((s) => ({
+                          ...s,
+                          questionIds: s.id === targetSection ? importedIds : (s.questionIds || []),
+                        }));
+                      }
+
+                      return prevSections.map((s) =>
+                        s.id === targetSection
+                          ? { ...s, questionIds: Array.from(new Set([...(s.questionIds || []), ...importedIds])) }
+                          : s
+                      );
                     });
                   }}
                 />

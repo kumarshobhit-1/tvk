@@ -111,9 +111,9 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
           )}
           
           {/* Header Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-6 text-center border-b-4 border-blue-800">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-slate-900 dark:to-slate-800 p-6 text-center border-b-4 border-blue-800 dark:border-slate-700">
             <div className="flex items-center justify-center mb-3">
-              <div className="bg-white rounded-full p-3 shadow-lg">
+              <div className="bg-white rounded-full p-3 shadow-lg dark:bg-slate-100">
                 <Trophy className="h-10 w-10 text-blue-600" />
               </div>
             </div>
@@ -259,7 +259,7 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
         {/* Share & Actions Section */}
         <div className="grid md:grid-cols-2 gap-4 mt-6">
           {/* Share Card */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 hover:shadow-xl transition-shadow duration-300 overflow-hidden animate-in fade-in slide-in-from-left duration-700" style={{ animationDelay: '300ms' }}>
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 hover:shadow-xl transition-shadow duration-300 overflow-hidden animate-in fade-in slide-in-from-left duration-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800" style={{ animationDelay: '300ms' }}>
             <CardContent className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Share2 className="h-5 w-5 text-white" />
@@ -268,7 +268,7 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
               <div className="space-y-2">
                 <Button
                   onClick={() => handleShare('twitter')}
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200 dark:bg-white/10 dark:hover:bg-white/15"
                   size="sm"
                 >
                   <Twitter className="mr-2 h-4 w-4" />
@@ -276,7 +276,7 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
                 </Button>
                 <Button
                   onClick={() => handleShare('whatsapp')}
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200 dark:bg-white/10 dark:hover:bg-white/15"
                   size="sm"
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
@@ -284,7 +284,7 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
                 </Button>
                 <Button
                   onClick={() => handleShare('linkedin')}
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200 dark:bg-white/10 dark:hover:bg-white/15"
                   size="sm"
                 >
                   <Linkedin className="mr-2 h-4 w-4" />
@@ -292,7 +292,7 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
                 </Button>
                 <Button
                   onClick={handleCopyLink}
-                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white border-0 hover:scale-105 transition-transform duration-200 dark:bg-white/10 dark:hover:bg-white/15"
                   size="sm"
                 >
                   {copySuccess ? (
@@ -312,7 +312,7 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
           </Card>
 
           {/* Action Button */}
-          <Card className="border-0 shadow-lg bg-white dark:bg-slate-800 animate-in fade-in slide-in-from-right duration-700" style={{ animationDelay: '400ms' }}>
+          <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-right duration-700" style={{ animationDelay: '400ms' }}>
             <CardContent className="p-6 space-y-3">
               <Button 
                 onClick={onReviewAnswers} 

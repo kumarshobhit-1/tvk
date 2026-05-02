@@ -111,28 +111,47 @@ export async function POST(request: NextRequest) {
       .get();
 
     if (!inProgressAttempts.empty) {
-      // Return the existing in-progress attempt
+      // Return the existing in-progress attempt (supporting sections)
       const existingAttempt = inProgressAttempts.docs[0];
       const attemptData = existingAttempt.data() as ExamAttempt;
-      
+
       const startTime = attemptData.startedAt && typeof attemptData.startedAt === 'object' && 'toDate' in attemptData.startedAt
         ? attemptData.startedAt.toDate().getTime()
         : (typeof attemptData.startedAt === 'number' ? attemptData.startedAt : Date.now());
-      
-      const questionsWithoutAnswers = exam.questions.map((q) => ({
-        id: q.id,
-        text: q.text,
-        options: q.options,
-        marks: q.marks,
-        difficulty: q.difficulty,
-        subject: q.subject,
-      }));
+
+      // Build sections response for in-progress attempt (compatible with new sections schema)
+      const sectionsData = (exam.sections && Array.isArray(exam.sections) && exam.sections.length > 0)
+        ? exam.sections
+        : [{ id: 's1', title: 'Section 1', durationMinutes: exam.durationMinutes, questionIds: exam.questions.map((q:any) => q.id) }];
+
+      const sections = sectionsData.map((s: any) => {
+        const qList = (s.questionIds || (s.questions && s.questions.map((q:any) => q.id)) || []);
+        const questionsForSection = qList.map((qid: string) => {
+          const q = exam.questions.find((qq: any) => qq.id === qid);
+          if (!q) return null;
+          return {
+            id: q.id,
+            text: q.text,
+            options: q.options,
+            marks: q.marks,
+            difficulty: q.difficulty,
+            subject: q.subject,
+          };
+        }).filter(Boolean);
+
+        return {
+          id: s.id || `s-${Math.random().toString(36).slice(2,8)}`,
+          title: s.title || 'Section',
+          durationMinutes: s.durationMinutes || 0,
+          questions: questionsForSection,
+        };
+      });
 
       return NextResponse.json({
         attemptId: existingAttempt.id,
         startedAt: startTime,
-        expiresAt: startTime + exam.durationMinutes * 60 * 1000,
-        questions: questionsWithoutAnswers,
+        // client will manage per-section timers; provide section durations and grouped questions
+        sections,
         exam: {
           id: examId,
           title: exam.title,
@@ -146,8 +165,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Shuffle questions if required
-    let questions = [...exam.questions];
+    // Prepare sections (either provided or single section fallback)
+    const sectionsData = (exam.sections && Array.isArray(exam.sections) && exam.sections.length > 0)
+      ? exam.sections
+      : [{ id: 's1', title: 'Section 1', durationMinutes: exam.durationMinutes, questionIds: exam.questions.map((q:any) => q.id) }];
+
+    // Build flattened ordered questions array preserving section grouping
+    let questions: any[] = [];
+    const sectionsSnapshot: any[] = [];
+
+    for (const s of sectionsData) {
+      const qIds = s.questionIds || (s.questions && s.questions.map((q:any) => q.id)) || [];
+      const questionsForSection = qIds.map((qid: string) => exam.questions.find((qq: any) => qq.id === qid)).filter(Boolean);
+      sectionsSnapshot.push({ id: s.id || `s-${Math.random().toString(36).slice(2,8)}`, title: s.title || 'Section', durationMinutes: s.durationMinutes || 0, questions: questionsForSection.map((q:any) => ({ id: q.id, marks: q.marks })) });
+      questions = questions.concat(questionsForSection);
+    }
+
+    // Shuffle questions if required (within flattened order)
     if (exam.shuffleQuestions) {
       questions = shuffleArray(questions);
     }
@@ -191,6 +225,8 @@ export async function POST(request: NextRequest) {
 
     // Add questionsSnapshot for reference
     (attemptData as any).questionsSnapshot = questionsSnapshot;
+    // Add sections snapshot so client can render per-section timers and grouped questions
+    (attemptData as any).sectionsSnapshot = sectionsSnapshot;
 
     const attemptRef = await adminDB.collection("exam_attempts").add(attemptData);
 
@@ -205,13 +241,24 @@ export async function POST(request: NextRequest) {
       // Don't send correctOptionId or explanation
     }));
 
+    // Group questions per section for client consumption
+    const sectionsForClient = sectionsSnapshot.map((s) => ({
+      id: s.id,
+      title: s.title,
+      durationMinutes: s.durationMinutes,
+      questions: s.questions.map((qs: any) => {
+        const q = questionsWithoutAnswers.find((qq: any) => qq.id === qs.id);
+        return q;
+      }).filter(Boolean),
+    }));
+
     const startTime = currentTime.getTime();
-    
+
     return NextResponse.json({
       attemptId: attemptRef.id,
       startedAt: startTime,
-      expiresAt: startTime + exam.durationMinutes * 60 * 1000,
-      questions: questionsWithoutAnswers,
+      // client will manage per-section timers; provide grouped sections
+      sections: sectionsForClient,
       exam: {
         id: examId,
         title: exam.title,

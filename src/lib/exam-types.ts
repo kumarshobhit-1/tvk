@@ -19,6 +19,16 @@ export interface ExamQuestion {
   subject?: string; // e.g., "SEBI Regulations", "Securities Market"
 }
 
+export interface ExamSection {
+  id: string;
+  title: string;
+  description?: string;
+  durationMinutes: number;
+  questionIds?: string[];
+  questions?: ExamQuestion[];
+  totalMarks?: number;
+}
+
 export interface Exam {
   id: string;
   title: string;
@@ -33,6 +43,7 @@ export interface Exam {
   shuffleOptions: boolean;
   instructions: string[];
   questions: ExamQuestion[];
+  sections?: ExamSection[];
   isPublished: boolean;
   isActive: boolean; // Whether exam is currently active
   emergencyStopped?: boolean; // Whether exam is emergency stopped

@@ -4,7 +4,8 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { AlertCircle, FileJson2, FileSpreadsheet, Upload } from "lucide-react";
 
-import type { DifficultyLevel, ExamQuestion } from "@/lib/exam-types";
+import type { DifficultyLevel, ExamQuestion, ExamSection } from "@/lib/exam-types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,9 +24,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 type ImportMode = "append" | "replace";
 
 interface BulkQuestionImportDialogProps {
-  onImport: (questions: ExamQuestion[], mode: ImportMode) => void;
+  onImport: (questions: ExamQuestion[], mode: ImportMode, sectionId?: string) => void;
   existingCount?: number;
   triggerLabel?: string;
+  sections?: ExamSection[];
+  initialSectionId?: string;
+  disabled?: boolean;
 }
 
 const OPTION_IDS = ["a", "b", "c", "d", "e"];
@@ -259,6 +263,9 @@ export default function BulkQuestionImportDialog({
   onImport,
   existingCount = 0,
   triggerLabel = "Bulk Upload Questions",
+  sections,
+  initialSectionId,
+  disabled,
 }: BulkQuestionImportDialogProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<ImportMode>("append");
@@ -269,6 +276,9 @@ export default function BulkQuestionImportDialog({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const propsInitial = initialSectionId || (sections && sections[0]?.id) || "";
+  const [targetSectionId, setTargetSectionId] = useState<string>(propsInitial);
+
   const resetForm = () => {
     setTextValue("");
     setFileName("");
@@ -277,6 +287,7 @@ export default function BulkQuestionImportDialog({
     setLoading(false);
     setMode("append");
     setSource("file");
+    setTargetSectionId(propsInitial ?? "");
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -308,7 +319,7 @@ export default function BulkQuestionImportDialog({
         return;
       }
 
-      onImport(result.questions, mode);
+      onImport(result.questions, mode, targetSectionId);
       handleOpenChange(false);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to import questions.");
@@ -320,7 +331,7 @@ export default function BulkQuestionImportDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={!!disabled}>
           <Upload className="h-4 w-4 mr-2" />
           {triggerLabel}
         </Button>
@@ -363,6 +374,22 @@ export default function BulkQuestionImportDialog({
                 Clear the current question list and replace it with the imported file.
               </p>
             </button>
+          </div>
+
+          <div className="mb-4">
+            <Label>Import Into Section</Label>
+            <div className="mt-2">
+              <Select value={targetSectionId} onValueChange={(v) => setTargetSectionId(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={sections && sections.length ? "Select section" : "No sections available"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(sections || []).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.title || s.id}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <Tabs value={source} onValueChange={(value) => setSource(value as "file" | "paste")}>
@@ -437,7 +464,7 @@ export default function BulkQuestionImportDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={runImport} disabled={loading}>
+          <Button onClick={runImport} disabled={loading || (!(sections && sections.length) || !targetSectionId)}>
             {loading ? "Importing..." : "Import Questions"}
           </Button>
         </DialogFooter>

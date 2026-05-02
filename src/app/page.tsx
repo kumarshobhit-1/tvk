@@ -168,9 +168,9 @@ export default async function Home() {
 
   return (
     <main className="bg-background text-foreground">
-      <section className="relative overflow-hidden border-b">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_30%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.45),transparent_40%)]" />
-        <div className="absolute left-1/2 top-10 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      <section className="relative overflow-hidden border-b bg-background">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_30%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.10),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.65),transparent_40%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.10),transparent_30%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.08),transparent_28%),linear-gradient(180deg,rgba(2,6,23,0.96),transparent_44%)]" />
+        <div className="absolute left-1/2 top-10 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl dark:bg-primary/20" />
         <div className="container mx-auto px-4 py-16 md:py-20">
           <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
             <div className="relative">
@@ -188,14 +188,14 @@ export default async function Home() {
                 banking, NABARD, PFRDA and other IT-led competitive exams.
               </p>
 
-              <div className="mt-7 rounded-3xl border bg-background/80 p-4 shadow-sm backdrop-blur md:p-5">
+              <div className="mt-7 rounded-3xl border border-border bg-background/90 p-4 shadow-sm backdrop-blur md:p-5 dark:bg-card/90">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Start here</p>
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {spotlightPaths.slice(0, 4).map((item) => (
                     <Link
                       key={item.title}
                       href={item.href}
-                      className="group rounded-2xl border bg-white px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                      className="group rounded-2xl border border-border bg-card px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md dark:bg-slate-900"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -211,7 +211,7 @@ export default async function Home() {
 
               <div className="mt-7 flex flex-wrap gap-2.5">
                 {QUICK_LINKS.map((item) => (
-                  <Button key={item.label} asChild variant="outline" className="h-10 rounded-full border-zinc-200 bg-background/90 px-4 text-sm font-medium shadow-sm hover:border-primary hover:bg-primary/5">
+                  <Button key={item.label} asChild variant="outline" className="h-10 rounded-full border-zinc-200 bg-background/90 px-4 text-sm font-medium shadow-sm hover:border-primary hover:bg-primary/5 dark:border-zinc-700 dark:bg-slate-900 dark:hover:bg-slate-800">
                     <Link href={item.href}>{item.label}</Link>
                   </Button>
                 ))}
@@ -231,7 +231,7 @@ export default async function Home() {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 {quickHighlights.map((item) => (
-                  <div key={item} className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-4 py-2 text-sm shadow-sm backdrop-blur">
+                  <div key={item} className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-2 text-sm shadow-sm backdrop-blur dark:bg-slate-900">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     {item}
                   </div>
@@ -243,7 +243,7 @@ export default async function Home() {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,197,94,0.16),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.14),transparent_30%)]" />
               <CardContent className="relative space-y-5 p-6 md:p-8">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur dark:bg-white/10">
                     <Trophy className="h-6 w-6" />
                   </div>
                   <div>
@@ -253,32 +253,32 @@ export default async function Home() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/60">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/55">Published exams</p>
                     <p className="mt-2 text-3xl font-bold">{totalPublishedExams}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/60">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/55">Premium tests</p>
                     <p className="mt-2 text-3xl font-bold">{totalPremiumExams}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/60">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/55">Study tracks</p>
                     <p className="mt-2 text-3xl font-bold">{totalFeaturedTracks}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                  <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/60">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/55">IT focus</p>
                     <p className="mt-2 text-3xl font-bold">SEBI+</p>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/60">
                   <p className="text-xs uppercase tracking-[0.2em] text-white/55">Popular exam routes</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {spotlightPaths.slice(4).map((item) => (
                       <Link
                         key={item.title}
                         href={item.href}
-                        className="rounded-xl border border-white/10 bg-white/10 px-3 py-3 transition-colors hover:bg-white/15"
+                        className="rounded-xl border border-white/10 bg-white/10 px-3 py-3 transition-colors hover:bg-white/15 dark:bg-slate-900/70 dark:hover:bg-slate-800/80"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
@@ -292,7 +292,7 @@ export default async function Home() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur">
+                <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/60">
                   <div className="flex items-start gap-3">
                     <Target className="mt-0.5 h-5 w-5 text-emerald-300" />
                     <div>
@@ -331,19 +331,19 @@ export default async function Home() {
                     <div className={`rounded-2xl bg-gradient-to-br ${track.tint} p-5 transition-transform group-hover:scale-[1.01]`}>
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-slate-900 shadow-sm">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-slate-900 shadow-sm dark:bg-slate-100 dark:text-slate-900">
                             <Icon className="h-6 w-6" />
                           </div>
-                          <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-950">{track.title}</h3>
-                          <p className="mt-2 max-w-xs text-sm leading-6 text-slate-700">{track.subtitle}</p>
+                          <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-50">{track.title}</h3>
+                          <p className="mt-2 max-w-xs text-sm leading-6 text-slate-700 dark:text-slate-300">{track.subtitle}</p>
                         </div>
 
-                        <div className="rounded-full border border-white/60 bg-white/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-sm">
+                        <div className="rounded-full border border-white/60 bg-white/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-sm dark:border-white/15 dark:bg-slate-900/80 dark:text-slate-200">
                           {count} live
                         </div>
                       </div>
 
-                      <div className="mt-6 flex items-center justify-between rounded-2xl bg-white/75 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm backdrop-blur">
+                      <div className="mt-6 flex items-center justify-between rounded-2xl bg-white/75 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm backdrop-blur dark:bg-slate-900/80 dark:text-slate-200">
                         <span>Open exams</span>
                         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                       </div>
@@ -356,10 +356,10 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="border-y bg-muted/30">
+      <section className="border-y bg-muted/30 dark:bg-slate-950/70">
         <div className="container mx-auto px-4 py-12 md:py-16">
           <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <Card className="rounded-3xl border bg-background shadow-sm">
+            <Card className="rounded-3xl border bg-background shadow-sm dark:bg-slate-900 dark:border-slate-800">
               <CardContent className="space-y-4 p-6 md:p-8">
                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Why this landing page works</p>
                 <h3 className="text-2xl font-bold tracking-tight">Fast access to the exact exam families your users care about</h3>
@@ -395,7 +395,7 @@ export default async function Home() {
               ].map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Card key={item.title} className="rounded-3xl border bg-background shadow-sm">
+                    <Card key={item.title} className="rounded-3xl border bg-background shadow-sm dark:bg-slate-900 dark:border-slate-800">
                     <CardContent className="p-5">
                       <div className="flex items-start gap-3">
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -416,7 +416,7 @@ export default async function Home() {
       </section>
 
       <section className="container mx-auto px-4 py-12 md:py-16">
-        <Card className="overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/10 via-background to-emerald-500/10 shadow-sm">
+        <Card className="overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/10 via-background to-emerald-500/10 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
           <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-8">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Next step</p>
