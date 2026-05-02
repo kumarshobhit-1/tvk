@@ -33,7 +33,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const navLinks = [
   { href: "/", label: "Home", icon: <Home className="h-4 w-4" /> },
   { href: "/dsa", label: "DSA Sheet", icon: <LayoutGrid className="h-4 w-4" /> },
-  { href: "/cs", label: "CS Subjects", icon: <BookOpen className="h-4 w-4" /> },
+  // { href: "/cs", label: "CS Subjects", icon: <BookOpen className="h-4 w-4" /> },
   { href: "/exam", label: "Exams", icon: <BookOpen className="h-4 w-4" /> },
   { href: "/hpcl-is-pyq", label: "HPCL IS PYQ", icon: <FileText className="h-4 w-4" /> },
   { href: "/rbi", label: "RBI", icon: <Shield className="h-4 w-4" /> },
