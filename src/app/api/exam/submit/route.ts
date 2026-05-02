@@ -94,18 +94,134 @@ export async function POST(request: NextRequest) {
     const passingPercentage = (exam.passingMarks / exam.totalMarks) * 100;
     const passed = percentage >= passingPercentage;
 
-    // Update attempt
-    await adminDB.collection("exam_attempts").doc(attemptId).update({
-      submittedAt,
-      answers: updatedAnswers,
-      score,
-      correctAnswers,
-      wrongAnswers,
-      unanswered,
-      percentage,
-      timeTaken,
-      passed,
-      status: "submitted",
+    const userRef = adminDB.collection("users").doc(decodedToken.uid);
+    const statsRef = adminDB.collection("system_config").doc("platform_stats");
+
+    await adminDB.runTransaction(async (transaction) => {
+      const [latestAttemptSnap, userSnap, statsSnap] = await Promise.all([
+        transaction.get(adminDB.collection("exam_attempts").doc(attemptId)),
+        transaction.get(userRef),
+        transaction.get(statsRef),
+      ]);
+
+      if (!latestAttemptSnap.exists) {
+        throw new Error("Attempt not found");
+      }
+
+      const latestAttempt = latestAttemptSnap.data() as ExamAttempt;
+
+      if (latestAttempt.userId !== decodedToken.uid) {
+        throw new Error("Unauthorized");
+      }
+
+      if (latestAttempt.status === "submitted") {
+        throw new Error("Already submitted");
+      }
+
+      let uniqueExamTakers = Number(statsSnap.data()?.uniqueExamTakers || 0);
+      const statsInitialized = statsSnap.exists && statsSnap.data()?.initialized === true;
+      const hasSubmittedExam = userSnap.exists && userSnap.data()?.hasSubmittedExam === true;
+      let userHasSubmittedBefore = hasSubmittedExam;
+
+      if (!userHasSubmittedBefore) {
+        const userSubmittedAttemptsSnap = await transaction.get(
+          adminDB.collection("exam_attempts")
+            .where("userId", "==", decodedToken.uid)
+            .where("status", "==", "submitted")
+            .select("userId")
+        );
+
+        userHasSubmittedBefore = !userSubmittedAttemptsSnap.empty;
+      }
+
+      if (!statsInitialized) {
+        const submittedAttemptsSnap = await transaction.get(
+          adminDB.collection("exam_attempts")
+            .where("status", "==", "submitted")
+            .select("userId")
+        );
+
+        uniqueExamTakers = new Set(
+          submittedAttemptsSnap.docs
+            .map((doc) => String(doc.data()?.userId || "").trim())
+            .filter(Boolean)
+        ).size;
+      }
+
+      const isFirstTimeExamTaker = !userHasSubmittedBefore;
+      const nextUniqueExamTakers = uniqueExamTakers + (isFirstTimeExamTaker ? 1 : 0);
+
+      let uniquePassedUsers = Number(statsSnap.data()?.uniquePassedUsers || 0);
+      const passedUsersInitialized = statsSnap.exists && statsSnap.data()?.passedUsersInitialized === true;
+      const userHadPassed = userSnap.exists && userSnap.data()?.hasPassed === true;
+      let userHasPassedBefore = userHadPassed;
+
+      if (!userHasPassedBefore) {
+        const userPassedAttemptsSnap = await transaction.get(
+          adminDB.collection("exam_attempts")
+            .where("userId", "==", decodedToken.uid)
+            .where("status", "==", "submitted")
+            .where("passed", "==", true)
+            .select("userId")
+        );
+
+        userHasPassedBefore = !userPassedAttemptsSnap.empty;
+      }
+
+      if (!passedUsersInitialized) {
+        const passedAttemptsSnap = await transaction.get(
+          adminDB.collection("exam_attempts")
+            .where("status", "==", "submitted")
+            .where("passed", "==", true)
+            .select("userId")
+        );
+
+        uniquePassedUsers = new Set(
+          passedAttemptsSnap.docs
+            .map((doc) => String(doc.data()?.userId || "").trim())
+            .filter(Boolean)
+        ).size;
+      }
+
+      const isFirstTimePassed = !userHasPassedBefore && passed;
+      const nextUniquePassedUsers = uniquePassedUsers + (isFirstTimePassed ? 1 : 0);
+      const successRate = nextUniqueExamTakers > 0 ? Math.round((nextUniquePassedUsers / nextUniqueExamTakers) * 100) : 0;
+
+      transaction.update(adminDB.collection("exam_attempts").doc(attemptId), {
+        submittedAt,
+        answers: updatedAnswers,
+        score,
+        correctAnswers,
+        wrongAnswers,
+        unanswered,
+        percentage,
+        timeTaken,
+        passed,
+        status: "submitted",
+      });
+
+      transaction.set(
+        userRef,
+        {
+          hasSubmittedExam: true,
+          firstExamSubmittedAt: userSnap.exists && userSnap.data()?.firstExamSubmittedAt ? userSnap.data()?.firstExamSubmittedAt : submittedAt,
+          hasPassed: passed || userHadPassed,
+        },
+        { merge: true }
+      );
+
+      transaction.set(
+        statsRef,
+        {
+          uniqueExamTakers: nextUniqueExamTakers,
+          uniquePassedUsers: nextUniquePassedUsers,
+          successRate,
+          initialized: true,
+          passedUsersInitialized: true,
+          updatedAt: submittedAt,
+        },
+        { merge: true }
+      );
     });
 
     return NextResponse.json({

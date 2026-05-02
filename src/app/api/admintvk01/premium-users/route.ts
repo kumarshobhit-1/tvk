@@ -195,6 +195,40 @@ export async function PATCH(request: NextRequest) {
       updatedAt: new Date(),
     });
 
+    const statsRef = adminDB.collection("system_config").doc("platform_stats");
+
+    await adminDB.runTransaction(async (transaction) => {
+      const statsSnap = await transaction.get(statsRef);
+      let premiumUsersCount = Number(statsSnap.data()?.premiumUsersCount || 0);
+      const statsInitialized = statsSnap.exists && statsSnap.data()?.premiumUsersInitialized === true;
+
+      if (!statsInitialized) {
+        const premiumUsersSnap = await transaction.get(
+          adminDB.collection("users").where("isPremium", "==", true).select("isPremium")
+        );
+
+        premiumUsersCount = premiumUsersSnap.size;
+      }
+
+      const wasPremium = Boolean(ensured.userData?.isPremium || ensured.userData?.premium);
+
+      if (isPremium && !wasPremium) {
+        premiumUsersCount += 1;
+      } else if (!isPremium && wasPremium) {
+        premiumUsersCount = Math.max(0, premiumUsersCount - 1);
+      }
+
+      transaction.set(
+        statsRef,
+        {
+          premiumUsersCount,
+          premiumUsersInitialized: true,
+          premiumUsersUpdatedAt: new Date(),
+        },
+        { merge: true }
+      );
+    });
+
     return NextResponse.json({
       success: true,
       message: isPremium ? "User marked as premium" : "Premium removed from user",

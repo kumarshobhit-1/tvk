@@ -37,15 +37,15 @@ export default function AboutPage() {
                         About <span className='bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent'>The Victory Key</span>
                     </h1>
                     <p className='text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed'>
-                        We bridge the gap between theoretical knowledge and what is actually asked in top tech interviews. 
-                        The Victory Key is designed by industry professionals who understand the challenges of modern tech interviews. 
-                        Our mission is to make quality education accessible, structured, and results-oriented.
+                        The Victory Key helps you convert study-hours into measurable progress. We focus on high-impact problems, clear learning paths, and realistic exam simulations so you can prepare for interviews with confidence.
+                        Built by engineers and educators, our platform emphasizes practice, feedback, and the metrics that truly matter.
                     </p>
                 </section>
 
                 <section className='mb-20'>
                     <h2 className='text-3xl font-bold text-center mb-12'>Platform Statistics</h2>
                     <RealtimeStats />
+                    <p className='text-center text-sm text-muted-foreground mt-3'>Live counts show recent exam attempts and pass rates aggregated from our platform; updated periodically.</p>
                 </section>
 
                 {/* Our Story Section */}
@@ -59,18 +59,16 @@ export default function AboutPage() {
                             <h2 className='text-3xl font-bold mb-6'>Built by Developers, for Developers</h2>
                             <div className='space-y-4 text-muted-foreground'>
                                 <p>
-                                    The Victory Key was born from the frustration of spending countless hours on irrelevant practice problems 
-                                    that never appeared in actual interviews. Our founders, having experienced the struggle of inconsistent 
-                                    preparation resources, decided to create a platform that focuses on what truly matters.
+                                    The Victory Key started as a small project to cut through the noise of generic practice material.
+                                    We focused on the problems that reflect real interview expectations and built tools to measure progress.
                                 </p>
                                 <p>
-                                    We analyzed thousands of interview questions from top tech companies like Google, Microsoft, Amazon, 
-                                    and Meta to curate the most relevant content. Our goal is simple: help you prepare efficiently 
-                                    and land your dream job.
+                                    Our content is curated and continuously reviewed by practitioners. We analyze exam patterns and
+                                    feedback to keep the material current and high-impact.
                                 </p>
                                 <p>
-                                    Today, The Victory Key serves students from top universities and working professionals looking to level up 
-                                    their careers. We're proud to be part of your journey to tech excellence.
+                                    Today thousands of learners and professionals use The Victory Key to prepare smarter, not harder.
+                                    Join the community and turn practice into results.
                                 </p>
                             </div>
                         </div>

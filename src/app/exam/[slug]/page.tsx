@@ -281,7 +281,7 @@ export default function ExamPage() {
                 <BookOpen className="h-6 w-6 mx-auto mb-2 text-primary" />
                 <p className="text-sm text-muted-foreground">Questions</p>
                 <p className="font-semibold">
-                  {examInfo ? examInfo.questions?.length || 0 : "Loading..."}
+                  {examInfo ? (examInfo.questionCount ?? 0) : "Loading..."}
                 </p>
               </div>
               <div className="p-4 bg-muted rounded-lg text-center">
