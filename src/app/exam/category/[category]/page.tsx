@@ -46,8 +46,9 @@ export default function CategoryExamsPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const params = useParams();
   const rawCategory = params.category as string;
-  // Decode the category from URL encoding (e.g., "ibps%20so%20it" → "ibps so it")
-  const category = decodeURIComponent(rawCategory);
+  // Decode the category slug (hyphen-separated) into a display value
+  // e.g. "ibps-so-it" -> "ibps so it". Also handle legacy %20 encodings.
+  const category = decodeURIComponent(rawCategory).replace(/-/g, " ");
   const [exams, setExams] = useState<ExamListItem[]>([]);
   const [examStatuses, setExamStatuses] = useState<Record<string, ExamStatus>>({});
   const [loading, setLoading] = useState(false);

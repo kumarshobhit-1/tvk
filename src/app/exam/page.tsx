@@ -184,7 +184,7 @@ export default function ExamsPage() {
             const Icon = meta.icon;
 
             return (
-              <Link key={cat} href={`/exam/category/${encodeURIComponent(cat.toLowerCase())}`} className="group">
+              <Link key={cat} href={`/exam/category/${cat.toLowerCase().replace(/\s+/g, "-")}`} className="group">
                 <Card className="h-full min-h-[170px] rounded-none border border-zinc-300 bg-white shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-700 dark:bg-slate-950">
                   <CardContent className="flex h-full flex-col items-center justify-center px-4 py-5 text-center">
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-[#4b5fcc] transition-colors group-hover:border-[#4b5fcc] group-hover:bg-[#4b5fcc]/5 dark:border-zinc-700 dark:bg-slate-900 dark:text-slate-100">

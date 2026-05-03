@@ -3,8 +3,8 @@ import Link from 'next/link';
 
 const examLinks = [
   { label: "SEBI", href: "/exam/category/sebi" },
-  { label: "RBI Grade B", href: "/exam/category/rbi%20grade%20b" },
-  { label: "IBPS SO IT", href: "/exam/category/ibps%20so%20it" },
+  { label: "RBI Grade B", href: "/exam/category/rbi-grade-b" },
+  { label: "IBPS SO IT", href: "/exam/category/ibps-so-it" },
   { label: "NABARD", href: "/exam/category/nabard" },
   { label: "PFRDA", href: "/exam/category/pfrda" },
   { label: "Banking IT", href: "/exam/category/banking" },

@@ -445,6 +445,92 @@ export default function EditExamPage() {
     }
   };
 
+  const downloadExamJSON = () => {
+    const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+    const examData = {
+      examId,
+      title,
+      description,
+      category,
+      isPremium,
+      durationMinutes: totalSectionDuration,
+      totalMarks,
+      passingMarks,
+      negativeMarking,
+      shuffleQuestions,
+      shuffleOptions,
+      isPublished,
+      instructions,
+      questions,
+      sections,
+    };
+
+    const blob = new Blob([JSON.stringify(examData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title.replace(/[^a-z0-9-_]/gi, "_") || "exam"}-${examId}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyExam = async () => {
+    try {
+      // Create fresh IDs for questions and sections
+      const idMap: Record<string, string> = {};
+      const newQuestions = questions.map((q) => {
+        const newId = `copy_q_${Math.random().toString(36).slice(2,9)}_${Date.now()}`;
+        idMap[q.id] = newId;
+        return { ...q, id: newId };
+      });
+
+      const newSections = sections.map((s) => ({
+        ...s,
+        id: `copy_s_${Math.random().toString(36).slice(2,9)}_${Date.now()}`,
+        questionIds: (s.questionIds || []).map((qid: string) => idMap[qid] || qid),
+      }));
+
+      const totalMarks = newQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+
+      const payload = {
+        title: `Copy of ${title}`,
+        description,
+        category,
+        isPremium,
+        durationMinutes: totalSectionDuration,
+        totalMarks,
+        passingMarks,
+        negativeMarking,
+        shuffleQuestions,
+        shuffleOptions,
+        instructions,
+        questions: newQuestions,
+        sections: newSections,
+        isPublished: false,
+      };
+
+      const res = await authenticatedFetch(`/api/exam/admintvk01`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to copy exam");
+      }
+
+      const data = await res.json();
+      const newExamId = data.examId;
+      toast({ title: "Success", description: "Exam copied. Opening new exam..." });
+      router.push(`/admintvk01/exams/edit/${newExamId}`);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Could not copy exam", variant: "destructive" });
+    }
+  };
+
   if (authLoading || loading) {
     return <Loading />;
   }
@@ -456,17 +542,28 @@ export default function EditExamPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/admintvk01/exams/list")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Exam</h1>
-            <p className="text-muted-foreground">Update exam details and questions</p>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/admintvk01/exams/list")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Edit Exam</h1>
+              <p className="text-muted-foreground">Update exam details and questions</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={downloadExamJSON} size="sm">
+              Download JSON
+            </Button>
+            <Button onClick={copyExam} size="sm">
+              Copy Exam
+            </Button>
           </div>
         </div>
 

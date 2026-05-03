@@ -171,7 +171,7 @@ export default function ExamPage() {
           variant="outline"
           onClick={() => {
             if (examInfo?.category) {
-              router.push(`/exam/category/${examInfo.category.toLowerCase()}`);
+              router.push(`/exam/category/${String(examInfo.category || "").toLowerCase().replace(/\s+/g, "-")}`);
             } else {
               router.push("/exam");
             }

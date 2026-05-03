@@ -86,8 +86,8 @@ const quickHighlights = [
 
 const QUICK_LINKS: QuickLink[] = [
   { label: "SEBI", href: "/exam/category/sebi" },
-  { label: "RBI Grade B", href: "/exam/category/rbi%20grade%20b" },
-  { label: "IBPS SO IT", href: "/exam/category/ibps%20so%20it" },
+  { label: "RBI Grade B", href: "/exam/category/rbi-grade-b" },
+  { label: "IBPS SO IT", href: "/exam/category/ibps-so-it" },
   { label: "NABARD", href: "/exam/category/nabard" },
   { label: "PFRDA", href: "/exam/category/pfrda" },
   { label: "Banking IT", href: "/exam/category/banking" },
@@ -101,12 +101,12 @@ const spotlightPaths = [
   },
   {
     title: "RBI Grade B",
-    href: "/exam/category/rbi%20grade%20b",
+      href: "/exam/category/rbi-grade-b",
     note: "High priority finance prep",
   },
   {
     title: "IBPS SO IT",
-    href: "/exam/category/ibps%20so%20it",
+      href: "/exam/category/ibps-so-it",
     note: "Specialist officer IT tests",
   },
   {
@@ -325,7 +325,7 @@ export default async function Home() {
             const Icon = track.icon;
             const count = trackCounts.get(track.category) ?? 0;
             return (
-              <Link key={track.category} href={`/exam/category/${encodeURIComponent(track.category.toLowerCase())}`} className="group">
+              <Link key={track.category} href={`/exam/category/${track.category.toLowerCase().replace(/\s+/g, "-")}`} className="group">
                 <Card className="h-full overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
                   <CardContent className="p-5">
                     <div className={`rounded-2xl bg-gradient-to-br ${track.tint} p-5 transition-transform group-hover:scale-[1.01]`}>
