@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FolderPlus, 
+  ArrowLeft,
   Upload, 
   Trash2, 
   FolderOpen, 
@@ -86,6 +87,8 @@ export default function AdminPDFsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ type: "folder" | "file"; id: string; name: string } | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_CATEGORY_OPTIONS);
   const [editingFolder, setEditingFolder] = useState<PDFFolder | null>(null);
+  const [parentFolderId, setParentFolderId] = useState<string | null>(null);
+  const [editParentFolderId, setEditParentFolderId] = useState<string | null>(null);
 
   // Form states
   const [folderName, setFolderName] = useState("");
@@ -195,6 +198,7 @@ export default function AdminPDFsPage() {
           isPremium: folderIsPremium,
           icon: folderIcon,
           color: folderColor,
+          parentId: parentFolderId,
           isPublished: folderPublished,
         }),
       });
@@ -221,6 +225,12 @@ export default function AdminPDFsPage() {
     } finally {
       setSavingFolder(false);
     }
+  };
+
+  const openCreateFolderDialog = (parentId: string | null = null) => {
+    resetFolderForm();
+    setParentFolderId(parentId);
+    setShowFolderDialog(true);
   };
 
   const handleUploadPDFs = async () => {
@@ -357,29 +367,35 @@ export default function AdminPDFsPage() {
     [...getFilesForFolder(folderId)].sort((a, b) => (a.order || 0) - (b.order || 0));
 
   const handleMoveFolder = async (folderId: string, direction: "up" | "down") => {
-    const sorted = getSortedFolders();
-    const index = sorted.findIndex((item) => item.id === folderId);
+    const currentFolder = folders.find((folder) => folder.id === folderId);
+    if (!currentFolder) return;
+
+    // Only consider siblings (same parent)
+    const siblings = getSortedFolders().filter((folder) => (folder.parentId || null) === (currentFolder.parentId || null));
+    const index = siblings.findIndex((item) => item.id === folderId);
     if (index < 0) return;
 
     const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= sorted.length) return;
+    if (swapIndex < 0 || swapIndex >= siblings.length) return;
 
-    const current = sorted[index];
-    const target = sorted[swapIndex];
+    const target = siblings[swapIndex];
+
+    // Assign deterministic order indices based on sibling positions and swap
+    const updates = [
+      { id: currentFolder.id, order: swapIndex },
+      { id: target.id, order: index },
+    ];
 
     try {
-      await Promise.all([
-        authenticatedFetch("/api/pdf/admintvk01", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "folder", id: current.id, order: target.order ?? swapIndex }),
-        }),
-        authenticatedFetch("/api/pdf/admintvk01", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "folder", id: target.id, order: current.order ?? index }),
-        }),
-      ]);
+      await Promise.all(
+        updates.map((u) =>
+          authenticatedFetch("/api/pdf/admintvk01", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "folder", id: u.id, order: u.order }),
+          })
+        )
+      );
 
       await fetchData();
     } catch (error: any) {
@@ -449,6 +465,7 @@ export default function AdminPDFsPage() {
     setEditingFolder(folder);
     setEditFolderCategory(normalizeCategory(folder.category || "SEBI"));
     setEditFolderIsPremium(folder.isPremium === true);
+    setEditParentFolderId(folder.parentId || null);
     setShowEditFolderDialog(true);
   };
 
@@ -465,6 +482,7 @@ export default function AdminPDFsPage() {
           id: editingFolder.id,
           category: normalizeCategory(editFolderCategory),
           isPremium: editFolderIsPremium,
+          parentId: editParentFolderId,
         }),
       });
 
@@ -540,6 +558,7 @@ export default function AdminPDFsPage() {
     setFolderIcon("📁");
     setFolderColor("#3b82f6");
     setFolderPublished(false);
+    setParentFolderId(null);
   };
 
   const getFilesForFolder = (folderId: string) => {
@@ -551,6 +570,116 @@ export default function AdminPDFsPage() {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  const getChildFolders = (parentId: string | null) => {
+    return folders
+      .filter((folder) => (folder.parentId || null) === parentId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  };
+
+  const getDescendantFolderIds = (folderId: string): string[] => {
+    if (!folderId) return [];
+    const children = folders.filter((folder) => folder.parentId === folderId);
+    return children.flatMap((child) => [child.id, ...getDescendantFolderIds(child.id)]);
+  };
+
+  const renderFolderNode = (folder: PDFFolder, depth = 0, showChildren = true) => {
+    const folderFiles = getFilesForFolder(folder.id);
+    const childFolders = getChildFolders(folder.id);
+    const hasChildren = childFolders.length > 0;
+
+    return (
+      <div key={folder.id}>
+        <div
+          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+            selectedFolder?.id === folder.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+          }`}
+          style={{ paddingLeft: 12 + depth * 18 }}
+          onClick={() => setSelectedFolder(folder)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl shrink-0" style={{ filter: `drop-shadow(0 0 2px ${folder.color})` }}>
+                {folder.icon}
+              </span>
+              <div>
+                <p className="font-medium flex items-center gap-2">
+                  {folder.name}
+                  {depth > 0 && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Child</span>}
+                </p>
+                <p className="text-xs text-muted-foreground">{folderFiles.length} files</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    {folder.category || "GENERAL"}
+                  </Badge>
+                  {hasChildren && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      {childFolders.length} subfolders
+                    </Badge>
+                  )}
+                  {folder.isPremium && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                      Premium
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={folder.isPublished ? "default" : "secondary"}>
+                {folder.isPublished ? "Published" : "Draft"}
+              </Badge>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openCreateFolderDialog(folder.id); }}>
+                    <FolderPlus className="h-4 w-4 mr-2" /> Create Subfolder
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRenameFolderDialog(folder); }}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditFolderDialog(folder); }}>
+                    <Check className="h-4 w-4 mr-2" /> Edit Access
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTogglePremium("folder", folder.id, folder.isPremium === true); }}>
+                    {folder.isPremium ? (<><Eye className="h-4 w-4 mr-2" /> Make Free</>) : (<><EyeOff className="h-4 w-4 mr-2" /> Mark Premium</>)}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveFolder(folder.id, "up"); }}>
+                    Move Up
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveFolder(folder.id, "down"); }}>
+                    Move Down
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTogglePublish("folder", folder.id, folder.isPublished); }}>
+                    {folder.isPublished ? (<><EyeOff className="h-4 w-4 mr-2" /> Unpublish</>) : (<><Eye className="h-4 w-4 mr-2" /> Publish</>)}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "folder", id: folder.id, name: folder.name }); setShowDeleteDialog(true); }}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+        {showChildren && (
+          <div
+            className={`space-y-2 mt-2 ${depth > 0 ? "ml-4 pl-4 border-l border-dashed border-muted-foreground/30" : ""}`}
+          >
+            {childFolders.map((child) => renderFolderNode(child, depth + 1, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const selectedFolderChildFolders = selectedFolder ? getChildFolders(selectedFolder.id) : [];
+  const selectedFolderParent = selectedFolder
+    ? folders.find((folder) => folder.id === selectedFolder.parentId) || null
+    : null;
 
   if (authLoading || loading) {
     return <Loading />;
@@ -574,7 +703,7 @@ export default function AdminPDFsPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            <Button onClick={() => setShowFolderDialog(true)}>
+            <Button onClick={() => openCreateFolderDialog()}>
               <FolderPlus className="h-4 w-4 mr-2" />
               New Folder
             </Button>
@@ -601,149 +730,14 @@ export default function AdminPDFsPage() {
                     variant="outline" 
                     size="sm" 
                     className="mt-2"
-                    onClick={() => setShowFolderDialog(true)}
+                    onClick={() => openCreateFolderDialog()}
                   >
                     Create First Folder
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {folders.map((folder) => {
-                    const folderFiles = getFilesForFolder(folder.id);
-                    return (
-                      <div
-                        key={folder.id}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedFolder?.id === folder.id
-                            ? "border-primary bg-primary/5"
-                            : "hover:bg-muted/50"
-                        }`}
-                        onClick={() => setSelectedFolder(folder)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span 
-                              className="text-xl"
-                              style={{ filter: `drop-shadow(0 0 2px ${folder.color})` }}
-                            >
-                              {folder.icon}
-                            </span>
-                            <div>
-                              <p className="font-medium">{folder.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {folderFiles.length} files
-                              </p>
-                              <div className="flex items-center gap-1 mt-1">
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                  {folder.category || "GENERAL"}
-                                </Badge>
-                                {folder.isPremium && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                    Premium
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={folder.isPublished ? "default" : "secondary"}>
-                              {folder.isPublished ? "Published" : "Draft"}
-                            </Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openRenameFolderDialog(folder);
-                                  }}
-                                >
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                  Rename
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEditFolderDialog(folder);
-                                  }}
-                                >
-                                  <Check className="h-4 w-4 mr-2" />
-                                  Edit Access
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleTogglePremium("folder", folder.id, folder.isPremium === true);
-                                  }}
-                                >
-                                  {folder.isPremium ? (
-                                    <>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      Make Free
-                                    </>
-                                  ) : (
-                                    <>
-                                      <EyeOff className="h-4 w-4 mr-2" />
-                                      Mark Premium
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleMoveFolder(folder.id, "up");
-                                  }}
-                                >
-                                  Move Up
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleMoveFolder(folder.id, "down");
-                                  }}
-                                >
-                                  Move Down
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleTogglePublish("folder", folder.id, folder.isPublished);
-                                  }}
-                                >
-                                  {folder.isPublished ? (
-                                    <>
-                                      <EyeOff className="h-4 w-4 mr-2" />
-                                      Unpublish
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      Publish
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteTarget({ type: "folder", id: folder.id, name: folder.name });
-                                    setShowDeleteDialog(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {getChildFolders(null).map((folder) => renderFolderNode(folder, 0, false))}
                 </div>
               )}
             </CardContent>
@@ -766,10 +760,22 @@ export default function AdminPDFsPage() {
                   </CardDescription>
                 </div>
                 {selectedFolder && (
-                  <Button onClick={() => setShowUploadDialog(true)}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload PDFs
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {selectedFolderParent && (
+                      <Button variant="outline" onClick={() => setSelectedFolder(selectedFolderParent)}>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back
+                      </Button>
+                    )}
+                    <Button variant="outline" onClick={() => openCreateFolderDialog(selectedFolder.id)}>
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      Create Subfolder
+                    </Button>
+                    <Button onClick={() => setShowUploadDialog(true)}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload PDFs
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardHeader>
@@ -781,6 +787,21 @@ export default function AdminPDFsPage() {
                 </div>
               ) : (
                 <>
+                  {selectedFolderChildFolders.length > 0 && (
+                    <div className="mb-6 rounded-lg border bg-muted/20 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="font-medium">Subfolders</p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedFolderChildFolders.length} folder(s) inside this folder
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {selectedFolderChildFolders.map((childFolder) => renderFolderNode(childFolder, 1))}
+                      </div>
+                    </div>
+                  )}
                   {getFilesForFolder(selectedFolder.id).length === 0 ? (
                     <div className="text-center py-16 text-muted-foreground">
                       <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
@@ -912,7 +933,7 @@ export default function AdminPDFsPage() {
 
         {/* Create Folder Dialog */}
         <Dialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
-          <DialogContent>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Folder</DialogTitle>
               <DialogDescription>
@@ -950,6 +971,22 @@ export default function AdminPDFsPage() {
                       {categoryOptions.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Parent Folder</Label>
+                  <Select value={parentFolderId || "__none__"} onValueChange={(value) => setParentFolderId(value === "__none__" ? null : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Top level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Top level</SelectItem>
+                      {folders.map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1050,6 +1087,25 @@ export default function AdminPDFsPage() {
                         {category}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Parent Folder</Label>
+                <Select value={editParentFolderId || "__none__"} onValueChange={(value) => setEditParentFolderId(value === "__none__" ? null : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Top level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Top level</SelectItem>
+                    {folders
+                      .filter((folder) => folder.id !== editingFolder?.id && !getDescendantFolderIds(editingFolder?.id || "").includes(folder.id))
+                      .map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

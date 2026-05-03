@@ -29,6 +29,7 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<PDFFolderWithFiles | null>(null);
+  const [folderStack, setFolderStack] = useState<PDFFolderWithFiles[]>([]);
 
   useEffect(() => {
     document.title = "PDF Library | The Victory Key";
@@ -85,6 +86,42 @@ export default function LibraryPage() {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const renderPublicFolderNode = (folder: PDFFolderWithFiles, depth = 0) => {
+    const hasChildren = (folder.subfolders || []).length > 0;
+
+    return (
+      <div key={folder.id}>
+        <div
+          className="p-3 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50"
+          style={{ paddingLeft: 12 + depth * 18 }}
+          onClick={() => setSelectedFolder(folder)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-md flex items-center justify-center text-2xl" style={{ backgroundColor: `${folder.color}20` }}>
+                {folder.icon}
+              </div>
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate">{folder.name}</div>
+                <div className="text-xs text-muted-foreground">{folder.files.length} files</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div>{folder.category || "GENERAL"}</div>
+              {folder.isPremium && <div className="text-secondary">Premium</div>}
+              {hasChildren && <div className="ml-2">{(folder.subfolders || []).length} subfolders</div>}
+            </div>
+          </div>
+        </div>
+        {(folder.subfolders || []).length > 0 && (
+          <div className="mt-2 space-y-2">
+            {folder.subfolders!.map((sub) => renderPublicFolderNode(sub, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Filter files for a given folder based on search
@@ -168,23 +205,28 @@ export default function LibraryPage() {
                 <AccordionItem key={folder.id} value={folder.id}>
                   <AccordionTrigger
                     className="py-2 hover:no-underline data-[state=open]:font-semibold cursor-pointer"
-                    onClick={() => setSelectedFolder(folder)}
+                    onClick={() => { setFolderStack([folder]); setSelectedFolder(folder); }}
                   >
                     <div className="flex items-center gap-2">
                       <span>{folder.icon}</span>
                       <div className="text-left min-w-0">
                         <div className="font-medium text-sm">{folder.name}</div>
-                        <div className="text-xs text-muted-foreground">{folder.files.length} files</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span>{folder.files.length} files</span>
+                          {folder.subfolders && folder.subfolders.length > 0 && (
+                            <span className="text-xs text-muted-foreground">· {folder.subfolders.length} subfolder{folder.subfolders.length > 1 ? "s" : ""}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="pb-0 hidden">
+                    <AccordionContent className="pb-0 hidden">
                     <div className="space-y-2 pl-4 py-2">
                       {getFilteredFiles(folder).map((file) => (
                         <div
                           key={file.id}
                           className="flex items-center gap-2 p-2 rounded hover:bg-primary/10 cursor-pointer group"
-                          onClick={() => setSelectedFolder(folder)}
+                          onClick={() => { setFolderStack([folder]); setSelectedFolder(folder); }}
                         >
                           <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                           <div className="text-left min-w-0 flex-1">
@@ -217,6 +259,20 @@ export default function LibraryPage() {
                     <Button variant="ghost" size="sm" className="md:hidden mr-2" onClick={() => setSelectedFolder(null)}>
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
+                    {folderStack.length > 1 ? (
+                      <Button variant="outline" size="sm" className="mr-2" onClick={() => {
+                        const newStack = folderStack.slice(0, -1);
+                        setFolderStack(newStack);
+                        setSelectedFolder(newStack.length ? newStack[newStack.length - 1] : null);
+                      }}>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" className="mr-2" onClick={() => { setSelectedFolder(null); setFolderStack([]); }}>
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    )}
                     <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ backgroundColor: `${selectedFolder.color}20` }}>
                       {selectedFolder.icon}
                     </div>
@@ -232,6 +288,25 @@ export default function LibraryPage() {
                     <p className="text-muted-foreground">{selectedFolder.description}</p>
                   )}
                 </div>
+
+                {/* Subfolders */}
+                {selectedFolder.subfolders && selectedFolder.subfolders.length > 0 && (
+                  <div className="mb-6 rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="font-medium">Subfolders</p>
+                        <p className="text-xs text-muted-foreground">{selectedFolder.subfolders.length} folder(s) inside this folder</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {selectedFolder.subfolders.map((sub) => (
+                        <div key={sub.id} onClick={() => { setFolderStack(prev => [...prev, sub]); setSelectedFolder(sub); }}>
+                          {renderPublicFolderNode(sub, 1)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Files list */}
                 <div className="space-y-2">

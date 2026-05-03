@@ -77,21 +77,39 @@ export async function GET(request: NextRequest) {
       files = files.filter((file) => file.folderId === folderId);
     }
 
-    // Group files by folder
-    const foldersWithFiles: PDFFolderWithFiles[] = folders.map((folder) => {
+    // Build folder objects with files and nest subfolders by parentId
+    const folderMap2 = new Map<string, PDFFolderWithFiles>();
+
+    // initialize entries with files
+    folders.forEach((folder) => {
       const folderFiles = files.filter((file) => file.folderId === folder.id);
-
-      return {
-        ...folder,
-        canAccess: true,
-        files: folderFiles,
-      };
+      folderMap2.set(folder.id, { ...folder, files: folderFiles, subfolders: [] });
     });
 
-    return NextResponse.json({
-      folders: foldersWithFiles,
-      totalFiles: files.length,
-    });
+    const roots: PDFFolderWithFiles[] = [];
+
+    // attach children to parents
+    for (const folder of folderMap2.values()) {
+      const parentId = folder.parentId || null;
+      if (parentId && folderMap2.has(parentId)) {
+        const parent = folderMap2.get(parentId)!;
+        parent.subfolders = parent.subfolders || [];
+        parent.subfolders.push(folder);
+      } else {
+        roots.push(folder);
+      }
+    }
+
+    // sort subfolders in each parent by order
+    const sortRecursively = (nodeList: PDFFolderWithFiles[] | undefined) => {
+      if (!nodeList) return;
+      nodeList.sort((a, b) => (a.order || 0) - (b.order || 0));
+      nodeList.forEach((n) => sortRecursively(n.subfolders));
+    };
+
+    sortRecursively(roots);
+
+    return NextResponse.json({ folders: roots, totalFiles: files.length });
   } catch (error: any) {
     console.error("Error fetching PDFs:", error);
     return NextResponse.json(
