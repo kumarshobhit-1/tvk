@@ -292,14 +292,29 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (type === "folder") {
-      // Check if folder has files
-      const filesSnapshot = await adminDB
-        .collection("pdf_files")
-        .where("folderId", "==", id)
-        .get();
+      const foldersSnapshot = await adminDB.collection("pdf_folders").get();
+      const allFolders = foldersSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as PDFFolder),
+      }));
 
-      if (!filesSnapshot.empty) {
-        // Delete all files in folder first
+      const folderMap = new Map(allFolders.map((folder) => [folder.id, folder]));
+
+      const collectDescendants = (folderId: string): string[] => {
+        const directChildren = allFolders.filter((folder) => (folder.parentId || null) === folderId);
+        return directChildren.flatMap((child) => [child.id, ...collectDescendants(child.id)]);
+      };
+
+      const descendantIds = collectDescendants(id);
+      const folderIdsToDelete = [id, ...descendantIds];
+
+      // Delete all files in the folder subtree first
+      for (const folderId of folderIdsToDelete) {
+        const filesSnapshot = await adminDB
+          .collection("pdf_files")
+          .where("folderId", "==", folderId)
+          .get();
+
         for (const fileDoc of filesSnapshot.docs) {
           const fileData = fileDoc.data() as PDFFile;
           await deletePDFFromCloudinary(fileData.cloudinaryPublicId);
@@ -307,8 +322,14 @@ export async function DELETE(request: NextRequest) {
         }
       }
 
-      // Delete folder
-      await adminDB.collection("pdf_folders").doc(id).delete();
+      // Delete child folders deepest-first, then the parent folder
+      const foldersByDepth = folderIdsToDelete
+        .map((folderId) => ({ folderId, depth: collectDescendants(folderId).length }))
+        .sort((a, b) => b.depth - a.depth);
+
+      for (const item of foldersByDepth) {
+        await adminDB.collection("pdf_folders").doc(item.folderId).delete();
+      }
     } else if (type === "file") {
       // Get file data first
       const fileDoc = await adminDB.collection("pdf_files").doc(id).get();

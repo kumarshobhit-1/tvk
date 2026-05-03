@@ -88,7 +88,7 @@ export default function LibraryPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const renderPublicFolderNode = (folder: PDFFolderWithFiles, depth = 0) => {
+  const renderPublicFolderNode = (folder: PDFFolderWithFiles, depth = 0, showChildren = true) => {
     const hasChildren = (folder.subfolders || []).length > 0;
 
     return (
@@ -115,9 +115,9 @@ export default function LibraryPage() {
             </div>
           </div>
         </div>
-        {(folder.subfolders || []).length > 0 && (
+        {showChildren && (folder.subfolders || []).length > 0 && (
           <div className="mt-2 space-y-2">
-            {folder.subfolders!.map((sub) => renderPublicFolderNode(sub, depth + 1))}
+            {folder.subfolders!.map((sub) => renderPublicFolderNode(sub, depth + 1, true))}
           </div>
         )}
       </div>
@@ -301,7 +301,7 @@ export default function LibraryPage() {
                     <div className="space-y-2">
                       {selectedFolder.subfolders.map((sub) => (
                         <div key={sub.id} onClick={() => { setFolderStack(prev => [...prev, sub]); setSelectedFolder(sub); }}>
-                          {renderPublicFolderNode(sub, 1)}
+                          {renderPublicFolderNode(sub, 1, false)}
                         </div>
                       ))}
                     </div>

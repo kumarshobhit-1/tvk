@@ -577,6 +577,16 @@ export default function AdminPDFsPage() {
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   };
 
+  const getRootFolders = () => {
+    return folders
+      .filter((folder) => {
+        const parentId = folder.parentId || null;
+        if (parentId === null) return true;
+        return !folders.some((candidate) => candidate.id === parentId);
+      })
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  };
+
   const getDescendantFolderIds = (folderId: string): string[] => {
     if (!folderId) return [];
     const children = folders.filter((folder) => folder.parentId === folderId);
@@ -587,6 +597,7 @@ export default function AdminPDFsPage() {
     const folderFiles = getFilesForFolder(folder.id);
     const childFolders = getChildFolders(folder.id);
     const hasChildren = childFolders.length > 0;
+    const isOrphan = (folder.parentId || null) !== null && !folders.some((candidate) => candidate.id === folder.parentId);
 
     return (
       <div key={folder.id}>
@@ -606,6 +617,7 @@ export default function AdminPDFsPage() {
                 <p className="font-medium flex items-center gap-2">
                   {folder.name}
                   {depth > 0 && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Child</span>}
+                  {isOrphan && <span className="text-[10px] uppercase tracking-wide text-destructive">Orphan</span>}
                 </p>
                 <p className="text-xs text-muted-foreground">{folderFiles.length} files</p>
                 <div className="flex items-center gap-1 mt-1">
@@ -737,7 +749,7 @@ export default function AdminPDFsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {getChildFolders(null).map((folder) => renderFolderNode(folder, 0, false))}
+                  {getRootFolders().map((folder) => renderFolderNode(folder, 0, false))}
                 </div>
               )}
             </CardContent>
