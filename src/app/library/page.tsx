@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { 
   FileText, 
   FolderOpen, 
@@ -30,6 +29,7 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<PDFFolderWithFiles | null>(null);
   const [folderStack, setFolderStack] = useState<PDFFolderWithFiles[]>([]);
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     document.title = "PDF Library | The Victory Key";
@@ -124,6 +124,53 @@ export default function LibraryPage() {
     );
   };
 
+  const renderSidebarFolderNode = (folder: PDFFolderWithFiles, depth = 0) => {
+    const children = folder.subfolders || [];
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedFolders[folder.id] === true;
+
+    return (
+      <div key={folder.id}>
+        <div
+          className={`flex items-center gap-2 rounded-md px-2 py-2 cursor-pointer transition-colors ${
+            selectedFolder?.id === folder.id ? "bg-primary/10 text-primary" : "hover:bg-muted/60"
+          }`}
+          style={{ paddingLeft: 8 + depth * 16 }}
+        >
+          <button
+            type="button"
+            className={`h-6 w-6 shrink-0 flex items-center justify-center rounded transition-transform ${hasChildren ? "text-muted-foreground hover:bg-muted" : "opacity-40 cursor-default"}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!hasChildren) return;
+              setExpandedFolders((prev) => ({ ...prev, [folder.id]: !prev[folder.id] }));
+            }}
+            aria-label={isExpanded ? "Collapse folder" : "Expand folder"}
+          >
+            <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+          </button>
+
+          <div className="flex items-center gap-2 min-w-0 flex-1" onClick={() => { setFolderStack([folder]); setSelectedFolder(folder); }}>
+            <span className="shrink-0">{folder.icon}</span>
+            <div className="min-w-0">
+              <div className="text-sm font-medium truncate">{folder.name}</div>
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <span>{folder.files.length} files</span>
+                {hasChildren && <span>· {children.length} subfolder{children.length > 1 ? "s" : ""}</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="mt-1 space-y-1">
+            {children.map((child) => renderSidebarFolderNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Filter files for a given folder based on search
   const getFilteredFiles = (folder: PDFFolderWithFiles) => {
     const sortedFiles = [...folder.files].sort((a, b) => {
@@ -200,46 +247,9 @@ export default function LibraryPage() {
               <FolderOpen className="h-4 w-4" />
               Folders
             </h3>
-            <Accordion type="single" collapsible className="w-full">
-              {getFilteredFolders().map((folder, idx) => (
-                <AccordionItem key={folder.id} value={folder.id}>
-                  <AccordionTrigger
-                    className="py-2 hover:no-underline data-[state=open]:font-semibold cursor-pointer"
-                    onClick={() => { setFolderStack([folder]); setSelectedFolder(folder); }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{folder.icon}</span>
-                      <div className="text-left min-w-0">
-                        <div className="font-medium text-sm">{folder.name}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-2">
-                          <span>{folder.files.length} files</span>
-                          {folder.subfolders && folder.subfolders.length > 0 && (
-                            <span className="text-xs text-muted-foreground">· {folder.subfolders.length} subfolder{folder.subfolders.length > 1 ? "s" : ""}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                    <AccordionContent className="pb-0 hidden">
-                    <div className="space-y-2 pl-4 py-2">
-                      {getFilteredFiles(folder).map((file) => (
-                        <div
-                          key={file.id}
-                          className="flex items-center gap-2 p-2 rounded hover:bg-primary/10 cursor-pointer group"
-                          onClick={() => { setFolderStack([folder]); setSelectedFolder(folder); }}
-                        >
-                          <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                          <div className="text-left min-w-0 flex-1">
-                            <div className="text-sm truncate">{file.name}</div>
-                            <div className="text-xs text-muted-foreground">{file.pageCount ? `${file.pageCount} pages` : formatFileSize(file.fileSize)}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            <div className="space-y-1">
+              {getFilteredFolders().map((folder) => renderSidebarFolderNode(folder))}
+            </div>
             </div>
           </aside>
 
