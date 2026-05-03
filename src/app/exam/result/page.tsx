@@ -36,6 +36,7 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{message: string, type?: string} | null>(null);
   const [showReview, setShowReview] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
 
   useEffect(() => {
     if (attemptId) {
@@ -44,6 +45,11 @@ export default function ResultPage() {
       document.title = "My Exam Results | The Victory Key";
     }
   }, [attemptId]);
+
+  useEffect(() => {
+    if (!showReview) return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [showReview, reviewIndex]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -341,42 +347,93 @@ export default function ResultPage() {
   }
 
   if (showReview) {
+    const currentAnswer = result.answers[reviewIndex];
+    const totalReviewQuestions = result.answers.length;
+
+    const goPrev = () => setReviewIndex((prev) => Math.max(0, prev - 1));
+    const goNext = () => setReviewIndex((prev) => Math.min(totalReviewQuestions - 1, prev + 1));
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <Button
             variant="outline"
-            onClick={() => setShowReview(false)}
+            onClick={() => {
+              setShowReview(false);
+              setReviewIndex(0);
+            }}
             className="mb-4"
           >
             ← Back to Summary
           </Button>
 
-          <h2 className="text-2xl font-bold mb-6">Answer Review</h2>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Answer Review</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Review questions one by one.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="px-3 py-1">
+                {reviewIndex + 1} / {totalReviewQuestions}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={goPrev} disabled={reviewIndex === 0}>
+                Previous
+              </Button>
+              <Button variant="outline" size="sm" onClick={goNext} disabled={reviewIndex === totalReviewQuestions - 1}>
+                Next
+              </Button>
+            </div>
+          </div>
 
-          <div className="space-y-6">
-            {result.answers.map((answer, index) => (
-              <QuestionCard
-                key={answer.questionId}
-                question={{
-                  id: answer.questionId,
-                  text: answer.questionText,
-                  options: answer.options,
-                  correctOptionId: answer.correctOptionId,
-                  explanation: answer.explanation,
-                  marks: answer.marksAwarded,
-                  difficulty: "Medium",
-                }}
-                questionNumber={index + 1}
-                totalQuestions={result.answers.length}
-                selectedOptionId={answer.selectedOptionId}
-                isFlagged={false}
-                onSelectOption={() => {}}
-                onToggleFlag={() => {}}
-                showCorrectAnswer={true}
-                correctOptionId={answer.correctOptionId}
-              />
-            ))}
+          <div className="mb-6 rounded-lg border bg-muted/30 p-4">
+            <p className="text-sm font-semibold mb-2">Color Guide</p>
+            <div className="grid gap-2 sm:grid-cols-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="h-4 w-4 rounded bg-red-500 border border-red-600" />
+                <span className="text-muted-foreground">Red means the option you selected was wrong.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-4 w-4 rounded bg-green-500 border border-green-600" />
+                <span className="text-muted-foreground">Green means the correct answer.</span>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              If your selected answer is correct, it will also stay green.
+            </p>
+          </div>
+
+          {currentAnswer && (
+            <QuestionCard
+              key={currentAnswer.questionId}
+              question={{
+                id: currentAnswer.questionId,
+                text: currentAnswer.questionText,
+                options: currentAnswer.options,
+                correctOptionId: currentAnswer.correctOptionId,
+                explanation: currentAnswer.explanation,
+                marks: currentAnswer.marksAwarded,
+                difficulty: "Medium",
+              }}
+              questionNumber={reviewIndex + 1}
+              totalQuestions={totalReviewQuestions}
+              selectedOptionId={currentAnswer.selectedOptionId}
+              isFlagged={false}
+              onSelectOption={() => {}}
+              onToggleFlag={() => {}}
+              showCorrectAnswer={true}
+              correctOptionId={currentAnswer.correctOptionId}
+            />
+          )}
+
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <Button variant="outline" onClick={goPrev} disabled={reviewIndex === 0}>
+              Previous Question
+            </Button>
+            <Button variant="outline" onClick={goNext} disabled={reviewIndex === totalReviewQuestions - 1}>
+              Next Question
+            </Button>
           </div>
         </div>
       </div>
