@@ -55,6 +55,25 @@ export default function CategoryExamsPage() {
   const [showLoading, setShowLoading] = useState(true);
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [selectedPremiumExam, setSelectedPremiumExam] = useState<ExamListItem | null>(null);
+  const supportPhone = "9452903509";
+  const supportEmail = "Consultantstvk@gmail.com";
+
+  const openPremiumDialog = (exam: ExamListItem) => {
+    if (premiumDialogOpen && selectedPremiumExam?.id === exam.id) return;
+    setSelectedPremiumExam(exam);
+    setPremiumDialogOpen(true);
+  };
+
+  const handlePremiumHover = (exam: ExamListItem, status?: ExamStatus) => {
+    if (!(status?.isPremiumExam && !status?.canAttemptPremium)) return;
+    if (typeof window === "undefined") return;
+
+    // Open on hover only for mouse/trackpad devices; keep click behavior for touch devices.
+    const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    if (!canHover) return;
+
+    openPremiumDialog(exam);
+  };
 
   // Add minimum delay to show loading
   useEffect(() => {
@@ -231,6 +250,7 @@ export default function CategoryExamsPage() {
               <Card
                 key={exam.id}
                 className="group overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-950"
+                onMouseEnter={() => handlePremiumHover(exam, status)}
               >
                 <div className="h-1 bg-gradient-to-r from-primary/80 via-primary to-emerald-500/80" />
 
@@ -324,10 +344,7 @@ export default function CategoryExamsPage() {
                       return (
                         <Button
                           type="button"
-                          onClick={() => {
-                            setSelectedPremiumExam(exam);
-                            setPremiumDialogOpen(true);
-                          }}
+                          onClick={() => openPremiumDialog(exam)}
                           className="h-9 flex-1 rounded-full px-4 text-sm font-semibold shadow-sm"
                         >
                           Premium required
@@ -403,6 +420,14 @@ export default function CategoryExamsPage() {
               <p className="mt-1 text-muted-foreground">
                 Premium access unlocks this exam and other exclusive premium tests.
               </p>
+              <div className="mt-3 space-y-1 text-sm">
+                <p>
+                  Mobile: <a className="font-medium underline" href={`tel:${supportPhone}`}>{supportPhone}</a>
+                </p>
+                <p>
+                  Email: <a className="font-medium underline" href={`mailto:${supportEmail}`}>{supportEmail}</a>
+                </p>
+              </div>
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -410,10 +435,10 @@ export default function CategoryExamsPage() {
                 <Link href="/contact">Buy Now</Link>
               </Button>
               <Button asChild variant="outline" className="h-11 rounded-full px-5 font-medium">
-                <a href="tel:9453453476">Call Now</a>
+                <a href={`tel:${supportPhone}`}>Call Now</a>
               </Button>
               <Button asChild variant="secondary" className="h-11 rounded-full px-5 font-medium">
-                <Link href="/contact">Contact Us</Link>
+                <a href={`mailto:${supportEmail}`}>Email Us</a>
               </Button>
             </div>
           </div>
