@@ -32,6 +32,29 @@ function normalizeCategory(value: string) {
   return value.trim().toUpperCase();
 }
 
+function ensureQuestionIds(items: ExamQuestion[] = []): ExamQuestion[] {
+  return items.map((q, idx) => ({
+    ...q,
+    id: q?.id && String(q.id).trim() ? String(q.id) : `legacy_q_${idx + 1}_${Date.now()}`,
+  }));
+}
+
+function ensureSectionsForLegacyExam(existingSections: any[] = [], examQuestions: ExamQuestion[] = [], fallbackDuration = 60) {
+  if (Array.isArray(existingSections) && existingSections.length > 0) return existingSections;
+
+  const questionIds = examQuestions.map((q) => q.id).filter(Boolean);
+  if (questionIds.length === 0) return [];
+
+  return [
+    {
+      id: "default-section",
+      title: "General",
+      durationMinutes: fallbackDuration,
+      questionIds,
+    },
+  ];
+}
+
 export default function EditExamPage() {
   const router = useRouter();
   const params = useParams();
@@ -60,11 +83,30 @@ export default function EditExamPage() {
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [sections, setSections] = useState<any[]>([]);
   const [selectedSectionIdForAdd, setSelectedSectionIdForAdd] = useState("");
+  const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
 
   const totalSectionDuration = useMemo(
     () => sections.reduce((sum, s) => sum + (Number.isFinite(s?.durationMinutes) ? s.durationMinutes : 0), 0),
     [sections]
   );
+
+  useEffect(() => {
+    if (!lastAddedQuestionId) return;
+
+    const scrollToAddedQuestion = () => {
+      const card = document.getElementById(`question-card-${lastAddedQuestionId}`);
+      if (card) {
+        const y = Math.max(0, window.scrollY + card.getBoundingClientRect().top - 140);
+        window.scrollTo({ top: y, behavior: "smooth" });
+        const firstInput = card.querySelector("textarea") as HTMLTextAreaElement | null;
+        window.setTimeout(() => firstInput?.focus({ preventScroll: true }), 280);
+      }
+      setLastAddedQuestionId(null);
+    };
+
+    const timer = window.setTimeout(scrollToAddedQuestion, 0);
+    return () => window.clearTimeout(timer);
+  }, [questions, lastAddedQuestionId]);
 
   const loadCategoryOptions = async () => {
     try {
@@ -153,9 +195,17 @@ export default function EditExamPage() {
       setShuffleOptions(exam.shuffleOptions);
       setIsPublished(exam.isPublished);
       setInstructions(exam.instructions || []);
-      setQuestions(exam.questions || []);
-      setSections(exam.sections || []);
-      setSelectedSectionIdForAdd((exam.sections && exam.sections[0]?.id) || "");
+
+      const normalizedQuestions = ensureQuestionIds(exam.questions || []);
+      const normalizedSections = ensureSectionsForLegacyExam(
+        exam.sections || [],
+        normalizedQuestions,
+        typeof exam.durationMinutes === "number" && exam.durationMinutes > 0 ? exam.durationMinutes : 60
+      );
+
+      setQuestions(normalizedQuestions);
+      setSections(normalizedSections);
+      setSelectedSectionIdForAdd(normalizedSections[0]?.id || "");
     } catch (error) {
       toast({
         title: "Error",
@@ -188,19 +238,8 @@ export default function EditExamPage() {
       difficulty: "Medium",
       subject: "",
     };
-    setQuestions([...questions, newQuestion]);
-    
-    // Scroll to the newly added question
-    setTimeout(() => {
-      const questionsContainer = questionsContainerRef.current;
-      if (questionsContainer) {
-        // Find the last question card and scroll to it
-        const lastQuestionCard = questionsContainer.querySelector(".question-card:last-child");
-        if (lastQuestionCard) {
-          lastQuestionCard.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }
-    }, 100);
+    setLastAddedQuestionId(newId);
+    setQuestions((prev) => [...prev, newQuestion]);
     setSections((prev) => prev.map((s) => s.id === selectedSectionIdForAdd ? { ...s, questionIds: Array.from(new Set([...(s.questionIds||[]), newId])) } : s));
   };
 
@@ -242,7 +281,16 @@ export default function EditExamPage() {
   };
 
   const removeQuestion = (index: number) => {
+    const removed = questions[index];
     setQuestions(questions.filter((_, i) => i !== index));
+    if (removed?.id) {
+      setSections((prev) =>
+        prev.map((s) => ({
+          ...s,
+          questionIds: (s.questionIds || []).filter((id: string) => id !== removed.id),
+        }))
+      );
+    }
   };
 
   const updateQuestion = (index: number, updates: Partial<ExamQuestion>) => {
@@ -664,7 +712,7 @@ export default function EditExamPage() {
             </div>
 
             {questions.map((question, qIndex) => (
-              <Card key={question.id} className="question-card">
+              <Card id={`question-card-${question.id}`} key={question.id} className="question-card">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">Question {qIndex + 1}</CardTitle>
@@ -801,6 +849,15 @@ export default function EditExamPage() {
                 </CardContent>
               </Card>
             ))}
+
+            {questions.length > 0 && (
+              <div className="sticky bottom-4 z-10 mt-4 flex justify-end">
+                <Button onClick={addQuestion} variant="default" disabled={!selectedSectionIdForAdd} className="rounded-full shadow-md">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Next Question
+                </Button>
+              </div>
+            )}
 
           </TabsContent>
 

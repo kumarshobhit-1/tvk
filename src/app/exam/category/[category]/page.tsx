@@ -85,10 +85,10 @@ export default function CategoryExamsPage() {
       try {
         // For "other" category, fetch exams without category or with empty category
         const url = category === "other" 
-          ? "/api/exam/list?category=other"
-          : `/api/exam/list?category=${encodeURIComponent(category)}`;
+          ? "/api/exam/list?category=other&noCache=1"
+          : `/api/exam/list?category=${encodeURIComponent(category)}&noCache=1`;
         
-        const response = await fetch(url);
+        const response = await fetch(url, { cache: "no-store" });
         const data = await response.json();
         
         if (data.exams) {
@@ -98,7 +98,7 @@ export default function CategoryExamsPage() {
           const statuses: Record<string, ExamStatus> = {};
           for (const exam of data.exams) {
             try {
-              const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`);
+              const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`, { cache: "no-store" });
               statuses[exam.id] = await statusRes.json();
             } catch (err) {
               console.error(`Error fetching status for exam ${exam.id}:`, err);

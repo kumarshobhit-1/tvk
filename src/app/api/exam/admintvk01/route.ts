@@ -30,6 +30,26 @@ function deriveDurationFromSections(sections: any[] | undefined, fallback = 60) 
   return total;
 }
 
+function ensureQuestionIdsForUpdate(questions: any[] = []) {
+  return questions.map((q, idx) => ({
+    ...q,
+    id: q?.id && String(q.id).trim() ? String(q.id) : `legacy_q_${idx + 1}_${Date.now()}`,
+  }));
+}
+
+function buildFallbackSections(questions: any[] = [], fallbackDuration = 60) {
+  const ids = questions.map((q) => q?.id).filter(Boolean);
+  if (ids.length === 0) return [];
+  return [
+    {
+      id: "default-section",
+      title: "General",
+      durationMinutes: fallbackDuration,
+      questionIds: ids,
+    },
+  ];
+}
+
 function invalidateExamCaches(examId?: string) {
   const cache = getCache();
   if (examId) {
@@ -193,18 +213,27 @@ export async function PUT(request: NextRequest) {
     const normalizedIsPublished = normalizeBoolean(examData.isPublished, examSnap.data()?.isPublished === true);
     const normalizedCategory = normalizeCategory(examData.category) || normalizeCategory(examSnap.data()?.category) || "SEBI";
 
-    // Only update metadata fields, NOT questions (which can be very large)
-    // If existing exam has no sections and caller didn't supply sections, reject
     const existingExam = examSnap.data() as any;
-    if ((!existingExam.sections || !Array.isArray(existingExam.sections) || existingExam.sections.length === 0)
-      && (!examData.sections || !Array.isArray(examData.sections) || examData.sections.length === 0)) {
-      return NextResponse.json({ error: "Exam must include sections. Provide sections in the update." }, { status: 400 });
+    const normalizedQuestions = Array.isArray(examData.questions)
+      ? ensureQuestionIdsForUpdate(examData.questions)
+      : (existingExam.questions || []);
+
+    let finalSections = Array.isArray(examData.sections) ? examData.sections : existingExam.sections;
+    if (!Array.isArray(finalSections) || finalSections.length === 0) {
+      finalSections = buildFallbackSections(
+        normalizedQuestions,
+        typeof examData.durationMinutes === "number" ? examData.durationMinutes : (existingExam.durationMinutes || 60)
+      );
     }
 
-    // Validate provided sections if present
-    if (examData.sections && Array.isArray(examData.sections)) {
-      for (let si = 0; si < examData.sections.length; si++) {
-        const s = examData.sections[si];
+    if (!Array.isArray(finalSections) || finalSections.length === 0) {
+      return NextResponse.json({ error: "Exam must include sections with questionIds." }, { status: 400 });
+    }
+
+    // Validate normalized sections
+    if (Array.isArray(finalSections)) {
+      for (let si = 0; si < finalSections.length; si++) {
+        const s = finalSections[si];
         if (!s || (!s.questionIds || !Array.isArray(s.questionIds) || s.questionIds.length === 0)) {
           return NextResponse.json({ error: `Section ${si + 1}: must have at least one questionId` }, { status: 400 });
         }
@@ -214,11 +243,14 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const sectionsForDuration = Array.isArray(examData.sections) ? examData.sections : existingExam.sections;
+    const sectionsForDuration = finalSections;
     const computedDuration = deriveDurationFromSections(
       sectionsForDuration,
       typeof examData.durationMinutes === "number" ? examData.durationMinutes : (existingExam.durationMinutes || 60)
     );
+
+    const questionsForMarks = normalizedQuestions;
+    const computedTotalMarks = questionsForMarks.reduce((sum: number, q: any) => sum + (q?.marks || 0), 0);
 
     const updateData: any = {
       title: examData.title,
@@ -228,14 +260,15 @@ export async function PUT(request: NextRequest) {
       isPublished: normalizedIsPublished,
       type: examData.type || "timed",
       durationMinutes: computedDuration,
-      totalMarks: examData.totalMarks || 0,
+      totalMarks: typeof examData.totalMarks === "number" ? examData.totalMarks : computedTotalMarks,
       passingMarks: examData.passingMarks || 0,
       negativeMarking: examData.negativeMarking || 0,
       shuffleQuestions: examData.shuffleQuestions || false,
       shuffleOptions: examData.shuffleOptions || false,
       instructions: examData.instructions || [],
-      // Only include sections when provided (or keep existing)
-      ...(examData.sections ? { sections: examData.sections } : {}),
+      // Persist updated questions when editing existing exams.
+      questions: normalizedQuestions,
+      sections: finalSections,
       updatedAt: new Date(),
     };
 

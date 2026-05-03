@@ -4,6 +4,23 @@ import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
 const EXAM_LIST_TTL_MS = 5 * 60 * 1000;
 
+function shouldBypassCache(request: NextRequest) {
+  const value = (request.nextUrl.searchParams.get("noCache") || request.nextUrl.searchParams.get("fresh") || "").toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function jsonNoStore(body: any, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Pragma: "no-cache",
+      Expires: "0",
+      ...(init?.headers || {}),
+    },
+  });
+}
+
 function toPublicExamSummary(id: string, examData: any) {
   return {
     id,
@@ -40,33 +57,36 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get("category");
     const examId = searchParams.get("examId");
+    const bypassCache = shouldBypassCache(request);
 
     // If examId is provided, fetch public-safe single exam summary
     if (examId) {
-      const exam = await cacheAside(
-        CacheKeys.exam(examId),
-        async () => {
-          const examSnap = await adminDB.collection("exams").doc(examId).get();
-          if (!examSnap.exists) return null;
+      const loadSingleExam = async () => {
+        const examSnap = await adminDB.collection("exams").doc(examId).get();
+        if (!examSnap.exists) return null;
 
-          const examData = examSnap.data();
-          if (!examData?.isPublished) return null;
+        const examData = examSnap.data();
+        if (!examData?.isPublished) return null;
 
-          return toPublicExamSummary(examSnap.id, examData);
-        },
-        EXAM_LIST_TTL_MS
-      );
+        return toPublicExamSummary(examSnap.id, examData);
+      };
+
+      const exam = bypassCache
+        ? await loadSingleExam()
+        : await cacheAside(
+            CacheKeys.exam(examId),
+            loadSingleExam,
+            EXAM_LIST_TTL_MS
+          );
 
       if (!exam) {
-        return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+        return jsonNoStore({ error: "Exam not found" }, { status: 404 });
       }
 
-      return NextResponse.json({ exams: [exam] });
+      return jsonNoStore({ exams: [exam] });
     }
 
-    const exams = await cacheAside(
-      CacheKeys.examList((category?.toUpperCase()) || "all"),
-      async () => {
+    const loadExamList = async () => {
         let examsQuery = adminDB.collection("exams").where("isPublished", "==", true);
 
         if (category && category !== "other") {
@@ -103,20 +123,26 @@ export async function GET(request: NextRequest) {
         });
 
         return list;
-      },
-      EXAM_LIST_TTL_MS
-    );
+      };
 
-    return NextResponse.json({ exams });
+    const exams = bypassCache
+      ? await loadExamList()
+      : await cacheAside(
+          CacheKeys.examList((category?.toUpperCase()) || "all"),
+          loadExamList,
+          EXAM_LIST_TTL_MS
+        );
+
+    return jsonNoStore({ exams });
   } catch (error: any) {
     console.error("Error fetching exams:", error);
     
     // Return empty array if collection doesn't exist or no exams yet
     if (error.code === 'permission-denied' || error.message?.includes('index')) {
-      return NextResponse.json({ exams: [] });
+      return jsonNoStore({ exams: [] });
     }
     
-    return NextResponse.json(
+    return jsonNoStore(
       { error: "Failed to fetch exams", exams: [] },
       { status: 500 }
     );

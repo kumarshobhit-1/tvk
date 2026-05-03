@@ -62,6 +62,7 @@ export default function AdminExamsPage() {
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [sections, setSections] = useState<ExamSection[]>([]);
   const [selectedSectionIdForAdd, setSelectedSectionIdForAdd] = useState("");
+  const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
 
   const totalSectionDuration = useMemo(
     () => sections.reduce((sum, s) => sum + (Number.isFinite(s.durationMinutes) ? s.durationMinutes : 0), 0),
@@ -101,6 +102,24 @@ export default function AdminExamsPage() {
       setSelectedSectionIdForAdd(sections[0]?.id || "");
     }
   }, [sections, selectedSectionIdForAdd]);
+
+  useEffect(() => {
+    if (!lastAddedQuestionId) return;
+
+    const scrollToAddedQuestion = () => {
+      const card = document.getElementById(`question-card-${lastAddedQuestionId}`);
+      if (card) {
+        const y = Math.max(0, window.scrollY + card.getBoundingClientRect().top - 140);
+        window.scrollTo({ top: y, behavior: "smooth" });
+        const firstInput = card.querySelector("textarea") as HTMLTextAreaElement | null;
+        window.setTimeout(() => firstInput?.focus({ preventScroll: true }), 280);
+      }
+      setLastAddedQuestionId(null);
+    };
+
+    const timer = window.setTimeout(scrollToAddedQuestion, 0);
+    return () => window.clearTimeout(timer);
+  }, [questions, lastAddedQuestionId]);
 
   const persistCategoryOption = async (rawCategory: string) => {
     const normalized = normalizeCategory(rawCategory);
@@ -178,7 +197,8 @@ export default function AdminExamsPage() {
       difficulty: "Medium",
       subject: "",
     };
-    setQuestions([...questions, newQuestion]);
+    setLastAddedQuestionId(newQuestionId);
+    setQuestions((prev) => [...prev, newQuestion]);
     setSections((prev) =>
       prev.map((s) =>
         s.id === selectedSectionIdForAdd
@@ -187,17 +207,6 @@ export default function AdminExamsPage() {
       )
     );
     
-    // Scroll to the newly added question
-    setTimeout(() => {
-      const questionsContainer = questionsContainerRef.current;
-      if (questionsContainer) {
-        // Find the last question card and scroll to it
-        const lastQuestionCard = questionsContainer.querySelector(".question-card:last-child");
-        if (lastQuestionCard) {
-          lastQuestionCard.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }
-    }, 100);
   };
 
   const addOption = (questionIndex: number) => {
@@ -734,7 +743,7 @@ export default function AdminExamsPage() {
             </div>
 
             {questions.map((question, qIndex) => (
-              <Card key={qIndex} className="question-card">
+              <Card id={`question-card-${question.id}`} key={question.id || qIndex} className="question-card">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Question {qIndex + 1}</CardTitle>
@@ -871,6 +880,15 @@ export default function AdminExamsPage() {
                 </CardContent>
               </Card>
             ))}
+
+            {questions.length > 0 && (
+              <div className="sticky bottom-4 z-10 mt-4 flex justify-end">
+                <Button onClick={addQuestion} disabled={!selectedSectionIdForAdd} className="rounded-full shadow-md">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Next Question
+                </Button>
+              </div>
+            )}
 
           </TabsContent>
         </Tabs>

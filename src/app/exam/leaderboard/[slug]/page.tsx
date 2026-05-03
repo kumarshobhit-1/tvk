@@ -170,74 +170,78 @@ export default function LeaderboardPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {currentLeaderboard.map((entry, index) => {
-                  const rank = entry.rank || index + 1;
-                  const isTopThree = rank <= 3;
-                  const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-600"];
-                  const isCurrentUser = user?.uid === entry.userId;
+                {currentLeaderboard.map((entry, index) => (
+                  (() => {
+                    const rank = entry.rank || index + 1;
+                    const isTopThree = rank <= 3;
+                    const medalColors = ["text-yellow-500", "text-gray-400", "text-orange-600"];
+                    const isCurrentUser = user?.uid === entry.userId;
 
-                  return (
-                    <div
-                      key={`${entry.userId}-${index}`}
-                      className={`
-                        flex items-center justify-between p-4 rounded-lg border transition-all
+                    return (
+                      <div
+                        key={`${entry.userId}-${index}`}
+                        className={
+                          `
+                        flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border transition-all
                         ${isTopThree ? "bg-accent" : "bg-background"}
                         ${rank === 1 ? "border-yellow-500 shadow-md" : ""}
                         ${rank === 2 ? "border-gray-400" : ""}
                         ${rank === 3 ? "border-orange-600" : ""}
                         ${isCurrentUser ? "ring-2 ring-primary" : ""}
-                      `}
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div
-                          className={`
+                        `
+                        }
+                      >
+                        <div className="flex items-center gap-4 w-full">
+                          <div
+                            className={`
                             flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg
                             ${isTopThree ? "bg-primary text-primary-foreground" : "bg-muted"}
                           `}
-                        >
-                          {isTopThree ? (
-                            <Trophy className={`h-6 w-6 ${medalColors[rank - 1]}`} />
-                          ) : (
-                            <span className="text-sm">#{rank}</span>
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold truncate">{entry.userName}</p>
-                            {isCurrentUser && (
-                              <Badge variant="outline" className="text-xs">You</Badge>
+                          >
+                            {isTopThree ? (
+                              <Trophy className={`h-6 w-6 ${medalColors[rank - 1]}`} />
+                            ) : (
+                              <span className="text-sm">#{rank}</span>
                             )}
                           </div>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="text-center hidden sm:block">
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(entry.timeTaken)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold truncate">{entry.userName}</p>
+                              {isCurrentUser && (
+                                <Badge variant="outline" className="text-xs">You</Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        <div className="text-center min-w-[80px]">
-                          <Badge 
-                            variant={entry.percentage >= 75 ? "default" : entry.percentage >= 50 ? "secondary" : "destructive"}
-                            className="mb-1"
-                          >
-                            {entry.percentage.toFixed(1)}%
-                          </Badge>
-                          <p className="text-xs text-muted-foreground">percentage</p>
-                        </div>
+                        <div className="flex items-center gap-4 mt-3 sm:mt-0 w-full sm:w-auto justify-between sm:justify-start">
+                          <div className="text-sm text-muted-foreground mr-2 hidden sm:block">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              <span>{formatTime(entry.timeTaken)}</span>
+                            </div>
+                          </div>
 
-                        <div className="text-center min-w-[60px]">
-                          <p className="font-bold text-lg">{entry.score.toFixed(1)}</p>
-                          <p className="text-xs text-muted-foreground">score</p>
+                          <div className="min-w-[80px] text-right sm:text-center">
+                            <Badge
+                              variant={entry.percentage >= 75 ? "default" : entry.percentage >= 50 ? "secondary" : "destructive"}
+                              className="mb-1 block"
+                            >
+                              {entry.percentage.toFixed(1)}%
+                            </Badge>
+                            <p className="text-xs text-muted-foreground">percentage</p>
+                          </div>
+
+                          <div className="min-w-[60px] text-right sm:text-center">
+                            <p className="font-bold text-lg">{entry.score.toFixed(1)}</p>
+                            <p className="text-xs text-muted-foreground">score</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })()
+                ))}
               </div>
             )}
 

@@ -45,14 +45,14 @@ export default function ExamPage() {
     const fetchExamData = async () => {
       try {
         // Fetch exam info
-        const infoResponse = await fetch(`/api/exam/list?examId=${examId}`);
+        const infoResponse = await fetch(`/api/exam/list?examId=${examId}&noCache=1`, { cache: "no-store" });
         if (infoResponse.ok) {
           const data = await infoResponse.json();
           setExamInfo(data.exams?.[0]);
         }
 
         // Fetch exam status
-        const statusResponse = await fetch(`/api/exam/status?examId=${examId}`);
+        const statusResponse = await fetch(`/api/exam/status?examId=${examId}`, { cache: "no-store" });
         if (statusResponse.ok) {
           const status = await statusResponse.json();
           setExamStatus(status);
@@ -64,8 +64,8 @@ export default function ExamPage() {
 
     fetchExamData();
     
-    // Refresh exam data every 30 seconds to check for admin updates
-    const interval = setInterval(fetchExamData, 30000);
+    // Refresh exam data frequently to keep card/instructions in sync with admin edits.
+    const interval = setInterval(fetchExamData, 10000);
     
     return () => clearInterval(interval);
   }, [examId, user]);
@@ -109,7 +109,7 @@ export default function ExamPage() {
         if (data.emergencyStopped) {
           setError("This exam has been temporarily stopped by the administrator. Please try again later.");
           // Refresh exam info to show the latest status
-          const infoResponse = await fetch(`/api/exam/list?examId=${examId}`);
+          const infoResponse = await fetch(`/api/exam/list?examId=${examId}&noCache=1`, { cache: "no-store" });
           if (infoResponse.ok) {
             const refreshedData = await infoResponse.json();
             setExamInfo(refreshedData.exams?.[0]);
