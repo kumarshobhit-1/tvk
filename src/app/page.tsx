@@ -25,6 +25,7 @@ type FeaturedTrack = {
   category: string;
   subtitle: string;
   icon: LucideIcon;
+  slug?: string;
   tint: string;
 };
 
@@ -35,29 +36,49 @@ type QuickLink = {
 
 const FEATURED_TRACKS: FeaturedTrack[] = [
   {
-    title: "SEBI",
-    category: "SEBI",
-    subtitle: "Grade A, IT and regulatory style papers",
-    icon: ShieldCheck,
-    tint: "from-emerald-500/15 to-emerald-500/5",
+    title: "Asst Dir Income Tax",
+    category: "Assistant Director IT",
+    slug: "ad-systems-it",
+    subtitle: "IT leadership and system exams",
+    icon: BriefcaseBusiness,
+    tint: "from-sky-500/15 to-sky-500/5",
   },
   {
     title: "RBI Grade B",
     category: "RBI GRADE B",
+    slug: "rbi-grade-b",
     subtitle: "High-value finance and policy exam prep",
     icon: Landmark,
     tint: "from-indigo-500/15 to-indigo-500/5",
   },
   {
+    title: "SEBI",
+    category: "SEBI",
+    slug: "sebi",
+    subtitle: "Grade A, IT and regulatory style papers",
+    icon: ShieldCheck,
+    tint: "from-emerald-500/15 to-emerald-500/5",
+  },
+  {
     title: "IBPS SO IT",
     category: "IBPS SO IT",
+    slug: "ibps-so-it",
     subtitle: "Specialist officer IT mock tests",
     icon: BriefcaseBusiness,
     tint: "from-sky-500/15 to-sky-500/5",
   },
   {
+    title: "Banking IT",
+    category: "BANKING",
+    slug: "banking",
+    subtitle: "Bank exams, IT officer and technical tracks",
+    icon: Banknote,
+    tint: "from-cyan-500/15 to-cyan-500/5",
+  },
+  {
     title: "NABARD",
     category: "NABARD",
+    slug: "nabard",
     subtitle: "Development banking and rural finance",
     icon: Building2,
     tint: "from-amber-500/15 to-amber-500/5",
@@ -65,16 +86,10 @@ const FEATURED_TRACKS: FeaturedTrack[] = [
   {
     title: "PFRDA",
     category: "PFRDA",
+    slug: "pfrda",
     subtitle: "Pension and retirement finance exams",
     icon: BarChart3,
     tint: "from-violet-500/15 to-violet-500/5",
-  },
-  {
-    title: "Banking IT",
-    category: "BANKING",
-    subtitle: "Bank exams, IT officer and technical tracks",
-    icon: Banknote,
-    tint: "from-cyan-500/15 to-cyan-500/5",
   },
 ];
 
@@ -85,28 +100,36 @@ const quickHighlights = [
 ];
 
 const QUICK_LINKS: QuickLink[] = [
-  { label: "SEBI", href: "/exam/category/sebi" },
+  { label: "Asst Dir Income Tax", href: "/adit" },
+  { label: "ICAI EO IT", href: "/exam/category/icai-eo-it" },
+  { label: "HPCL IS", href: "/hpcl-is-pyq" },
   { label: "RBI Grade B", href: "/exam/category/rbi-grade-b" },
   { label: "IBPS SO IT", href: "/exam/category/ibps-so-it" },
+  { label: "SEBI", href: "/exam/category/sebi" },
+  { label: "Banking IT", href: "/exam/category/banking" },
   { label: "NABARD", href: "/exam/category/nabard" },
   { label: "PFRDA", href: "/exam/category/pfrda" },
-  { label: "Banking IT", href: "/exam/category/banking" },
 ];
 
 const spotlightPaths = [
+  {
+    title: "Asst Dir Income Tax",
+    href: "/adit",
+    note: "focused IT leadership prep",
+  },
+  {
+    title: "RBI Grade B",
+    href: "/rbi",
+    note: "High priority finance prep",
+  },
   {
     title: "SEBI Grade A",
     href: "/exam/category/sebi",
     note: "Regulatory and IT mock tests",
   },
   {
-    title: "RBI Grade B",
-      href: "/exam/category/rbi-grade-b",
-    note: "High priority finance prep",
-  },
-  {
     title: "IBPS SO IT",
-      href: "/exam/category/ibps-so-it",
+    href: "/exam/category/ibps-so-it",
     note: "Specialist officer IT tests",
   },
   {
@@ -128,6 +151,10 @@ const spotlightPaths = [
 
 function normalizeCategory(value: string) {
   return value.trim().toUpperCase();
+}
+
+function toSlug(value: string) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
 
 export default async function Home() {
@@ -158,7 +185,11 @@ export default async function Home() {
     FEATURED_TRACKS.forEach((track) => {
       const count = publishedSnap.docs.filter((doc) => {
         const data = doc.data() as { category?: string };
-        return normalizeCategory(String(data.category || "OTHER")) === normalizeCategory(track.category);
+        const docCat = String(data.category || "");
+        if (track.slug) {
+          return toSlug(docCat) === toSlug(track.slug);
+        }
+        return normalizeCategory(String(docCat || "OTHER")) === normalizeCategory(track.category);
       }).length;
       trackCounts.set(track.category, count);
     });
@@ -180,12 +211,12 @@ export default async function Home() {
               </Badge>
 
               <h1 className="max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
-                Focused prep for SEBI, RBI Grade B, IBPS SO IT and banking exams.
+                RBI, SEBI, IBPS, SBI, ICAI, HPCL and other IT - focused prep.
               </h1>
 
               <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                Find category-wise mock tests, premium exam tracks and focused preparation routes for finance, regulatory,
-                banking, NABARD, PFRDA and other IT-led competitive exams.
+                Find category-wise mock tests, premium exam tracks and focused preparation routes for Asst Dir Income Tax,
+                RBI Grade B, IBPS SO IT, SEBI, ICAI EO IT, HPCL IS, Banking IT, NABARD, PFRDA and other IT-led competitive exams.
               </p>
 
               <div className="mt-7 rounded-3xl border border-border bg-background/90 p-4 shadow-sm backdrop-blur md:p-5 dark:bg-card/90">
@@ -325,7 +356,7 @@ export default async function Home() {
             const Icon = track.icon;
             const count = trackCounts.get(track.category) ?? 0;
             return (
-              <Link key={track.category} href={`/exam/category/${track.category.toLowerCase().replace(/\s+/g, "-")}`} className="group">
+                    <Link key={track.category} href={`/exam/category/${track.slug ?? track.category.toLowerCase().replace(/\s+/g, "-")}`} className="group">
                 <Card className="h-full overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
                   <CardContent className="p-5">
                     <div className={`rounded-2xl bg-gradient-to-br ${track.tint} p-5 transition-transform group-hover:scale-[1.01]`}>

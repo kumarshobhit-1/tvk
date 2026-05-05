@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,24 @@ export default function LibraryPage() {
   const [selectedFolder, setSelectedFolder] = useState<PDFFolderWithFiles | null>(null);
   const [folderStack, setFolderStack] = useState<PDFFolderWithFiles[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams?.get("category") ?? "";
+
+  function toSlug(value: string) {
+    return String(value || "").trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  }
+
+  const findFolderBySlug = (list: PDFFolderWithFiles[], slug: string): PDFFolderWithFiles | null => {
+    for (const f of list) {
+      const fslug = toSlug(f.category || f.name || "");
+      if (fslug === slug) return f;
+      if (f.subfolders && f.subfolders.length) {
+        const found = findFolderBySlug(f.subfolders, slug);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
 
   useEffect(() => {
     document.title = "PDF Library | The Victory Key";
@@ -45,7 +63,16 @@ export default function LibraryPage() {
         const data = await response.json();
         
         if (response.ok) {
-          setFolders(data.folders || []);
+          const foldersRes = data.folders || [];
+          setFolders(foldersRes);
+          // If a category query param is present, try to pre-select the folder
+          if (categoryParam) {
+            const match = findFolderBySlug(foldersRes, categoryParam);
+            if (match) {
+              setSelectedFolder(match);
+              setFolderStack([match]);
+            }
+          }
         }
       } catch (error) {
         console.error("Error fetching PDFs:", error);
