@@ -11,6 +11,10 @@ import { Trophy, Clock, TrendingUp, Search, ChevronLeft, ChevronRight } from "lu
 import Loading from "@/components/ui/loading";
 import type { LeaderboardEntry } from "@/lib/exam-types";
 
+function toSlug(value: string) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
 export default function LeaderboardPage() {
   const params = useParams();
   const router = useRouter();
@@ -129,7 +133,7 @@ export default function LeaderboardPage() {
           variant="outline"
           onClick={() => {
             if (examCategory) {
-              router.push(`/exam/category/${examCategory.toLowerCase()}`);
+              router.push(`/exam/category/${toSlug(examCategory)}`);
             } else {
               router.push("/exam");
             }
