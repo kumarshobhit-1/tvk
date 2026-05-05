@@ -46,7 +46,7 @@ const FEATURED_TRACKS: FeaturedTrack[] = [
   {
     title: "RBI Grade B",
     category: "RBI GRADE B",
-    slug: "rbi-grade-b",
+    slug: "rbi",
     subtitle: "High-value finance and policy exam prep",
     icon: Landmark,
     tint: "from-indigo-500/15 to-indigo-500/5",
@@ -103,7 +103,7 @@ const QUICK_LINKS: QuickLink[] = [
   { label: "Asst Dir Income Tax", href: "/adit" },
   { label: "ICAI EO IT", href: "/exam/category/icai-eo-it" },
   { label: "HPCL IS", href: "/hpcl-is-pyq" },
-  { label: "RBI Grade B", href: "/exam/category/rbi-grade-b" },
+  { label: "RBI Grade B", href: "/exam/category/rbi" },
   { label: "IBPS SO IT", href: "/exam/category/ibps-so-it" },
   { label: "SEBI", href: "/exam/category/sebi" },
   { label: "Banking IT", href: "/exam/category/banking" },
