@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { authenticatedFetch } from "@/lib/api-client";
 import { ExamRunner } from "@/components/exam/ExamRunner";
 import { ExamRunnerWithSections } from "@/components/exam/ExamRunnerWithSections";
 import { ExamInstructionsWithSections } from "@/components/exam/ExamInstructionsWithSections";
@@ -45,7 +46,7 @@ export default function ExamPage() {
     const fetchExamData = async () => {
       try {
         // Fetch exam info
-        const infoResponse = await fetch(`/api/exam/list?examId=${examId}&noCache=1`, { cache: "no-store" });
+        const infoResponse = await authenticatedFetch(`/api/exam/list?examId=${examId}&noCache=1`, { cache: "no-store" });
         if (infoResponse.ok) {
           const data = await infoResponse.json();
           setExamInfo(data.exams?.[0]);
@@ -109,7 +110,7 @@ export default function ExamPage() {
         if (data.emergencyStopped) {
           setError("This exam has been temporarily stopped by the administrator. Please try again later.");
           // Refresh exam info to show the latest status
-          const infoResponse = await fetch(`/api/exam/list?examId=${examId}&noCache=1`, { cache: "no-store" });
+          const infoResponse = await authenticatedFetch(`/api/exam/list?examId=${examId}&noCache=1`, { cache: "no-store" });
           if (infoResponse.ok) {
             const refreshedData = await infoResponse.json();
             setExamInfo(refreshedData.exams?.[0]);

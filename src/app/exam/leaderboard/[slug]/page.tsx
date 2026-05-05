@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { authenticatedFetch } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +43,7 @@ export default function LeaderboardPage() {
       setLoading(true);
       try {
         // Fetch exam info to get category
-        const examResponse = await fetch(`/api/exam/list?examId=${examId}`);
+        const examResponse = await authenticatedFetch(`/api/exam/list?examId=${examId}`);
         const examData = await examResponse.json();
         if (examData.exams && examData.exams[0]) {
           setExamCategory(examData.exams[0].category);

@@ -102,6 +102,8 @@ export async function GET(request: NextRequest) {
           isPremiumRaw: userData.isPremium === true,
           premiumRaw: userData.premium === true,
           premiumCategories: normalizePremiumCategories(userData),
+          allowedExamIds: Array.isArray(userData.allowedExamIds) ? userData.allowedExamIds : [],
+          allowedPdfIds: Array.isArray(userData.allowedPdfIds) ? userData.allowedPdfIds : [],
           premiumUpdatedAt: toIsoDate(userData.premiumUpdatedAt),
           premiumUpdatedBy: userData.premiumUpdatedBy || null,
         },
@@ -150,7 +152,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { userId, isPremium, premiumCategories, grantAllAccess } = await request.json();
+    const { userId, isPremium, premiumCategories, grantAllAccess, allowedExamIds, allowedPdfIds } = await request.json();
 
     if (!userId || typeof userId !== "string") {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -183,7 +185,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    await ensured.userRef.update({
+    const updatePayload: any = {
       isPremium,
       premium: isPremium,
       premiumCategories: isPremium
@@ -193,7 +195,24 @@ export async function PATCH(request: NextRequest) {
       premiumUpdatedBy: auth.userId || null,
       premiumUpdatedByRole: auth.role || null,
       updatedAt: new Date(),
-    });
+    };
+
+    // Optional per-user explicit access lists (arrays of IDs)
+    if (isPremium) {
+      if (Array.isArray(allowedExamIds)) {
+        updatePayload.allowedExamIds = allowedExamIds.filter((x: any) => typeof x === 'string');
+      }
+      if (Array.isArray(allowedPdfIds)) {
+        updatePayload.allowedPdfIds = allowedPdfIds.filter((x: any) => typeof x === 'string');
+      }
+    } else {
+      updatePayload.allowedExamIds = [];
+      updatePayload.allowedPdfIds = [];
+    }
+
+    // No per-category quotas — only explicit per-user allowed IDs are stored
+
+    await ensured.userRef.update(updatePayload);
 
     const statsRef = adminDB.collection("system_config").doc("platform_stats");
 

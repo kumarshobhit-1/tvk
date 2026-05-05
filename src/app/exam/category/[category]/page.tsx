@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { authenticatedFetch } from "@/lib/api-client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,7 +109,7 @@ export default function CategoryExamsPage() {
           ? "/api/exam/list?category=other&noCache=1"
           : `/api/exam/list?category=${encodeURIComponent(category)}&noCache=1`;
         
-        const response = await fetch(url, { cache: "no-store" });
+        const response = await authenticatedFetch(url, { cache: "no-store" });
         const data = await response.json();
         
         if (data.exams) {

@@ -29,8 +29,14 @@ export async function GET(request: NextRequest) {
     const userData = userSnap.exists ? userSnap.data() : undefined;
     const examData = examSnap.exists ? examSnap.data() : undefined;
     const premiumUser = isPremiumUser(userData);
-    const premiumAccessForExam = hasPremiumAccess(userData, examData?.category);
     const isPremiumExam = examData?.isPremium === true;
+    const explicitExamIds: string[] = Array.isArray((userData as any)?.allowedExamIds)
+      ? (userData as any).allowedExamIds.map((s: any) => String(s || "").trim()).filter(Boolean)
+      : [];
+    const explicitExamAccess = premiumUser && explicitExamIds.length > 0 ? explicitExamIds.includes(examId) : null;
+    const premiumAccessForExam = explicitExamAccess === null
+      ? hasPremiumAccess(userData, examData?.category)
+      : explicitExamAccess;
 
     // Get all attempts for this exam by this user
     const attemptsSnap = await adminDB.collection("exam_attempts")

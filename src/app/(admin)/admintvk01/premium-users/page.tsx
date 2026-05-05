@@ -76,12 +76,20 @@ export default function PremiumUsersPage() {
   const [selectedCourseToAdd, setSelectedCourseToAdd] = useState("");
   const [newCourseInput, setNewCourseInput] = useState("");
   const [selectedPremiumCategories, setSelectedPremiumCategories] = useState<string[]>([]);
+  const [activeLoadCategory, setActiveLoadCategory] = useState<string>("");
   const [previewUser, setPreviewUser] = useState<PreviewUser | null>(null);
+  const [allowedExamIdsInput, setAllowedExamIdsInput] = useState("");
+  const [allowedPdfIdsInput, setAllowedPdfIdsInput] = useState("");
+  const [examsForPicker, setExamsForPicker] = useState<any[]>([]);
+  const [selectedExamIds, setSelectedExamIds] = useState<string[]>([]);
+  const [pdfsForPicker, setPdfsForPicker] = useState<any[]>([]);
+  const [selectedPdfIds, setSelectedPdfIds] = useState<string[]>([]);
   const [premiumUsers, setPremiumUsers] = useState<PremiumUserRow[]>([]);
 
   const previewCategories = (previewUser?.premiumCategories || []).map((item) => normalizeCategory(item));
   const effectiveSelectedCategories =
     selectedPremiumCategories.length > 0 ? selectedPremiumCategories : previewCategories;
+  const loadableSelectedCategories = effectiveSelectedCategories.filter((category) => category !== "ALL");
 
   const addCourseToSelection = (course: string) => {
     const normalized = normalizeCategory(course);
@@ -89,10 +97,17 @@ export default function PremiumUsersPage() {
 
     setSelectedPremiumCategories((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
     setAvailableCourses((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+    setActiveLoadCategory(normalized === "ALL" ? "" : normalized);
   };
 
   const removeCourseFromSelection = (course: string) => {
-    setSelectedPremiumCategories((prev) => prev.filter((item) => item !== course));
+    setSelectedPremiumCategories((prev) => {
+      const next = prev.filter((item) => item !== course);
+      if (activeLoadCategory === course) {
+        setActiveLoadCategory(next[next.length - 1] || "");
+      }
+      return next;
+    });
   };
 
   const loadCourseOptions = async () => {
@@ -104,7 +119,7 @@ export default function PremiumUsersPage() {
       const categoriesFromApi: string[] = Array.isArray(data.categories)
         ? data.categories
             .map((item: string) => normalizeCategory(item))
-            .filter(Boolean)
+            .filter((item: string) => Boolean(item) && item !== "ALL")
         : [];
 
       const merged = Array.from(new Set([...DEFAULT_COURSE_OPTIONS, ...categoriesFromApi]));
@@ -133,7 +148,7 @@ export default function PremiumUsersPage() {
     const categoriesFromApi: string[] = Array.isArray(data.categories)
       ? data.categories
           .map((item: string) => normalizeCategory(item))
-          .filter(Boolean)
+          .filter((item: string) => Boolean(item) && item !== "ALL")
       : [];
 
     setAvailableCourses(Array.from(new Set([...DEFAULT_COURSE_OPTIONS, ...categoriesFromApi])));
@@ -190,7 +205,15 @@ export default function PremiumUsersPage() {
       setPreviewUser(data.user || null);
       const nextCategories = (data.user?.premiumCategories || []).map((item: string) => normalizeCategory(item));
       setSelectedPremiumCategories(nextCategories);
+      setActiveLoadCategory(nextCategories.find((category) => category !== "ALL") || "");
+      setAllowedExamIdsInput((data.user?.allowedExamIds || []).join(", "));
+      setAllowedPdfIdsInput((data.user?.allowedPdfIds || []).join(", "));
+      setSelectedExamIds(Array.isArray(data.user?.allowedExamIds) ? data.user.allowedExamIds : []);
+      setSelectedPdfIds(Array.isArray(data.user?.allowedPdfIds) ? data.user.allowedPdfIds : []);
+      // per-category quotas not used; only explicit IDs are honored
       setAvailableCourses((prev) => Array.from(new Set([...prev, ...nextCategories])));
+      setExamsForPicker([]);
+      setPdfsForPicker([]);
       toast({ title: "User Found", description: "User preview loaded" });
     } catch (error: any) {
       setPreviewUser(null);
@@ -208,6 +231,7 @@ export default function PremiumUsersPage() {
     if (!previewUser) return;
 
     const selectedCategories = effectiveSelectedCategories;
+    const grantAllAccess = selectedCategories.includes("ALL");
 
     if (nextPremium && selectedCategories.length === 0) {
       toast({
@@ -226,7 +250,10 @@ export default function PremiumUsersPage() {
         body: JSON.stringify({
           userId: previewUser.uid,
           isPremium: nextPremium,
-          premiumCategories: selectedCategories,
+          premiumCategories: grantAllAccess ? ["ALL"] : selectedCategories.filter((category) => category !== "ALL"),
+          grantAllAccess,
+          allowedExamIds: grantAllAccess ? [] : (selectedExamIds.length > 0 ? selectedExamIds : (allowedExamIdsInput || "").split(/[,\s]+/).filter(Boolean)),
+          allowedPdfIds: grantAllAccess ? [] : (selectedPdfIds.length > 0 ? selectedPdfIds : (allowedPdfIdsInput || "").split(/[,\s]+/).filter(Boolean)),
         }),
       });
 
@@ -248,6 +275,11 @@ export default function PremiumUsersPage() {
 
       toast({ title: "Success", description: data?.message || "Updated successfully" });
       setPreviewUser(null);
+      setAllowedExamIdsInput("");
+      setAllowedPdfIdsInput("");
+      setSelectedExamIds([]);
+      setSelectedPdfIds([]);
+      setActiveLoadCategory("");
       setSelectedPremiumCategories([]);
       setSelectedCourseToAdd("");
       setNewCourseInput("");
@@ -289,6 +321,9 @@ export default function PremiumUsersPage() {
           premiumUpdatedAt: new Date().toISOString(),
         });
         setSelectedPremiumCategories(nextPremium ? target.premiumCategories || [] : []);
+        setActiveLoadCategory(nextPremium ? ((target.premiumCategories || []).find((category) => normalizeCategory(category) !== "ALL") || "") : "");
+        setSelectedExamIds([]);
+        setSelectedPdfIds([]);
       }
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Update failed", variant: "destructive" });
@@ -309,13 +344,77 @@ export default function PremiumUsersPage() {
       premiumUpdatedAt: target.premiumUpdatedAt,
     });
     setSelectedPremiumCategories((target.premiumCategories || []).map((c) => normalizeCategory(c)));
+    setActiveLoadCategory((target.premiumCategories || []).map((category) => normalizeCategory(category)).find((category) => category !== "ALL") || "");
+    // If user profile exists, try to load allowed IDs from backend preview user later via handleSearch
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Load exams for picker by category
+  const loadExamsForPicker = async (categories: string[]) => {
+    const nextCategories = Array.from(new Set((categories || []).map((category) => normalizeCategory(category)).filter((category) => category && category !== "ALL")));
+    if (nextCategories.length === 0) return setExamsForPicker([]);
+    try {
+      const responses = await Promise.all(
+        nextCategories.map(async (category) => {
+          const res = await authenticatedFetch(`/api/exam/list?category=${encodeURIComponent(category)}`);
+          if (!res.ok) return [] as any[];
+          const data = await res.json();
+          return Array.isArray(data.exams) ? data.exams : [];
+        })
+      );
+      const merged = Array.from(
+        new Map(responses.flat().map((exam: any) => [exam.id, exam])).values()
+      );
+      setExamsForPicker(merged);
+    } catch {
+      setExamsForPicker([]);
+    }
+  };
+
+  const toggleExamSelection = (id: string) => {
+    setSelectedExamIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      setAllowedExamIdsInput(next.join(', '));
+      return next;
+    });
+  };
+
+  // Load PDFs for picker by category (flattened)
+  const loadPdfsForPicker = async (categories: string[]) => {
+    try {
+      const res = await authenticatedFetch(`/api/pdf/list`);
+      if (!res.ok) return setPdfsForPicker([]);
+      const data = await res.json();
+      const folders = Array.isArray(data.folders) ? data.folders : [];
+      const allFiles: any[] = [];
+      folders.forEach((f: any) => {
+        (f.files || []).forEach((file: any) => allFiles.push(file));
+      });
+      const categorySet = new Set((categories || []).map((category) => normalizeCategory(category)).filter((category) => category && category !== "ALL"));
+      const filtered = categorySet.size > 0
+        ? allFiles.filter((f) => categorySet.has(normalizeCategory(f.category || f.folderCategory || "")))
+        : [];
+      setPdfsForPicker(filtered);
+    } catch {
+      setPdfsForPicker([]);
+    }
+  };
+
+  const togglePdfSelection = (id: string) => {
+    setSelectedPdfIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      setAllowedPdfIdsInput(next.join(', '));
+      return next;
+    });
+  };
+
+  // per-category quotas removed; only explicit IDs are used
 
   const handleUpdateAccess = async () => {
     if (!previewUser || !previewUser.isPremium) return;
 
     const selectedCategories = effectiveSelectedCategories;
+    const grantAllAccess = selectedCategories.includes("ALL");
     if (selectedCategories.length === 0) {
       toast({
         title: "Missing Courses",
@@ -333,7 +432,10 @@ export default function PremiumUsersPage() {
         body: JSON.stringify({
           userId: previewUser.uid,
           isPremium: true,
-          premiumCategories: selectedCategories,
+          premiumCategories: grantAllAccess ? ["ALL"] : selectedCategories.filter((category) => category !== "ALL"),
+          grantAllAccess,
+          allowedExamIds: grantAllAccess ? [] : (selectedExamIds.length > 0 ? selectedExamIds : (allowedExamIdsInput || "").split(/[,\s]+/).filter(Boolean)),
+          allowedPdfIds: grantAllAccess ? [] : (selectedPdfIds.length > 0 ? selectedPdfIds : (allowedPdfIdsInput || "").split(/[,\s]+/).filter(Boolean)),
         }),
       });
 
@@ -354,6 +456,8 @@ export default function PremiumUsersPage() {
 
       toast({ title: "Updated", description: "Premium access updated successfully" });
       setPreviewUser(null);
+      setExamsForPicker([]);
+      setPdfsForPicker([]);
       setSelectedPremiumCategories([]);
       setSelectedCourseToAdd("");
       setNewCourseInput("");
@@ -417,7 +521,16 @@ export default function PremiumUsersPage() {
             <Label htmlFor="premium-categories">Premium Courses</Label>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
               <div className="md:col-span-3">
-                <Select value={selectedCourseToAdd} onValueChange={setSelectedCourseToAdd}>
+                <Select
+                  value={selectedCourseToAdd}
+                  onValueChange={(value) => {
+                    setSelectedCourseToAdd(value);
+                    setExamsForPicker([]);
+                    setPdfsForPicker([]);
+                    setSelectedExamIds([]);
+                    setSelectedPdfIds([]);
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select course/category" />
                   </SelectTrigger>
@@ -499,6 +612,84 @@ export default function PremiumUsersPage() {
               Select one or more courses. If a new exam course is created later, you can add it from this dropdown after refresh, or use New.
             </p>
           </div>
+
+          {previewUser && (
+            <div className="space-y-3">
+              {effectiveSelectedCategories.includes("ALL") ? (
+                <p className="text-xs text-emerald-600">Full access selected. No category-specific loading is needed.</p>
+              ) : loadableSelectedCategories.length === 0 ? (
+                <p className="text-xs text-destructive">Select a category above before loading exams or PDFs.</p>
+              ) : null}
+
+              <div className="space-y-2">
+                <Label>Allowed Exam IDs (comma or space separated)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={allowedExamIdsInput}
+                    onChange={(e) => setAllowedExamIdsInput(e.target.value)}
+                    placeholder="e.g. examId1, examId2"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => loadExamsForPicker(loadableSelectedCategories)}
+                    disabled={loadableSelectedCategories.length === 0}
+                    className="whitespace-nowrap"
+                  >
+                    Load Exams
+                  </Button>
+                </div>
+              </div>
+
+              {examsForPicker.length > 0 && (
+                <div className="space-y-2">
+                  <div className="font-semibold">Select Exams to Grant</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-auto">
+                    {examsForPicker.map((ex) => (
+                      <label key={ex.id} className="flex items-center gap-2">
+                        <input type="checkbox" checked={selectedExamIds.includes(ex.id)} onChange={() => toggleExamSelection(ex.id)} />
+                        <span className="text-sm">{ex.title} <span className="text-xs text-muted-foreground">({ex.id})</span></span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Allowed PDF IDs (comma or space separated)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={allowedPdfIdsInput}
+                    onChange={(e) => setAllowedPdfIdsInput(e.target.value)}
+                    placeholder="e.g. pdfId1, pdfId2"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => loadPdfsForPicker(loadableSelectedCategories)}
+                    disabled={loadableSelectedCategories.length === 0}
+                    className="whitespace-nowrap"
+                  >
+                    Load PDFs
+                  </Button>
+                </div>
+              </div>
+
+              {pdfsForPicker.length > 0 && (
+                <div className="space-y-2">
+                  <div className="font-semibold">Select PDFs to Grant</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-auto">
+                    {pdfsForPicker.map((f) => (
+                      <label key={f.id} className="flex items-center gap-2">
+                        <input type="checkbox" checked={selectedPdfIds.includes(f.id)} onChange={() => togglePdfSelection(f.id)} />
+                        <span className="text-sm">{f.title || f.name} <span className="text-xs text-muted-foreground">({f.id})</span></span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {previewUser && (
             <div className="rounded-md border p-4 space-y-2 text-sm">

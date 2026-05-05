@@ -305,7 +305,7 @@ export default async function Home() {
                 <div className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur dark:border-white/10 dark:bg-slate-950/60">
                   <p className="text-xs uppercase tracking-[0.2em] text-white/55">Popular exam routes</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {spotlightPaths.slice(4).map((item) => (
+                    {spotlightPaths.slice(0, 4).map((item) => (
                       <Link
                         key={item.title}
                         href={item.href}

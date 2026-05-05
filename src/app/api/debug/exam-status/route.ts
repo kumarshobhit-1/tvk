@@ -4,6 +4,11 @@ import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdminPermission(request, "canViewExamAnalytics");
+    if (!auth.isValid) {
+      return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const examId = searchParams.get("examId");
     const category = searchParams.get("category");

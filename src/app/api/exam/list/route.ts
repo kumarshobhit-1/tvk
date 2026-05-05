@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
@@ -59,6 +60,37 @@ export async function GET(request: NextRequest) {
     const examId = searchParams.get("examId");
     const bypassCache = shouldBypassCache(request);
 
+    // Attempt to resolve authenticated user (optional) so we can apply per-user allowed lists
+    let userData: any | undefined;
+    let userId: string | undefined;
+    try {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.split("Bearer ")[1];
+        const decoded = await adminAuth.verifyIdToken(token);
+        userId = decoded.uid;
+        const userSnap = await adminDB.collection("users").doc(decoded.uid).get();
+        userData = userSnap.exists ? userSnap.data() : undefined;
+      }
+    } catch (e) {
+      userData = undefined;
+    }
+
+    if (!userData) {
+      try {
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+        if (sessionCookie) {
+          const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+          userId = decodedToken.uid;
+          const userSnap = await adminDB.collection("users").doc(decodedToken.uid).get();
+          userData = userSnap.exists ? userSnap.data() : undefined;
+        }
+      } catch {
+        userData = undefined;
+      }
+    }
+
     // If examId is provided, fetch public-safe single exam summary
     if (examId) {
       const loadSingleExam = async () => {
@@ -67,6 +99,21 @@ export async function GET(request: NextRequest) {
 
         const examData = examSnap.data();
         if (!examData?.isPublished) return null;
+
+        if (userData) {
+          const isPremiumUser = userData.isPremium === true || userData.premium === true;
+          const allowedExamIds: string[] = Array.isArray((userData as any).allowedExamIds)
+            ? (userData as any).allowedExamIds.map((s: any) => String(s || "").trim()).filter(Boolean)
+            : [];
+
+          if (isPremiumUser && allowedExamIds.length > 0 && !allowedExamIds.includes(examSnap.id)) {
+            return null;
+          }
+
+          if (!isPremiumUser && allowedExamIds.length > 0) {
+            return null;
+          }
+        }
 
         return toPublicExamSummary(examSnap.id, examData);
       };
@@ -113,7 +160,39 @@ export async function GET(request: NextRequest) {
         }
 
         const querySnapshot = await examsQuery.get();
-        const list = querySnapshot.docs.map((doc) => toPublicExamSummary(doc.id, doc.data()));
+        let list = querySnapshot.docs.map((doc) => toPublicExamSummary(doc.id, doc.data()));
+
+        // If explicit per-user allowed IDs exist, they override category-wide access.
+        // This prevents one granted exam from unlocking the whole category.
+        if (category && userData) {
+          const { allowedExamIds } = userData as any;
+          const normalizedCategory = category.toUpperCase();
+          const isPremiumUser = userData.isPremium === true || userData.premium === true;
+          const explicitIds: string[] = Array.isArray(allowedExamIds)
+            ? allowedExamIds.map((s: any) => String(s || "").trim()).filter(Boolean)
+            : [];
+          const explicitAllowedSet = new Set(explicitIds);
+
+          if (isPremiumUser && explicitIds.length > 0) {
+            list = list.filter((e: any) => explicitAllowedSet.has(e.id));
+          } else {
+            const userHasCategory = (function () {
+              try {
+                const premiumCats = (userData.premiumCategories || userData.premiumAccessCategories || userData.allowedCategories || []);
+                if (Array.isArray(premiumCats) && premiumCats.map((c: any) => String(c || "").trim().toUpperCase()).includes("ALL")) return true;
+                if (Array.isArray(premiumCats) && premiumCats.map((c: any) => String(c || "").trim().toUpperCase()).includes(normalizedCategory)) return true;
+                if (userData.isPremium === true || userData.premium === true) return true;
+              } catch (e) {
+                // ignore and treat as no category access
+              }
+              return false;
+            })();
+
+            if (!userHasCategory) {
+              list = [];
+            }
+          }
+        }
 
         // Sort by createdAt in JavaScript instead of Firestore
         list.sort((a: any, b: any) => {
@@ -125,7 +204,7 @@ export async function GET(request: NextRequest) {
         return list;
       };
 
-    const exams = bypassCache
+    const exams = (bypassCache || (userData && category))
       ? await loadExamList()
       : await cacheAside(
           CacheKeys.examList((category?.toUpperCase()) || "all"),

@@ -44,7 +44,16 @@ export async function POST(request: NextRequest) {
     }
 
     const exam = examSnap.data() as Exam;
-    const premiumAccessForExam = hasPremiumAccess(userData, exam.category);
+    const premiumUser = Boolean(userData?.isPremium === true || userData?.premium === true);
+    const explicitExamIds: string[] = Array.isArray((userData as any)?.allowedExamIds)
+      ? (userData as any).allowedExamIds.map((s: any) => String(s || "").trim()).filter(Boolean)
+      : [];
+    const explicitExamAccess = premiumUser && explicitExamIds.length > 0
+      ? explicitExamIds.includes(examId)
+      : null;
+    const premiumAccessForExam = explicitExamAccess === null
+      ? hasPremiumAccess(userData, exam.category)
+      : explicitExamAccess;
 
     if (exam.isPremium && !premiumAccessForExam) {
       return NextResponse.json(

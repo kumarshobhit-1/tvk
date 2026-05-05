@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { adminAuth } from "@/lib/firebase/firebase-admin";
 
 // Language mapping for Piston API
 const languageMap: Record<string, string> = {
@@ -11,6 +13,14 @@ const languageMap: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await adminAuth.verifySessionCookie(sessionCookie);
+
     const { code, language } = await request.json();
 
     if (!code || !language) {
@@ -112,6 +122,14 @@ export async function POST(request: NextRequest) {
 // GET endpoint to check API status and supported languages
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await adminAuth.verifySessionCookie(sessionCookie);
+
     // Test Piston API availability
     const response = await fetch("https://emkc.org/api/v2/piston/runtimes");
     const runtimes = await response.json();

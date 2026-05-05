@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { authenticatedFetch } from "@/lib/api-client";
 import { Timer } from "./Timer";
 import { QuestionCard } from "./QuestionCard";
 import { Button } from "@/components/ui/button";
@@ -205,7 +206,7 @@ export function ExamRunner({
         }
 
         // Check if exam is emergency stopped
-        const examResponse = await fetch(`/api/exam/list?examId=${exam.id}`);
+        const examResponse = await authenticatedFetch(`/api/exam/list?examId=${exam.id}`);
         if (examResponse.ok) {
           const examData = await examResponse.json();
           const currentExam = examData.exams?.[0];

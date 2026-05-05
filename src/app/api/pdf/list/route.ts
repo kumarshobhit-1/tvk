@@ -64,11 +64,22 @@ export async function GET(request: NextRequest) {
             ? file.isPremium === true
             : folder.isPremium === true;
 
+        // Allow explicit per-user PDF access if present on profile.
+        // When explicit IDs exist, they override broader category access.
+        const isPremiumUser = userData?.isPremium === true || userData?.premium === true;
+        const allowedPdfIds: string[] = Array.isArray(userData?.allowedPdfIds) ? userData.allowedPdfIds.map((id: any) => String(id)) : [];
+        const allowedPdfSet = new Set(allowedPdfIds);
+        const hasExplicitPdfAccess = isPremiumUser && allowedPdfSet.size > 0;
+
         return {
           ...file,
           category: effectiveCategory,
           isPremium: requiresPremium,
-          canAccess: !requiresPremium || hasPremiumAccess(userData, effectiveCategory),
+          canAccess: !requiresPremium
+            ? true
+            : hasExplicitPdfAccess
+              ? allowedPdfSet.has(file.id)
+              : hasPremiumAccess(userData, effectiveCategory),
         } as PDFFile;
       })
       .sort((a, b) => (a.order || 0) - (b.order || 0));

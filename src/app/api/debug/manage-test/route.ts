@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
+import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdminPermission(request, "canViewExamAnalytics");
+    if (!auth.isValid) {
+      return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+    }
+
     // Get all published exams
     const examsQuery = adminDB.collection("exams").where("isPublished", "==", true);
     const examsSnap = await examsQuery.get();
