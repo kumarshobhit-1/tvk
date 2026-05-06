@@ -24,6 +24,7 @@ interface ExamListItem {
   title: string;
   description: string;
   isPremium?: boolean;
+  isLocked?: boolean;
   type: string;
   durationMinutes: number;
   totalMarks: number;
@@ -242,6 +243,7 @@ export default function CategoryExamsPage() {
           {exams.map((exam) => {
             const status = examStatuses[exam.id];
             const isPremium = status?.isPremiumExam ?? exam.isPremium;
+            const isLocked = status?.isLocked ?? exam.isLocked;
             const actionLabel = !status
               ? "Start exam"
               : !status.canRetake && status.hasPassed
@@ -265,6 +267,11 @@ export default function CategoryExamsPage() {
                       {isPremium && (
                         <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]">
                           Premium
+                        </Badge>
+                      )}
+                      {isLocked && (
+                        <Badge variant="destructive" className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]">
+                          Locked
                         </Badge>
                       )}
                       <Badge
@@ -351,6 +358,19 @@ export default function CategoryExamsPage() {
                         >
                           Premium required
                         </Button>
+                      );
+                    }
+
+                    if (isLocked || status?.isLocked) {
+                      return (
+                        <>
+                          <Button disabled className="h-9 flex-1 rounded-full px-4 text-sm font-semibold shadow-sm">
+                            Locked
+                          </Button>
+                          <Button asChild variant="outline" className="h-9 rounded-full px-4 text-sm font-medium">
+                            <Link href={`/exam/leaderboard/${exam.id}`}>Leaderboard</Link>
+                          </Button>
+                        </>
                       );
                     }
 

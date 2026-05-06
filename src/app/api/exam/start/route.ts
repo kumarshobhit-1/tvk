@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const exam = examSnap.data() as Exam;
+    const isLockedExam = exam.isLocked === true;
     const premiumUser = Boolean(userData?.isPremium === true || userData?.premium === true);
     const explicitExamIds: string[] = Array.isArray((userData as any)?.allowedExamIds)
       ? (userData as any).allowedExamIds.map((s: any) => String(s || "").trim()).filter(Boolean)
@@ -54,6 +55,16 @@ export async function POST(request: NextRequest) {
     const premiumAccessForExam = explicitExamAccess === null
       ? hasPremiumAccess(userData, exam.category)
       : explicitExamAccess;
+
+    if (isLockedExam) {
+      return NextResponse.json(
+        {
+          error: "This exam is locked by the administrator",
+          code: "EXAM_LOCKED",
+        },
+        { status: 403 }
+      );
+    }
 
     if (exam.isPremium && !premiumAccessForExam) {
       return NextResponse.json(

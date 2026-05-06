@@ -50,6 +50,7 @@ export default function AdminExamsPage() {
   const [passingMarks, setPassingMarks] = useState(40);
   const [negativeMarking, setNegativeMarking] = useState(0.25);
   const [isPremium, setIsPremium] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
@@ -361,6 +362,7 @@ export default function AdminExamsPage() {
         description,
         category,
         isPremium,
+        isLocked,
         type: "timed",
         durationMinutes: normalizedSections.reduce((sum, s) => sum + s.durationMinutes, 0),
         totalMarks,
@@ -603,6 +605,20 @@ export default function AdminExamsPage() {
                       id="premium"
                       checked={isPremium}
                       onCheckedChange={setIsPremium}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="locked">Locked Exam</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Visible to everyone, but cannot be attempted until unlocked
+                      </p>
+                    </div>
+                    <Switch
+                      id="locked"
+                      checked={isLocked}
+                      onCheckedChange={setIsLocked}
                     />
                   </div>
 

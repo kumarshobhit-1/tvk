@@ -73,23 +73,33 @@ export default function ExamPage() {
 
   const handleStartExam = async () => {
     // Check for blocking conditions before attempting to start
+    // Priority 1: Premium requirement
+    if (examInfo?.isPremium && examStatus && examStatus.canAttemptPremium === false) {
+      setError("Premium access required to attempt this exam.");
+      return;
+    }
+
+    // Priority 2: Lock state (after premium check)
+    if (examInfo?.isLocked || examStatus?.isLocked) {
+      setError("This exam is locked by the administrator.");
+      return;
+    }
+
+    // Priority 3: Already passed
     if (examStatus?.hasPassed) {
       setError("You have already passed this exam! You can view your result.");
       return;
     }
 
+    // Priority 4: Attempt limit
     if (examStatus && examStatus.attemptCount >= 3) {
       setError("You have exhausted all 3 attempts for this exam.");
       return;
     }
 
+    // Priority 5: Emergency stop
     if (examInfo && (examInfo.emergencyStopped || !examInfo.isActive)) {
       setError("This exam has been temporarily stopped by the administrator. Please try again later.");
-      return;
-    }
-
-    if (examInfo?.isPremium && examStatus && examStatus.canAttemptPremium === false) {
-      setError("Premium access required to attempt this exam.");
       return;
     }
 
@@ -192,10 +202,12 @@ export default function ExamPage() {
               agreedToInstructions={agreedToInstructions}
               onAgreedChange={(v: boolean) => setAgreedToInstructions(v)}
               disabled={
+                (examInfo?.isPremium && examStatus && examStatus.canAttemptPremium === false) ||
+                examInfo?.isLocked ||
+                examStatus?.isLocked ||
                 examStatus?.hasPassed ||
                 (examStatus && examStatus.attemptCount >= 3) ||
-                (examInfo && (examInfo.emergencyStopped || !examInfo.isActive)) ||
-                (examInfo?.isPremium && examStatus && examStatus.canAttemptPremium === false)
+                (examInfo && (examInfo.emergencyStopped || !examInfo.isActive))
               }
             />
           </div>
@@ -207,39 +219,7 @@ export default function ExamPage() {
           )}
 
           <div className="space-y-2 px-4 pb-4">
-            {examStatus?.hasPassed ? (
-              <>
-                <div className="w-full p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-center mb-2">
-                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                    ✅ You have already passed this exam!
-                  </p>
-                </div>
-                <Button
-                  onClick={() => router.push(`/exam/result?attemptId=${examStatus.lastAttemptId}`)}
-                  className="w-full"
-                  size="lg"
-                  variant="outline"
-                >
-                  View Result
-                </Button>
-              </>
-            ) : examInfo && (examInfo.emergencyStopped || !examInfo.isActive) ? (
-              <>
-                <div className="w-full p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md text-center mb-2">
-                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                    🛑 Exam temporarily stopped by administrator
-                  </p>
-                </div>
-                <Button
-                  disabled
-                  className="w-full"
-                  size="lg"
-                  variant="outline"
-                >
-                  Exam Unavailable
-                </Button>
-              </>
-            ) : examInfo?.isPremium && examStatus && examStatus.canAttemptPremium === false ? (
+            {examInfo?.isPremium && examStatus && examStatus.canAttemptPremium === false ? (
               <>
                 <div className="w-full p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md text-center mb-2">
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
@@ -253,6 +233,38 @@ export default function ExamPage() {
                   variant="outline"
                 >
                   Premium Only
+                </Button>
+              </>
+            ) : examInfo?.isLocked || examStatus?.isLocked ? (
+              <>
+                <div className="w-full p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md text-center mb-2">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    🔒 Exam locked by administrator
+                  </p>
+                </div>
+                <Button
+                  disabled
+                  className="w-full"
+                  size="lg"
+                  variant="outline"
+                >
+                  Locked
+                </Button>
+              </>
+            ) : examStatus?.hasPassed ? (
+              <>
+                <div className="w-full p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-center mb-2">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    ✅ You have already passed this exam!
+                  </p>
+                </div>
+                <Button
+                  onClick={() => router.push(`/exam/result?attemptId=${examStatus.lastAttemptId}`)}
+                  className="w-full"
+                  size="lg"
+                  variant="outline"
+                >
+                  View Result
                 </Button>
               </>
             ) : examStatus && examStatus.attemptCount >= 3 ? (
@@ -269,6 +281,22 @@ export default function ExamPage() {
                   variant="outline"
                 >
                   View Last Attempt
+                </Button>
+              </>
+              ) : examInfo && (examInfo.emergencyStopped || !examInfo.isActive) ? (
+              <>
+                <div className="w-full p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md text-center mb-2">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                    🛑 Exam temporarily stopped by administrator
+                  </p>
+                </div>
+                <Button
+                  disabled
+                  className="w-full"
+                  size="lg"
+                  variant="outline"
+                >
+                  Exam Unavailable
                 </Button>
               </>
             ) : examStatus && examStatus.attemptCount > 0 ? (

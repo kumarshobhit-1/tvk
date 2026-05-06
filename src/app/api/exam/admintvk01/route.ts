@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
       title: examData.title,
       description: examData.description || "",
       isPremium: normalizeBoolean(examData.isPremium),
+      isLocked: normalizeBoolean(examData.isLocked, false),
       type: examData.type || "timed",
       durationMinutes: computedDuration,
       totalMarks:
@@ -210,6 +211,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const normalizedIsPremium = normalizeBoolean(examData.isPremium, examSnap.data()?.isPremium === true);
+    const normalizedIsLocked = normalizeBoolean(examData.isLocked, examSnap.data()?.isLocked === true);
     const normalizedIsPublished = normalizeBoolean(examData.isPublished, examSnap.data()?.isPublished === true);
     const normalizedCategory = normalizeCategory(examData.category) || normalizeCategory(examSnap.data()?.category) || "SEBI";
 
@@ -257,6 +259,7 @@ export async function PUT(request: NextRequest) {
       description: examData.description || "",
       category: normalizedCategory,
       isPremium: normalizedIsPremium,
+      isLocked: normalizedIsLocked,
       isPublished: normalizedIsPublished,
       type: examData.type || "timed",
       durationMinutes: computedDuration,

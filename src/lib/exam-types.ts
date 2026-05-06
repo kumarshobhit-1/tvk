@@ -34,6 +34,7 @@ export interface Exam {
   title: string;
   description: string;
   isPremium?: boolean;
+  isLocked?: boolean; // Whether the exam is locked until admin unlocks it
   type: ExamType;
   durationMinutes: number; // Total duration in minutes
   totalMarks: number;
