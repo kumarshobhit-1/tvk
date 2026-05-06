@@ -297,7 +297,7 @@ export default function LibraryPage() {
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
                     {folderStack.length > 1 ? (
-                      <Button variant="outline" size="sm" className="mr-2" onClick={() => {
+                      <Button variant="outline" size="sm" className="hidden md:inline-flex mr-2" onClick={() => {
                         const newStack = folderStack.slice(0, -1);
                         setFolderStack(newStack);
                         setSelectedFolder(newStack.length ? newStack[newStack.length - 1] : null);
@@ -306,7 +306,7 @@ export default function LibraryPage() {
                         Back
                       </Button>
                     ) : (
-                      <Button variant="ghost" size="sm" className="mr-2" onClick={() => { setSelectedFolder(null); setFolderStack([]); }}>
+                      <Button variant="ghost" size="sm" className="hidden md:inline-flex mr-2" onClick={() => { setSelectedFolder(null); setFolderStack([]); }}>
                         <ArrowLeft className="h-4 w-4" />
                       </Button>
                     )}
@@ -357,7 +357,14 @@ export default function LibraryPage() {
                             <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
                           </div>
                           <div className="min-w-0">
-                            <div className="font-medium text-sm truncate">{file.name}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium text-sm truncate">{file.name}</div>
+                              {file.isLocked && (
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                  Locked
+                                </Badge>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}{file.pageCount ? ` · ${file.pageCount} pages` : ""}</div>
                           </div>
                         </div>

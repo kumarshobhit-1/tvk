@@ -22,6 +22,7 @@ export interface PDFFile {
   name: string;
   description?: string;
   category?: string;
+  isLocked?: boolean;
   isPremium?: boolean;
   premiumOverridden?: boolean;
   canAccess?: boolean;

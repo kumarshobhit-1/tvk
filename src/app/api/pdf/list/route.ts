@@ -71,15 +71,20 @@ export async function GET(request: NextRequest) {
         const allowedPdfSet = new Set(allowedPdfIds);
         const hasExplicitPdfAccess = isPremiumUser && allowedPdfSet.size > 0;
 
+        const isLocked = file.isLocked === true;
+
         return {
           ...file,
           category: effectiveCategory,
           isPremium: requiresPremium,
-          canAccess: !requiresPremium
-            ? true
-            : hasExplicitPdfAccess
-              ? allowedPdfSet.has(file.id)
-              : hasPremiumAccess(userData, effectiveCategory),
+          isLocked,
+          canAccess: isLocked
+            ? false
+            : !requiresPremium
+              ? true
+              : hasExplicitPdfAccess
+                ? allowedPdfSet.has(file.id)
+                : hasPremiumAccess(userData, effectiveCategory),
         } as PDFFile;
       })
       .sort((a, b) => (a.order || 0) - (b.order || 0));

@@ -461,6 +461,26 @@ export default function AdminPDFsPage() {
     }
   };
 
+  const handleToggleLock = async (fileId: string, currentStatus: boolean) => {
+    try {
+      const response = await authenticatedFetch("/api/pdf/admintvk01", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "file", id: fileId, isLocked: !currentStatus }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data?.error || "Failed to update lock status");
+      }
+
+      toast({ title: "Updated", description: `File ${!currentStatus ? "locked" : "unlocked"}` });
+      await fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to update lock", variant: "destructive" });
+    }
+  };
+
   const openEditFolderDialog = (folder: PDFFolder) => {
     setEditingFolder(folder);
     setEditFolderCategory(normalizeCategory(folder.category || "SEBI"));
@@ -853,6 +873,9 @@ export default function AdminPDFsPage() {
                               {file.isPublished ? "Published" : "Draft"}
                             </Badge>
                             {file.isPremium && <Badge variant="secondary">Premium</Badge>}
+                            {file.isLocked && (
+                              <Badge variant="destructive">Locked</Badge>
+                            )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -882,6 +905,21 @@ export default function AdminPDFsPage() {
                                     <>
                                       <EyeOff className="h-4 w-4 mr-2" />
                                       Mark Premium
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleToggleLock(file.id, file.isLocked === true)}
+                                >
+                                  {file.isLocked ? (
+                                    <>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      Unlock
+                                    </>
+                                  ) : (
+                                    <>
+                                      <EyeOff className="h-4 w-4 mr-2" />
+                                      Lock
                                     </>
                                   )}
                                 </DropdownMenuItem>

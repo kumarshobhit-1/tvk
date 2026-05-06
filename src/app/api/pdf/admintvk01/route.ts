@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
           const pdfFile: Omit<PDFFile, "id"> = {
             name: file.name.replace(/\.pdf$/i, ""),
             category: folderData.category || "SEBI",
+            // default to unlocked unless explicitly set later by admin
+            isLocked: false,
             isPremium: folderData.isPremium === true,
             premiumOverridden: false,
             folderId,
@@ -233,6 +235,10 @@ export async function PUT(request: NextRequest) {
     if (type === "file" && typeof normalizedUpdates.isPremium === "boolean") {
       // File-level premium toggles are treated as explicit overrides.
       normalizedUpdates.premiumOverridden = true;
+    }
+    // Allow toggling lock on files
+    if (type === "file" && typeof normalizedUpdates.isLocked === "boolean") {
+      // no special handling required, just persist the flag
     }
 
     await docRef.update(normalizedUpdates);
