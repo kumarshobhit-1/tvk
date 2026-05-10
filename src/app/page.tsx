@@ -137,6 +137,11 @@ const spotlightPaths = [
     note: "Regulatory and IT mock tests",
   },
   {
+    title: "Coal India Limited",
+    href: "/cil",
+    note: "PSU-focused mocks and study tracks for technical and managerial roles",
+  },
+  {
     title: "IBPS SO IT",
     href: "/exam/category/ibps-so-it",
     note: "Specialist officer IT tests",
@@ -216,11 +221,11 @@ export default async function Home() {
             <div className="relative">
               <Badge variant="secondary" className="mb-5 gap-2 rounded-full px-4 py-2 text-sm shadow-sm ring-1 ring-black/5">
                 <Sparkles className="h-4 w-4" />
-                Finance exam hub for serious prep
+                Govt IT exam hub for serious prep
               </Badge>
 
               <h1 className="max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
-                RBI, SEBI, IBPS, SBI, ICAI, HPCL and other IT - focused prep.
+                RBI, SEBI, IBPS, SBI, CIL, HPCL and other IT - focused prep.
               </h1>
 
               <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
