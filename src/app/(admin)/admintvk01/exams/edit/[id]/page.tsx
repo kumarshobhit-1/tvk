@@ -26,7 +26,7 @@ const SectionEditorWrapper = dynamic(
   { ssr: false }
 );
 
-const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
+const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC", "COAL INDIA LIMITED"];
 
 function normalizeCategory(value: string) {
   return value.trim().toUpperCase();

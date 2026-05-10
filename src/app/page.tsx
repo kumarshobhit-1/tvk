@@ -60,6 +60,14 @@ const FEATURED_TRACKS: FeaturedTrack[] = [
     tint: "from-emerald-500/15 to-emerald-500/5",
   },
   {
+    title: "Coal India Limited",
+    category: "COAL INDIA LIMITED",
+    slug: "coal-india-limited",
+    subtitle: "PSU exam-oriented mocks and study tracks",
+    icon: Trophy,
+    tint: "from-amber-500/15 to-amber-500/5",
+  },
+  {
     title: "IBPS SO IT",
     category: "IBPS SO IT",
     slug: "ibps-so-it",
@@ -104,6 +112,7 @@ const QUICK_LINKS: QuickLink[] = [
   { label: "ICAI EO IT", href: "/exam/category/icai-eo-it" },
   { label: "HPCL IS", href: "/hpcl-is-pyq" },
   { label: "RBI Grade B", href: "/exam/category/rbi" },
+  { label: "Coal India Limited", href: "/exam/category/coal-india-limited" },
   { label: "IBPS SO IT", href: "/exam/category/ibps-so-it" },
   { label: "SEBI", href: "/exam/category/sebi" },
   { label: "Banking IT", href: "/exam/category/banking" },

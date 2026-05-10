@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 
-const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
+const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC", "COAL INDIA LIMITED"];
 
 function normalizeCategory(value: string) {
   return value.trim().toUpperCase();

@@ -20,7 +20,7 @@ import Loading from "@/components/ui/loading";
 import type { ExamQuestion, ExamOption, DifficultyLevel, ExamSection } from "@/lib/exam-types";
 import BulkQuestionImportDialog from "@/components/admin/bulk-question-import-dialog";
 
-const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
+const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC", "COAL INDIA LIMITED"];
 
 function normalizeCategory(value: string) {
   return value.trim().toUpperCase();

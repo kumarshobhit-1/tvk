@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { authenticatedFetch } from "@/lib/api-client";
@@ -59,7 +59,7 @@ function normalizeCategory(value: string) {
   return value.trim().toUpperCase();
 }
 
-const DEFAULT_COURSE_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC"];
+const DEFAULT_COURSE_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC", "COAL INDIA LIMITED"];
 
 export default function PremiumUsersPage() {
   const router = useRouter();
@@ -85,11 +85,49 @@ export default function PremiumUsersPage() {
   const [pdfsForPicker, setPdfsForPicker] = useState<any[]>([]);
   const [selectedPdfIds, setSelectedPdfIds] = useState<string[]>([]);
   const [premiumUsers, setPremiumUsers] = useState<PremiumUserRow[]>([]);
+  const [listSearchQuery, setListSearchQuery] = useState("");
+  const [listCategoryFilter, setListCategoryFilter] = useState("ALL");
 
   const previewCategories = (previewUser?.premiumCategories || []).map((item) => normalizeCategory(item));
   const effectiveSelectedCategories =
     selectedPremiumCategories.length > 0 ? selectedPremiumCategories : previewCategories;
   const loadableSelectedCategories = effectiveSelectedCategories.filter((category) => category !== "ALL");
+
+  const listCategoryOptions = useMemo(() => {
+    const categoriesFromUsers = premiumUsers.flatMap((u) =>
+      (u.premiumCategories || [])
+        .map((c) => normalizeCategory(c))
+        .filter((c) => c && c !== "ALL")
+    );
+    return Array.from(new Set([...availableCourses.map((c) => normalizeCategory(c)), ...categoriesFromUsers])).filter(Boolean);
+  }, [availableCourses, premiumUsers]);
+
+  const filteredPremiumUsers = useMemo(() => {
+    const query = listSearchQuery.trim().toLowerCase();
+    const normalizedFilter = normalizeCategory(listCategoryFilter || "ALL");
+
+    return premiumUsers.filter((userRow) => {
+      const normalizedCategories = (userRow.premiumCategories || []).map((c) => normalizeCategory(c));
+
+      const matchesCategory =
+        normalizedFilter === "ALL" ||
+        normalizedCategories.includes(normalizedFilter) ||
+        normalizedCategories.includes("ALL");
+
+      if (!matchesCategory) return false;
+      if (!query) return true;
+
+      const searchableText = [
+        userRow.displayName || "",
+        userRow.email || "",
+        (userRow.premiumCategories || []).join(" "),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(query);
+    });
+  }, [premiumUsers, listSearchQuery, listCategoryFilter]);
 
   const addCourseToSelection = (course: string) => {
     const normalized = normalizeCategory(course);
@@ -747,6 +785,34 @@ export default function PremiumUsersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <Label htmlFor="premium-users-list-search">Search Users</Label>
+              <Input
+                id="premium-users-list-search"
+                placeholder="Search by name, email, or course"
+                value={listSearchQuery}
+                onChange={(e) => setListSearchQuery(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="premium-users-category-filter">Category Filter</Label>
+              <Select value={listCategoryFilter} onValueChange={setListCategoryFilter}>
+                <SelectTrigger id="premium-users-category-filter">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Categories</SelectItem>
+                  {listCategoryOptions.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -757,14 +823,14 @@ export default function PremiumUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {premiumUsers.length === 0 ? (
+              {filteredPremiumUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    No premium users found
+                    No users match your search/filter
                   </TableCell>
                 </TableRow>
               ) : (
-                premiumUsers.map((u) => (
+                filteredPremiumUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell>
                       <div className="font-medium">{u.displayName || "Unnamed"}</div>
