@@ -63,6 +63,48 @@ export async function uploadPDFToCloudinary(
   });
 }
 
+export async function uploadImageToCloudinary(
+  fileBuffer: Buffer,
+  fileName: string,
+  folderPath: string = 'tvk-question-images'
+): Promise<CloudinaryUploadResult> {
+  return new Promise((resolve, reject) => {
+    const cleanFileName = fileName
+      .replace(/\.[^/.]+$/i, '')
+      .replace(/[^a-zA-Z0-9-_]/g, '_');
+
+    const uniqueId = `${cleanFileName}_${Date.now()}`;
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'image',
+        folder: folderPath,
+        public_id: uniqueId,
+        type: 'upload',
+        overwrite: false,
+      },
+      (error, result) => {
+        if (error) {
+          console.error('Cloudinary image upload error:', error);
+          reject(error);
+        } else if (result) {
+          resolve({
+            public_id: result.public_id,
+            secure_url: result.secure_url,
+            url: result.url,
+            bytes: result.bytes,
+            format: result.format || 'jpg',
+            pages: result.pages,
+            thumbnail_url: undefined,
+          });
+        }
+      }
+    );
+
+    uploadStream.end(fileBuffer);
+  });
+}
+
 export function generatePDFThumbnail(publicId: string): string {
   // Generate a thumbnail image from the first page of the PDF
   return cloudinary.url(publicId, {

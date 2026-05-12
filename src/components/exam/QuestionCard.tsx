@@ -71,6 +71,26 @@ export function QuestionCard({
         </div>
 
         <div className="mb-6">
+          {question.imageUrl && (
+            <div className="mb-4 space-y-2">
+              <div className="mx-auto overflow-hidden rounded-xl border bg-muted/30 max-w-xl">
+                <img
+                  src={question.imageUrl}
+                  alt={`Question ${questionNumber} illustration`}
+                  className="max-h-64 w-full object-contain"
+                  loading="lazy"
+                />
+              </div>
+              {/* <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(question.imageUrl, "_blank", "noopener,noreferrer")}
+              >
+                View Full Image
+              </Button> */}
+            </div>
+          )}
           <p className="text-lg font-medium leading-relaxed whitespace-pre-wrap">{question.text}</p>
           <p className="text-sm text-muted-foreground mt-2">
             Marks: {question.marks}

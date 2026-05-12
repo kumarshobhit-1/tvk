@@ -238,8 +238,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error submitting exam:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to submit exam";
     return NextResponse.json(
-      { error: "Failed to submit exam" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -179,10 +179,12 @@ function parseQuestionRows(rows: unknown[]): { questions: ExamQuestion[]; errors
     const difficulty = normalizeDifficulty(getFirstValue(normalized, ["difficulty", "level"]));
     const explanationValue = getFirstValue(normalized, ["explanation", "reason", "solution"]);
     const subjectValue = getFirstValue(normalized, ["subject", "topic", "chapter"]);
+    const imageUrlValue = getFirstValue(normalized, ["imageurl", "image_url", "photo", "photo_url", "question_image", "question_image_url"]);
 
     questions.push({
       id: `q_${Date.now()}_${index + 1}`,
       text: questionText,
+      imageUrl: imageUrlValue == null ? "" : String(imageUrlValue).trim(),
       options: options.map((optionText, optionIndex) => ({
         id: OPTION_IDS[optionIndex] || `${optionIndex + 1}`,
         text: optionText,

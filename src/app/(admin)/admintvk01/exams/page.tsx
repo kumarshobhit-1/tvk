@@ -64,6 +64,8 @@ export default function AdminExamsPage() {
   const [sections, setSections] = useState<ExamSection[]>([]);
   const [selectedSectionIdForAdd, setSelectedSectionIdForAdd] = useState("");
   const [lastAddedQuestionId, setLastAddedQuestionId] = useState<string | null>(null);
+  const [uploadingQuestionImageIndex, setUploadingQuestionImageIndex] = useState<number | null>(null);
+  const [visibleQuestionPreviews, setVisibleQuestionPreviews] = useState<Record<string, boolean>>({});
 
   const totalSectionDuration = useMemo(
     () => sections.reduce((sum, s) => sum + (Number.isFinite(s.durationMinutes) ? s.durationMinutes : 0), 0),
@@ -186,6 +188,7 @@ export default function AdminExamsPage() {
     const newQuestion: ExamQuestion = {
       id: newQuestionId,
       text: "",
+      imageUrl: "",
       options: [
         { id: "a", text: "" },
         { id: "b", text: "" },
@@ -252,6 +255,11 @@ export default function AdminExamsPage() {
     setQuestions(questions.filter((_, i) => i !== index));
     if (removed?.id) {
       setSections((prev) => prev.map((s) => ({ ...s, questionIds: (s.questionIds || []).filter((id) => id !== removed.id) })));
+      setVisibleQuestionPreviews((prev) => {
+        const next = { ...prev };
+        delete next[removed.id];
+        return next;
+      });
     }
   };
 
@@ -274,6 +282,37 @@ export default function AdminExamsPage() {
           : q
       )
     );
+  };
+
+  const uploadQuestionImage = async (questionIndex: number, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid File", description: "Please choose an image file", variant: "destructive" });
+      return;
+    }
+
+    setUploadingQuestionImageIndex(questionIndex);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folderPath", "tvk-question-images/exams");
+
+      const response = await authenticatedFetch("/api/upload/question-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to upload image");
+      }
+
+      updateQuestion(questionIndex, { imageUrl: data.secureUrl || data.url || "" });
+      toast({ title: "Success", description: "Question image uploaded" });
+    } catch (error: any) {
+      toast({ title: "Upload Failed", description: error.message || "Could not upload image", variant: "destructive" });
+    } finally {
+      setUploadingQuestionImageIndex(null);
+    }
   };
 
   const handleSave = async () => {
@@ -783,6 +822,61 @@ export default function AdminExamsPage() {
                       placeholder="Enter question text"
                       rows={3}
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Question Photo URL (Optional)</Label>
+                    <Input
+                      type="url"
+                      value={question.imageUrl || ""}
+                      onChange={(e) => updateQuestion(qIndex, { imageUrl: e.target.value })}
+                      placeholder="https://..."
+                    />
+                    {question.imageUrl && (
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setVisibleQuestionPreviews((prev) => ({
+                              ...prev,
+                              [question.id]: !prev[question.id],
+                            }))
+                          }
+                        >
+                          {visibleQuestionPreviews[question.id] ? "Hide Preview" : "Show Preview"}
+                        </Button>
+                        {visibleQuestionPreviews[question.id] && (
+                          <div className="overflow-hidden rounded-lg border bg-muted/30">
+                            <img
+                              src={question.imageUrl}
+                              alt={`Question ${qIndex + 1} preview`}
+                              className="max-h-64 w-full object-contain"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Upload Question Photo From Device</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          void uploadQuestionImage(qIndex, file);
+                          e.target.value = "";
+                        }
+                      }}
+                      disabled={uploadingQuestionImageIndex === qIndex}
+                    />
+                    {uploadingQuestionImageIndex === qIndex && (
+                      <p className="text-xs text-muted-foreground">Uploading image...</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">

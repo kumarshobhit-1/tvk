@@ -11,6 +11,7 @@ export interface ExamOption {
 export interface ExamQuestion {
   id: string;
   text: string;
+  imageUrl?: string;
   options: ExamOption[];
   correctOptionId: string;
   explanation?: string;

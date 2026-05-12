@@ -169,7 +169,18 @@ export function ExamRunner({
 
       if (!response.ok) {
         console.error("Submit error:", result);
-        throw new Error(result.error || "Failed to submit exam");
+        
+        // Handle rate limit errors specially - don't allow retries
+        if (response.status === 429) {
+          toast({
+            title: "Rate Limit Exceeded",
+            description: "Too many submission attempts. Please wait before retrying.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        throw new Error(result.error || `Submit failed with status ${response.status}`);
       }
       
       // Clear localStorage
@@ -180,7 +191,7 @@ export function ExamRunner({
     } catch (error: any) {
       console.error("Error submitting exam:", error);
       toast({
-        title: "Error",
+        title: "Submission Error",
         description: error.message || "Failed to submit exam. Please try again.",
         variant: "destructive",
       });
