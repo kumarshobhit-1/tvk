@@ -250,7 +250,8 @@ export async function POST(request: NextRequest) {
     // Add sections snapshot so client can render per-section timers and grouped questions
     (attemptData as any).sectionsSnapshot = sectionsSnapshot;
 
-    const attemptRef = await adminDB.collection("exam_attempts").add(attemptData);
+    const sanitizedAttemptData = sanitizeFirestoreValue(attemptData);
+    const attemptRef = await adminDB.collection("exam_attempts").add(sanitizedAttemptData);
 
     // Return attempt ID, start time, and questions (without correct answers)
     const questionsWithoutAnswers = questions.map((q) => ({
@@ -309,4 +310,37 @@ function shuffleArray<T>(array: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+function sanitizeFirestoreValue<T>(value: T): T {
+  if (value === undefined) {
+    return null as T;
+  }
+
+  if (value === null) {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeFirestoreValue(item)) as T;
+  }
+
+  if (typeof value === "object") {
+    const cleaned: Record<string, unknown> = {};
+
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      const sanitized = sanitizeFirestoreValue(item);
+      if (sanitized !== undefined) {
+        cleaned[key] = sanitized;
+      }
+    }
+
+    return cleaned as T;
+  }
+
+  return value;
 }
