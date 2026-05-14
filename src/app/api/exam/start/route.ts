@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
     for (const s of sectionsData) {
       const qIds = (s as any).questionIds || ((s as any).questions && (s as any).questions.map((q:any) => q.id)) || [];
       const questionsForSection = qIds.map((qid: string) => exam.questions.find((qq: any) => qq.id === qid)).filter(Boolean);
-      sectionsSnapshot.push({ id: (s as any).id || `s-${Math.random().toString(36).slice(2,8)}`, title: (s as any).title || 'Section', durationMinutes: (s as any).durationMinutes || 0, questions: questionsForSection.map((q:any) => ({ id: q.id, marks: q.marks, imageUrl: q.imageUrl })) });
+      sectionsSnapshot.push({ id: (s as any).id || `s-${Math.random().toString(36).slice(2,8)}`, title: (s as any).title || 'Section', durationMinutes: (s as any).durationMinutes || 0, questions: questionsForSection.map((q:any) => ({ id: q.id, marks: q.marks, imageUrl: q.imageUrl ?? null })) });
       questions = questions.concat(questionsForSection);
     }
 
@@ -220,13 +220,13 @@ export async function POST(request: NextRequest) {
     const questionsSnapshot = questions.map((q) => ({
       id: q.id,
       text: q.text,
-      imageUrl: q.imageUrl,
+      imageUrl: q.imageUrl ?? null,
       options: q.options,
       correctOptionId: q.correctOptionId,
-      explanation: q.explanation,
+      explanation: q.explanation ?? null,
       marks: q.marks,
       difficulty: q.difficulty,
-      subject: q.subject,
+      subject: q.subject ?? null,
     }));
 
     const attemptData: Omit<ExamAttempt, "id"> = {
@@ -256,11 +256,11 @@ export async function POST(request: NextRequest) {
     const questionsWithoutAnswers = questions.map((q) => ({
       id: q.id,
       text: q.text,
-      imageUrl: q.imageUrl,
+      imageUrl: q.imageUrl ?? null,
       options: q.options,
       marks: q.marks,
       difficulty: q.difficulty,
-      subject: q.subject,
+      subject: q.subject ?? null,
       // Don't send correctOptionId or explanation
     }));
 
