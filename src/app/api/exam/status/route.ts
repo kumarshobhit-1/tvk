@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
 
     const passedAttempt = attempts.find((a: any) => a.passed);
     const attemptCount = attempts.length;
-    const canRetake = !passedAttempt && attemptCount < 5;
+    // Passing should not block future attempts; only the max attempt limit should.
+    const canRetake = attemptCount < 5;
     const hasInProgress = false; // Could add check for in-progress attempts
 
     return NextResponse.json({

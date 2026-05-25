@@ -245,11 +245,9 @@ export default function CategoryExamsPage() {
             const status = examStatuses[exam.id];
             const isPremium = status?.isPremiumExam ?? exam.isPremium;
             const isLocked = status?.isLocked ?? exam.isLocked;
-            const actionLabel = !status
-              ? "Start exam"
-              : !status.canRetake && status.hasPassed
-                ? "Review"
-                : `${status.attemptCount > 0 ? "Retake" : "Start"} exam`;
+            const attemptLabel = status && status.attemptCount > 0 ? "Retake exam" : "Start exam";
+            const canAttemptNow = !status || status.attemptCount < 5;
+            const showReviewButton = !!status && status.attemptCount > 0;
 
             return (
               <Card
@@ -375,12 +373,18 @@ export default function CategoryExamsPage() {
                       );
                     }
 
-                    if (!status.canRetake && status.hasPassed) {
+                    if (!canAttemptNow) {
                       return (
                         <>
-                          <Button asChild className="h-9 flex-1 rounded-full px-4 text-sm font-semibold shadow-sm">
-                            <Link href={`/exam/${exam.id}?mode=review`}>Review</Link>
-                          </Button>
+                          {showReviewButton ? (
+                            <Button asChild className="h-9 flex-1 rounded-full px-4 text-sm font-semibold shadow-sm">
+                              <Link href={`/exam/${exam.id}?mode=review`}>Review</Link>
+                            </Button>
+                          ) : (
+                            <Button disabled className="h-9 flex-1 rounded-full px-4 text-sm font-semibold shadow-sm">
+                              Maximum attempts reached
+                            </Button>
+                          )}
                           <Button asChild variant="outline" className="h-9 rounded-full px-4 text-sm font-medium">
                             <Link href={`/exam/leaderboard/${exam.id}`}>Leaderboard</Link>
                           </Button>
@@ -392,10 +396,15 @@ export default function CategoryExamsPage() {
                       <>
                         <Button asChild className="h-9 flex-1 rounded-full px-4 text-sm font-semibold shadow-sm">
                           <Link href={`/exam/${exam.id}`}>
-                            {actionLabel}
+                            {attemptLabel}
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Link>
                         </Button>
+                        {showReviewButton && (
+                          <Button asChild variant="outline" className="h-9 rounded-full px-4 text-sm font-medium">
+                            <Link href={`/exam/result?attemptId=${status?.lastAttemptId}`}>Review</Link>
+                          </Button>
+                        )}
                         <Button asChild variant="outline" className="h-9 rounded-full px-4 text-sm font-medium">
                           <Link href={`/exam/leaderboard/${exam.id}`}>Leaderboard</Link>
                         </Button>

@@ -85,19 +85,13 @@ export default function ExamPage() {
       return;
     }
 
-    // Priority 3: Already passed
-    if (examStatus?.hasPassed) {
-      setError("You have already passed this exam! You can view your result.");
-      return;
-    }
-
-    // Priority 4: Attempt limit
+    // Priority 3: Attempt limit
     if (examStatus && examStatus.attemptCount >= 5) {
       setError("You have exhausted all 5 attempts for this exam.");
       return;
     }
 
-    // Priority 5: Emergency stop
+    // Priority 4: Emergency stop
     if (examInfo && (examInfo.emergencyStopped || !examInfo.isActive)) {
       setError("This exam has been temporarily stopped by the administrator. Please try again later.");
       return;
@@ -139,6 +133,20 @@ export default function ExamPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const attemptStartWithAgreement = () => {
+    // Require the user to agree to instructions before starting via the extra "Attempt Again" buttons.
+    if (!agreedToInstructions) {
+      setError("Please agree to the exam instructions before starting the attempt. Tick the checkbox");
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      return;
+    }
+
+    // Delegate to the real starter
+    handleStartExam();
   };
 
   if (authLoading || showLoading) {
@@ -197,7 +205,7 @@ export default function ExamPage() {
             <ExamInstructionsWithSections
               examInfo={examInfo}
               sections={examInfo?.sections}
-              onStart={handleStartExam}
+              onStart={attemptStartWithAgreement}
               loading={loading}
               agreedToInstructions={agreedToInstructions}
               onAgreedChange={(v: boolean) => setAgreedToInstructions(v)}
@@ -205,7 +213,6 @@ export default function ExamPage() {
                 (examInfo?.isPremium && examStatus && examStatus.canAttemptPremium === false) ||
                 examInfo?.isLocked ||
                 examStatus?.isLocked ||
-                examStatus?.hasPassed ||
                 (examStatus && examStatus.attemptCount >= 5) ||
                 (examInfo && (examInfo.emergencyStopped || !examInfo.isActive))
               }
@@ -251,22 +258,6 @@ export default function ExamPage() {
                   Locked
                 </Button>
               </>
-            ) : examStatus?.hasPassed ? (
-              <>
-                <div className="w-full p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-center mb-2">
-                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                    ✅ You have already passed this exam!
-                  </p>
-                </div>
-                <Button
-                  onClick={() => router.push(`/exam/result?attemptId=${examStatus.lastAttemptId}`)}
-                  className="w-full"
-                  size="lg"
-                  variant="outline"
-                >
-                  View Result
-                </Button>
-              </>
             ) : examStatus && examStatus.attemptCount >= 5 ? (
               <>
                 <div className="w-full p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md text-center mb-2">
@@ -282,6 +273,31 @@ export default function ExamPage() {
                 >
                   View Last Attempt
                 </Button>
+              </>
+            ) : examStatus?.hasPassed ? (
+              <>
+                <div className="w-full p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md text-center mb-2">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    ✅ You have already passed this exam! You can still attempt again until 5 total attempts.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Button
+                    onClick={() => attemptStartWithAgreement()}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Attempt Again
+                  </Button>
+                  <Button
+                    onClick={() => router.push(`/exam/result?attemptId=${examStatus.lastAttemptId}`)}
+                    className="w-full"
+                    size="lg"
+                    variant="outline"
+                  >
+                    Review Last Attempt
+                  </Button>
+                </div>
               </>
               ) : examInfo && (examInfo.emergencyStopped || !examInfo.isActive) ? (
               <>
@@ -306,13 +322,23 @@ export default function ExamPage() {
                     📝 Attempt {examStatus.attemptCount + 1} of 5
                   </p>
                 </div>
-                <Button
-                  onClick={() => router.push(`/exam/result?attemptId=${examStatus.lastAttemptId}`)}
-                  variant="outline"
-                  className="w-full"
-                >
-                  View Previous Attempt
-                </Button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Button
+                    onClick={() => attemptStartWithAgreement()}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Attempt Again
+                  </Button>
+                  <Button
+                    onClick={() => router.push(`/exam/result?attemptId=${examStatus.lastAttemptId}`)}
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                  >
+                    Review Last Attempt
+                  </Button>
+                </div>
               </>
             ) : (
               <></>

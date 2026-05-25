@@ -97,19 +97,6 @@ export async function POST(request: NextRequest) {
 
     // Count total attempts and check pass status
     const attemptsList = existingAttempts.docs.map(doc => doc.data() as ExamAttempt);
-    const passedAttempt = attemptsList.find(a => a.passed);
-    
-    // If user has passed, don't allow retake
-    if (passedAttempt) {
-      return NextResponse.json(
-        { 
-          error: "You have already passed this exam",
-          passed: true,
-          attemptId: existingAttempts.docs.find(doc => doc.data().passed)?.id
-        },
-        { status: 403 }
-      );
-    }
 
     // Check attempt limit (max 5 attempts)
     if (attemptsList.length >= 5) {

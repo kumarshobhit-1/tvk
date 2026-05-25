@@ -39,11 +39,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     
-    // Check if already submitted
-    if (attempt.status === "submitted") {
-      return NextResponse.json({ error: "Already submitted" }, { status: 400 });
-    }
-
     // Get exam details
     const examSnap = await adminDB.collection("exams").doc(attempt.examId).get();
 
@@ -52,6 +47,24 @@ export async function POST(request: NextRequest) {
     }
 
     const exam = examSnap.data() as Exam;
+
+    // If this attempt was already submitted, return the existing result instead of failing again.
+    if (attempt.status === "submitted") {
+      return NextResponse.json({
+        success: true,
+        attemptId,
+        score: attempt.score ?? 0,
+        totalMarks: exam.totalMarks,
+        correctAnswers: attempt.correctAnswers ?? 0,
+        wrongAnswers: attempt.wrongAnswers ?? 0,
+        unanswered: attempt.unanswered ?? 0,
+        percentage: attempt.percentage ?? 0,
+        passed: attempt.passed ?? false,
+        timeTaken: attempt.timeTaken ?? 0,
+        alreadySubmitted: true,
+      });
+    }
+
     const submittedAt = new Date();
     const startTime = attempt.startedAt && typeof attempt.startedAt === 'object' && 'toDate' in attempt.startedAt
       ? attempt.startedAt.toDate().getTime()
@@ -97,7 +110,7 @@ export async function POST(request: NextRequest) {
     const userRef = adminDB.collection("users").doc(decodedToken.uid);
     const statsRef = adminDB.collection("system_config").doc("platform_stats");
 
-    await adminDB.runTransaction(async (transaction) => {
+    const transactionResult = await adminDB.runTransaction(async (transaction) => {
       const [latestAttemptSnap, userSnap, statsSnap] = await Promise.all([
         transaction.get(adminDB.collection("exam_attempts").doc(attemptId)),
         transaction.get(userRef),
@@ -115,7 +128,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (latestAttempt.status === "submitted") {
-        throw new Error("Already submitted");
+        return {
+          alreadySubmitted: true,
+          attempt: latestAttempt,
+        };
       }
 
       let uniqueExamTakers = Number(statsSnap.data()?.uniqueExamTakers || 0);
@@ -222,19 +238,47 @@ export async function POST(request: NextRequest) {
         },
         { merge: true }
       );
+
+      return {
+        alreadySubmitted: false,
+        score,
+        correctAnswers,
+        wrongAnswers,
+        unanswered,
+        percentage,
+        passed,
+        timeTaken,
+      };
     });
+
+    if (transactionResult?.alreadySubmitted) {
+      const existingAttempt = transactionResult.attempt as ExamAttempt;
+      return NextResponse.json({
+        success: true,
+        attemptId,
+        score: existingAttempt.score ?? 0,
+        totalMarks: exam.totalMarks,
+        correctAnswers: existingAttempt.correctAnswers ?? 0,
+        wrongAnswers: existingAttempt.wrongAnswers ?? 0,
+        unanswered: existingAttempt.unanswered ?? 0,
+        percentage: existingAttempt.percentage ?? 0,
+        passed: existingAttempt.passed ?? false,
+        timeTaken: existingAttempt.timeTaken ?? 0,
+        alreadySubmitted: true,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       attemptId,
-      score,
+      score: transactionResult.score,
       totalMarks: exam.totalMarks,
-      correctAnswers,
-      wrongAnswers,
-      unanswered,
-      percentage,
-      passed,
-      timeTaken,
+      correctAnswers: transactionResult.correctAnswers,
+      wrongAnswers: transactionResult.wrongAnswers,
+      unanswered: transactionResult.unanswered,
+      percentage: transactionResult.percentage,
+      passed: transactionResult.passed,
+      timeTaken: transactionResult.timeTaken,
     });
   } catch (error) {
     console.error("Error submitting exam:", error);
