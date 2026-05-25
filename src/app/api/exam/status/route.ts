@@ -55,13 +55,13 @@ export async function GET(request: NextRequest) {
 
     const passedAttempt = attempts.find((a: any) => a.passed);
     const attemptCount = attempts.length;
-    const canRetake = !passedAttempt && attemptCount < 3;
+    const canRetake = !passedAttempt && attemptCount < 5;
     const hasInProgress = false; // Could add check for in-progress attempts
 
     return NextResponse.json({
       hasPassed: !!passedAttempt,
       attemptCount,
-      maxAttempts: 3,
+      maxAttempts: 5,
       canRetake,
       isPremiumUser: premiumUser,
       hasPremiumAccess: premiumAccessForExam,

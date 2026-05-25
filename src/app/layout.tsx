@@ -12,6 +12,7 @@ import { ThemeProvider } from '@/context/theme-context';
 import Loading from '@/components/ui/loading';
 import { useLoading } from '@/hooks/use-loading';
 import { Footer } from "@/components/ui/footer";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ExamExpiryChecker } from "@/components/exam/ExamExpiryChecker";
 
 
@@ -105,6 +106,7 @@ export default function RootLayout({
                   <main className="flex-1">{children}</main>
                 </div>
                 <Toaster />
+                <WhatsAppButton />
               </NotificationProvider>
             </AuthProvider>
           </ThemeProvider>

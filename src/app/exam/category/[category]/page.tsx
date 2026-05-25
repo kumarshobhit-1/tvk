@@ -42,6 +42,7 @@ interface ExamStatus {
   isPremiumUser?: boolean;
   canAttemptPremium?: boolean;
   isPremiumExam?: boolean;
+  isLocked?: boolean;
 }
 
 export default function CategoryExamsPage() {
@@ -59,7 +60,7 @@ export default function CategoryExamsPage() {
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [selectedPremiumExam, setSelectedPremiumExam] = useState<ExamListItem | null>(null);
   const supportPhone = "9452903509";
-  const supportEmail = "Consultantstvk@gmail.com";
+  const supportEmail = "tvk.head@gmail.com";
 
   const openPremiumDialog = (exam: ExamListItem) => {
     if (premiumDialogOpen && selectedPremiumExam?.id === exam.id) return;

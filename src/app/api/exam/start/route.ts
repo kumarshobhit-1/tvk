@@ -111,13 +111,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check attempt limit (max 3 attempts)
-    if (attemptsList.length >= 3) {
+    // Check attempt limit (max 5 attempts)
+    if (attemptsList.length >= 5) {
       return NextResponse.json(
         { 
-          error: "Maximum attempt limit reached (3 attempts)",
+          error: "Maximum attempt limit reached (5 attempts)",
           attempts: attemptsList.length,
-          maxAttempts: 3
+          maxAttempts: 5
         },
         { status: 403 }
       );

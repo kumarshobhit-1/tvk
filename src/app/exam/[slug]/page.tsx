@@ -92,8 +92,8 @@ export default function ExamPage() {
     }
 
     // Priority 4: Attempt limit
-    if (examStatus && examStatus.attemptCount >= 3) {
-      setError("You have exhausted all 3 attempts for this exam.");
+    if (examStatus && examStatus.attemptCount >= 5) {
+      setError("You have exhausted all 5 attempts for this exam.");
       return;
     }
 
@@ -206,7 +206,7 @@ export default function ExamPage() {
                 examInfo?.isLocked ||
                 examStatus?.isLocked ||
                 examStatus?.hasPassed ||
-                (examStatus && examStatus.attemptCount >= 3) ||
+                (examStatus && examStatus.attemptCount >= 5) ||
                 (examInfo && (examInfo.emergencyStopped || !examInfo.isActive))
               }
             />
@@ -267,11 +267,11 @@ export default function ExamPage() {
                   View Result
                 </Button>
               </>
-            ) : examStatus && examStatus.attemptCount >= 3 ? (
+            ) : examStatus && examStatus.attemptCount >= 5 ? (
               <>
                 <div className="w-full p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md text-center mb-2">
                   <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                    ❌ Maximum attempt limit reached (3/3)
+                    ❌ Maximum attempt limit reached (5/5)
                   </p>
                 </div>
                 <Button
@@ -303,7 +303,7 @@ export default function ExamPage() {
               <>
                 <div className="w-full p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md text-center mb-2">
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    📝 Attempt {examStatus.attemptCount + 1} of 3
+                    📝 Attempt {examStatus.attemptCount + 1} of 5
                   </p>
                 </div>
                 <Button

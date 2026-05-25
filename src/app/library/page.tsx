@@ -105,8 +105,33 @@ export default function LibraryPage() {
 
   const handleDownloadPDF = (file: PDFFile) => {
     trackAction(file.id, "download");
-    // Direct download - Cloudinary raw files download directly
-    window.open(file.cloudinarySecureUrl, "_blank");
+    // Try to fetch the PDF and force a .pdf filename download.
+    // Fallback: open the URL in a new tab if fetch is blocked or fails.
+    (async () => {
+      try {
+        const res = await fetch(file.cloudinarySecureUrl, { method: "GET" });
+        if (!res.ok) throw new Error("Network response was not ok");
+
+        const contentType = res.headers.get("content-type") || "application/pdf";
+        const blob = await res.blob();
+
+        // If the response isn't a PDF, still attempt download but keep original type
+        const blobUrl = URL.createObjectURL(new Blob([blob], { type: contentType }));
+
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        // Ensure filename ends with .pdf
+        const safeName = (file.name || "download").replace(/\.pdf$/i, "") + ".pdf";
+        a.download = safeName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        console.error("PDF download failed, falling back to opening URL:", err);
+        window.open(file.cloudinarySecureUrl, "_blank");
+      }
+    })();
   };
 
   const formatFileSize = (bytes: number) => {
