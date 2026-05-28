@@ -4,6 +4,11 @@ import { FieldValue } from "firebase-admin/firestore";
 import type { ExamAttempt, Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 
+function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
+  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
+  if (nm >= 1) return nm;
+  return nm * questionMarks;
+}
 // Get all published exams with their active attempt counts
 export async function GET(request: NextRequest) {
   // Temporarily disable auth check for debugging
@@ -215,7 +220,7 @@ export async function POST(request: NextRequest) {
           score += question.marks;
         } else {
           wrongAnswers++;
-          score -= exam.negativeMarking * question.marks;
+          score -= computePenalty(exam.negativeMarking, question.marks);
         }
       });
 
@@ -327,7 +332,7 @@ export async function PATCH(request: NextRequest) {
             score += question.marks;
           } else {
             wrongAnswers++;
-            score -= exam.negativeMarking * question.marks;
+            score -= computePenalty(exam.negativeMarking, question.marks);
           }
         });
 
