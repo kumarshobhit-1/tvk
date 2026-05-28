@@ -4,6 +4,14 @@ import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { Exam, ExamAttempt, ExamAnswer } from "@/lib/exam-types";
 
+function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
+  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
+  // If admin supplied an absolute penalty (>=1), treat it as absolute marks to subtract.
+  // Otherwise treat it as a fraction of question marks (e.g., 0.25 means 0.25 * marks).
+  if (nm >= 1) return nm;
+  return nm * questionMarks;
+}
+
 const submitExamLimiter = new RateLimiter(RATE_LIMITS.examSubmit);
 
 export async function POST(request: NextRequest) {
@@ -97,7 +105,7 @@ export async function POST(request: NextRequest) {
         correctAnswers++;
       } else {
         wrongAnswers++;
-        score -= exam.negativeMarking * question.marks;
+        score -= computePenalty(exam.negativeMarking, question.marks);
       }
 
       return answer;
