@@ -31,6 +31,8 @@ export interface PDFFile {
   cloudinaryUrl: string;
   cloudinarySecureUrl: string;
   thumbnailUrl?: string | null;
+  viewUrl?: string;
+  downloadUrl?: string;
   fileSize: number; // in bytes
   pageCount?: number | null;
   mimeType: string;
