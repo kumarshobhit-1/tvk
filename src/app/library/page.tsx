@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import type { PDFFolderWithFiles, PDFFile } from "@/lib/pdf-types";
 
 export default function LibraryPage() {
   const { user, loading: authLoading } = useRequireAuth();
+  const { toast } = useToast();
   const router = useRouter();
   const [folders, setFolders] = useState<PDFFolderWithFiles[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,19 +100,42 @@ export default function LibraryPage() {
 
   const handleViewPDF = (file: PDFFile) => {
     trackAction(file.id, "view");
-    // Use Google Docs Viewer to display PDF inline (prevents download)
-    const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(file.cloudinarySecureUrl)}&embedded=true`;
-    window.open(googleDocsUrl, "_blank");
+    window.open(
+      `/library/view?fileId=${encodeURIComponent(file.id)}&name=${encodeURIComponent(file.name || "PDF Document")}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   const handleDownloadPDF = (file: PDFFile) => {
     trackAction(file.id, "download");
-    // Try to fetch the PDF and force a .pdf filename download.
-    // Fallback: open the URL in a new tab if fetch is blocked or fails.
+    const downloadUrl = file.downloadUrl || `/api/pdf/access?fileId=${encodeURIComponent(file.id)}&action=download`;
     (async () => {
       try {
-        const res = await fetch(file.cloudinarySecureUrl, { method: "GET" });
-        if (!res.ok) throw new Error("Network response was not ok");
+        const res = await fetch(downloadUrl, { method: "GET" });
+        if (!res.ok) {
+          if (res.status === 403) {
+            toast({
+              title: "Access denied",
+              description: "This PDF is Premium(locked). Upgrade your plan or contact support to download it.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          let message = "Unable to download the PDF.";
+          try {
+            const data = await res.json();
+            if (data?.error) message = data.error;
+          } catch {}
+
+          toast({
+            title: "Download failed",
+            description: message,
+            variant: "destructive",
+          });
+          return;
+        }
 
         const contentType = res.headers.get("content-type") || "application/pdf";
         const blob = await res.blob();
@@ -128,8 +153,12 @@ export default function LibraryPage() {
         a.remove();
         URL.revokeObjectURL(blobUrl);
       } catch (err) {
-        console.error("PDF download failed, falling back to opening URL:", err);
-        window.open(file.cloudinarySecureUrl, "_blank");
+        console.error("PDF download failed:", err);
+        toast({
+          title: "Download failed",
+          description: "Unable to download this PDF right now. Please try again later.",
+          variant: "destructive",
+        });
       }
     })();
   };
