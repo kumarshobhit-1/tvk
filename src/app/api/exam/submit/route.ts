@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
-import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { Exam, ExamAttempt, ExamAnswer } from "@/lib/exam-types";
 
 function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
@@ -12,14 +11,8 @@ function computePenalty(negativeMarking: number | undefined, questionMarks: numb
   return nm * questionMarks;
 }
 
-const submitExamLimiter = new RateLimiter(RATE_LIMITS.examSubmit);
-
 export async function POST(request: NextRequest) {
   try {
-    if (!submitExamLimiter.isAllowed(request)) {
-      return NextResponse.json({ error: RATE_LIMITS.examSubmit.message }, { status: 429 });
-    }
-
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("session")?.value;
     if (!sessionCookie) {
