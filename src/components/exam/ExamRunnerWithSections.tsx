@@ -91,6 +91,16 @@ export function ExamRunnerWithSections({
   const MAX_TAB_SWITCHES = 3;
   const isProcessingTabSwitch = useRef(false);
   const hasSubmittedExam = useRef(false);
+  const answersRef = useRef<ExamAnswer[]>([]);
+
+  const updateAnswers = useCallback(
+    (updater: ExamAnswer[] | ((prev: ExamAnswer[]) => ExamAnswer[])) => {
+      const next = typeof updater === "function" ? updater(answersRef.current) : updater;
+      answersRef.current = next;
+      setAnswers(next);
+    },
+    []
+  );
 
   const currentSection = sections[currentSectionIndex];
   const currentSectionQuestions = currentSection?.questions || [];
@@ -100,12 +110,18 @@ export function ExamRunnerWithSections({
     const savedAnswers = localStorage.getItem(`exam_${attemptId}`);
     if (savedAnswers) {
       try {
-        setAnswers(JSON.parse(savedAnswers));
+        const parsedAnswers = JSON.parse(savedAnswers);
+        answersRef.current = parsedAnswers;
+        setAnswers(parsedAnswers);
       } catch (error) {
         console.error("Error loading saved answers:", error);
       }
     }
   }, [attemptId]);
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
 
   // Save answers to localStorage
   useEffect(() => {
@@ -115,17 +131,17 @@ export function ExamRunnerWithSections({
   // Auto-save to server every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      saveProgressToServer();
+      saveProgressToServer(answersRef.current);
     }, 30000);
     return () => clearInterval(interval);
-  }, [answers]);
+  }, []);
 
-  const saveProgressToServer = async () => {
+  const saveProgressToServer = async (answersToSave: ExamAnswer[] = answersRef.current) => {
     try {
       await fetch("/api/exam/save-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId, answers }),
+        body: JSON.stringify({ attemptId, answers: answersToSave }),
       });
     } catch (error) {
       console.error("Error saving progress:", error);
@@ -169,7 +185,7 @@ export function ExamRunnerWithSections({
   const handleSelectOption = (optionId: string) => {
     const activeQuestionId = currentSectionQuestions[currentQuestionInSection]?.id;
     if (!activeQuestionId) return;
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer) =>
         answer.questionId === activeQuestionId
           ? { ...answer, selectedOptionId: optionId }
@@ -181,7 +197,7 @@ export function ExamRunnerWithSections({
   const handleClearAnswer = () => {
     const activeQuestionId = currentSectionQuestions[currentQuestionInSection]?.id;
     if (!activeQuestionId) return;
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer) =>
         answer.questionId === activeQuestionId
           ? { ...answer, selectedOptionId: null }
@@ -193,7 +209,7 @@ export function ExamRunnerWithSections({
   const handleToggleReview = () => {
     const activeQuestionId = currentSectionQuestions[currentQuestionInSection]?.id;
     if (!activeQuestionId) return;
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer) =>
         answer.questionId === activeQuestionId
           ? { ...answer, isMarkedForReview: !answer.isMarkedForReview }
@@ -205,7 +221,7 @@ export function ExamRunnerWithSections({
   const handleToggleFlag = () => {
     const activeQuestionId = currentSectionQuestions[currentQuestionInSection]?.id;
     if (!activeQuestionId) return;
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer) =>
         answer.questionId === activeQuestionId
           ? { ...answer, isFlagged: !answer.isFlagged }
@@ -253,13 +269,22 @@ export function ExamRunnerWithSections({
     setIsSubmitting(true);
 
     try {
+      const latestAnswers = answersRef.current.length > 0 ? answersRef.current : answers;
       const response = await fetch("/api/exam/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId, answers }),
+        body: JSON.stringify({ attemptId, answers: latestAnswers }),
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      let result: any = {};
+      if (responseText) {
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          result = { error: responseText };
+        }
+      }
 
       if (!response.ok) {
         console.error("Submit error:", result);
