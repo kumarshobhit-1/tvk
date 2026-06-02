@@ -6,6 +6,12 @@ import type { ExamAttempt, Exam } from "@/lib/exam-types";
 
 const checkExpiredLimiter = new RateLimiter(RATE_LIMITS.general);
 
+function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
+  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
+  if (nm >= 1) return nm;
+  return nm * questionMarks;
+}
+
 // Check and expire exams that have exceeded their duration
 export async function POST(request: NextRequest) {
   try {
@@ -68,7 +74,7 @@ export async function POST(request: NextRequest) {
             score += question.marks;
           } else {
             wrongAnswers++;
-            score -= exam.negativeMarking * question.marks;
+            score -= computePenalty(exam.negativeMarking, question.marks);
           }
         });
 

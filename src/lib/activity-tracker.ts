@@ -1,6 +1,7 @@
 // Activity tracking utilities for user progress
 import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { invalidateUserCache } from './user-cache';
 
 interface ActivityLog {
   id: string;
@@ -70,6 +71,9 @@ export async function trackActivity(
       streakCount: newStreakCount,
       recentActivity: updatedActivity
     });
+
+    // invalidate cached user doc
+    try { invalidateUserCache(userId); } catch {}
 
     console.log('✅ Activity tracked successfully!');
     console.log('   Item:', itemTitle);

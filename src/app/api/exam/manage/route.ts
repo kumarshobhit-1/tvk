@@ -4,6 +4,12 @@ import { FieldValue } from "firebase-admin/firestore";
 import type { ExamAttempt, Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 
+function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
+  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
+  if (nm >= 1) return nm;
+  return nm * questionMarks;
+}
+
 // Get all published exams with their active attempt counts
 export async function GET(request: NextRequest) {
   // Temporarily disable auth check for debugging
@@ -23,17 +29,20 @@ export async function GET(request: NextRequest) {
     for (const examDoc of examsSnap.docs) {
       const exam = { id: examDoc.id, ...examDoc.data() } as Exam & { id: string };
       
-      // Get all in-progress attempts for this exam
-      const inProgressAttemptsSnap = await adminDB
+      // Read all attempts for the exam once and derive active/total counts from the same snapshot.
+      // This removes the duplicate `exam_attempts` scan that previously powered active and total counts separately.
+      const attemptsSnap = await adminDB
         .collection("exam_attempts")
         .where("examId", "==", exam.id)
-        .where("status", "==", "in-progress")
+        .select("status", "startedAt", "userId", "userName")
         .get();
 
-      // Filter truly active attempts (not expired and not inactive for more than 5 minutes)
       const currentTime = Date.now();
-      const activeAttempts = inProgressAttemptsSnap.docs.filter(doc => {
+      const activeAttempts = attemptsSnap.docs.filter(doc => {
         const attemptData = doc.data();
+        if (attemptData.status !== "in-progress") {
+          return false;
+        }
         const startedAt = attemptData.startedAt;
         
         // Convert Firestore timestamp to milliseconds
@@ -66,8 +75,11 @@ export async function GET(request: NextRequest) {
       }));
 
       // Auto-cleanup stale attempts (expired OR inactive)
-      const staleAttempts = inProgressAttemptsSnap.docs.filter(doc => {
+      const staleAttempts = attemptsSnap.docs.filter(doc => {
         const attemptData = doc.data();
+        if (attemptData.status !== "in-progress") {
+          return false;
+        }
         const startedAt = attemptData.startedAt;
         let startTime: number;
         if (startedAt && typeof startedAt === 'object') {
@@ -108,15 +120,9 @@ export async function GET(request: NextRequest) {
         await batch.commit();
       }
 
-      // Get total attempt count (all attempts - active, submitted, etc.)
-      const totalAttemptsSnap = await adminDB
-        .collection("exam_attempts")
-        .where("examId", "==", exam.id)
-        .get();
-
       // Count unique students (not total attempts)
       const uniqueStudents = new Set();
-      totalAttemptsSnap.docs.forEach(doc => {
+      attemptsSnap.docs.forEach(doc => {
         const attemptData = doc.data();
         if (attemptData.userId) {
           uniqueStudents.add(attemptData.userId);
@@ -127,7 +133,7 @@ export async function GET(request: NextRequest) {
         ...exam,
         activeAttempts: activeAttempts,
         activeCount: activeAttempts.length,
-        totalAttempts: totalAttemptsSnap.docs.length, // Total attempts count
+        totalAttempts: attemptsSnap.docs.length, // Total attempts count
         uniqueStudents: uniqueStudents.size // Unique students count
       });
     }
@@ -215,7 +221,7 @@ export async function POST(request: NextRequest) {
           score += question.marks;
         } else {
           wrongAnswers++;
-          score -= exam.negativeMarking * question.marks;
+          score -= computePenalty(exam.negativeMarking, question.marks);
         }
       });
 
@@ -327,7 +333,7 @@ export async function PATCH(request: NextRequest) {
             score += question.marks;
           } else {
             wrongAnswers++;
-            score -= exam.negativeMarking * question.marks;
+            score -= computePenalty(exam.negativeMarking, question.marks);
           }
         });
 
@@ -458,7 +464,7 @@ export async function PATCH(request: NextRequest) {
         emergencyStoppedAt: null,
         emergencyStoppedBy: null,
         emergencyRestartedAt: FieldValue.serverTimestamp(),
-        emergencyRestartedBy: userId
+        emergencyRestartedBy: auth.userId
       });
       
       return NextResponse.json({ 

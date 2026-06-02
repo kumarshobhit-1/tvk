@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const querySnapshot = await adminDB.collection("exam_attempts")
       .where("examId", "==", examId)
       .where("status", "==", "submitted")
+      .select("userId", "userName", "userEmail", "score", "percentage", "timeTaken", "submittedAt")
       .get();
     
     // Convert to array and filter out test users

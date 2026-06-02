@@ -3,6 +3,12 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam, ExamAttempt, ExamResult } from "@/lib/exam-types";
 
+function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
+  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
+  if (nm >= 1) return nm;
+  return nm * questionMarks;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -97,7 +103,7 @@ export async function GET(request: NextRequest) {
           ? 0
           : isCorrect
           ? question.marks
-          : -exam.negativeMarking * question.marks;
+          : -computePenalty(exam.negativeMarking, question.marks);
 
         return {
           questionId: question.id,

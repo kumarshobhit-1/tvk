@@ -12,11 +12,30 @@ type PlatformStats = {
 
 let cachedStats: PlatformStats | null = null;
 let cachedAt = 0;
-const CACHE_TTL_MS = 5000;
+const CACHE_TTL_MS = 10 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
   try {
     const startTime = Date.now();
+
+    // Serve the cached payload first when it is still fresh.
+    // This avoids repeatedly re-reading exam_attempts and re-listing Firebase Auth users on every poll.
+    if (cachedStats && Date.now() - cachedAt < CACHE_TTL_MS) {
+      return NextResponse.json(
+        {
+          ...cachedStats,
+          queryTime: Date.now() - startTime,
+        },
+        {
+          headers: {
+            "Cache-Control": "private, max-age=300, stale-while-revalidate=60",
+            "Pragma": "cache",
+            "Expires": new Date(Date.now() + 5 * 60 * 1000).toUTCString(),
+          },
+        }
+      );
+    }
+
     const statsRef = adminDB.collection('system_config').doc('platform_stats');
     const statsDoc = await statsRef.get();
 
@@ -70,74 +89,23 @@ export async function GET(request: NextRequest) {
         },
         {
           headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-            'Surrogate-Control': 'no-store'
+            'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+            'Pragma': 'cache',
+            'Expires': new Date(Date.now() + 5 * 60 * 1000).toUTCString(),
+            'Surrogate-Control': 'max-age=300'
           }
         }
       );
     }
 
-    // Fetch exam attempts if needed for initialization
-    const attemptsSnap = await adminDB.collection('exam_attempts').where('status', '==', 'submitted').select('userId', 'passed').get();
-
-    if (!statsInitialized) {
-      uniqueExamTakers = new Set(
-        attemptsSnap.docs
-          .map(doc => String(doc.data().userId || '').trim())
-          .filter(Boolean)
-      ).size;
-
-      await statsRef.set(
-        {
-          uniqueExamTakers,
-          initialized: true,
-          updatedAt: new Date(),
-        },
-        { merge: true }
-      );
-    }
-
-    if (!premiumUsersInitialized) {
-      const premiumUsersSnap = await adminDB.collection('users').where('isPremium', '==', true).select('isPremium').get();
-      premiumUsersCount = premiumUsersSnap.size;
-
-      await statsRef.set(
-        {
-          premiumUsersCount,
-          premiumUsersInitialized: true,
-          premiumUsersUpdatedAt: new Date(),
-        },
-        { merge: true }
-      );
-    }
-
-    if (!successRateInitialized) {
-      const passedAttemptsSnap = await adminDB.collection('exam_attempts')
-        .where('status', '==', 'submitted')
-        .where('passed', '==', true)
-        .select('userId')
-        .get();
-
-      const uniquePassedUsers = new Set(
-        passedAttemptsSnap.docs
-          .map(doc => String(doc.data()?.userId || '').trim())
-          .filter(Boolean)
-      ).size;
-
-      successRate = uniqueExamTakers > 0 ? Math.round((uniquePassedUsers / uniqueExamTakers) * 100) : 0;
-
-      await statsRef.set(
-        {
-          uniquePassedUsers,
-          successRate,
-          passedUsersInitialized: true,
-          successRateUpdatedAt: new Date(),
-        },
-        { merge: true }
-      );
-    }
+    // Avoid expensive collection scans here. Rely on `platform_stats` document values
+    // which are incrementally maintained during normal operation (exam submits).
+    // If the stats doc was never initialized, do NOT perform a full collection scan here;
+    // instead return the stored values (or zeros) and allow an admin-triggered paginated
+    // recalc to bootstrap historical numbers.
+    uniqueExamTakers = Number(statsDoc.data()?.uniqueExamTakers || 0);
+    premiumUsersCount = Number(statsDoc.data()?.premiumUsersCount || 0);
+    successRate = Number(statsDoc.data()?.successRate || 0);
 
     const stats = {
       activeUsersCount,
@@ -154,10 +122,10 @@ export async function GET(request: NextRequest) {
     // Force no caching
     return NextResponse.json(stats, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
+        'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+        'Pragma': 'cache',
+        'Expires': new Date(Date.now() + 5 * 60 * 1000).toUTCString(),
+        'Surrogate-Control': 'max-age=300'
       }
     });
   } catch (error: any) {

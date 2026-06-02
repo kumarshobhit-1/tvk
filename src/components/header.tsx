@@ -6,7 +6,8 @@ import { signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { LayoutGrid, BookOpen, LogOut, LogIn, User as UserIcon, Menu, Info, Shield, Mail, Code2, Home, FileText, BriefcaseBusiness } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { /* doc, getDoc */ } from "firebase/firestore";
+import { getUserDocCached } from '@/lib/user-cache';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,13 +58,12 @@ export function Header() {
       return;
     }
     const checkAdminStatus = async () => {
-      const userDocRef = doc(db, "users", user.uid);
       try {
-        const userDoc = await getDoc(userDocRef);
-        const adminRole = userDoc.exists() ? userDoc.data().adminRole : undefined;
+        const userData = await getUserDocCached(user.uid);
+        const adminRole = userData?.adminRole;
         if (
-          userDoc.exists() &&
-          (userDoc.data().isAdmin === true ||
+          userData &&
+          (userData.isAdmin === true ||
             ['super_admin', 'isAdmin', 'content_admin', 'exam_admin', 'qa_admin'].includes(adminRole))
         ) {
           setIsAdmin(true);

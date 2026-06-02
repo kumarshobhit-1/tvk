@@ -24,7 +24,8 @@ const store: RateLimitStore = {};
  */
 export class RateLimiter {
   private config: RateLimitConfig;
-  private cleanupInterval: NodeJS.Timer | null = null;
+  // Use ReturnType<typeof setInterval> which maps correctly to the runtime's timer type
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(config: RateLimitConfig) {
     this.config = config;
@@ -36,7 +37,12 @@ export class RateLimiter {
 
   destroy() {
     if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
+      // clearInterval accepts different timer types depending on lib; cast to any to satisfy TS
+      try {
+        clearInterval(this.cleanupInterval as any);
+      } catch (_) {
+        // ignore
+      }
       this.cleanupInterval = null;
     }
   }

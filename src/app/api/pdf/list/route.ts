@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import type { PDFFolder, PDFFile, PDFFolderWithFiles } from "@/lib/pdf-types";
-import { hasPremiumAccess } from "@/lib/premium-access";
+import { buildPdfAccessUrl, canUserAccessPdf } from "@/lib/pdf-access";
 
 // GET - List all published folders and files
 export async function GET(request: NextRequest) {
@@ -59,32 +59,21 @@ export async function GET(request: NextRequest) {
       .map((file) => {
         const folder = folderMap.get(file.folderId)!;
         const effectiveCategory = file.category || folder.category || "";
-        const requiresPremium =
-          file.premiumOverridden === true
-            ? file.isPremium === true
-            : folder.isPremium === true;
-
-        // Allow explicit per-user PDF access if present on profile.
-        // When explicit IDs exist, they override broader category access.
-        const isPremiumUser = userData?.isPremium === true || userData?.premium === true;
-        const allowedPdfIds: string[] = Array.isArray(userData?.allowedPdfIds) ? userData.allowedPdfIds.map((id: any) => String(id)) : [];
-        const allowedPdfSet = new Set(allowedPdfIds);
-        const hasExplicitPdfAccess = isPremiumUser && allowedPdfSet.size > 0;
-
         const isLocked = file.isLocked === true;
+        const canAccess = canUserAccessPdf(userData, { ...file, category: effectiveCategory }, folder);
+        const { cloudinaryUrl, cloudinarySecureUrl, ...safeFile } = file as PDFFile & {
+          cloudinaryUrl?: string;
+          cloudinarySecureUrl?: string;
+        };
 
         return {
-          ...file,
+          ...safeFile,
           category: effectiveCategory,
-          isPremium: requiresPremium,
+          isPremium: file.premiumOverridden === true ? file.isPremium === true : folder.isPremium === true,
           isLocked,
-          canAccess: isLocked
-            ? false
-            : !requiresPremium
-              ? true
-              : hasExplicitPdfAccess
-                ? allowedPdfSet.has(file.id)
-                : hasPremiumAccess(userData, effectiveCategory),
+          canAccess,
+          viewUrl: buildPdfAccessUrl(file.id, "view"),
+          downloadUrl: buildPdfAccessUrl(file.id, "download"),
         } as PDFFile;
       })
       .sort((a, b) => (a.order || 0) - (b.order || 0));

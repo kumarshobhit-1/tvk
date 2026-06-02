@@ -63,47 +63,84 @@ export function ExamRunner({
   const [showTabWarning, setShowTabWarning] = useState(false);
   const MAX_TAB_SWITCHES = 3;
   const isProcessingTabSwitch = useRef(false);
+  const hasSubmittedExam = useRef(false);
+  const answersRef = useRef<ExamAnswer[]>([]);
+  const lastSavedSerializedRef = useRef<string>("");
+
+  const updateAnswers = useCallback(
+    (updater: ExamAnswer[] | ((prev: ExamAnswer[]) => ExamAnswer[])) => {
+      const next = typeof updater === "function" ? updater(answersRef.current) : updater;
+      answersRef.current = next;
+      setAnswers(next);
+    },
+    []
+  );
 
   // Load saved answers from localStorage
   useEffect(() => {
     const savedAnswers = localStorage.getItem(`exam_${attemptId}`);
     if (savedAnswers) {
       try {
-        setAnswers(JSON.parse(savedAnswers));
+        const parsedAnswers = JSON.parse(savedAnswers);
+        answersRef.current = parsedAnswers;
+        setAnswers(parsedAnswers);
+        lastSavedSerializedRef.current = JSON.stringify(parsedAnswers);
       } catch (error) {
         console.error("Error loading saved answers:", error);
       }
     }
   }, [attemptId]);
 
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
   // Save answers to localStorage
   useEffect(() => {
     localStorage.setItem(`exam_${attemptId}`, JSON.stringify(answers));
   }, [answers, attemptId]);
 
-  // Auto-save to server every 30 seconds
+  // Auto-save to server only when answers changed (every 60 seconds)
   useEffect(() => {
     const interval = setInterval(() => {
-      saveProgressToServer();
-    }, 30000);
+      try {
+        const currentSerialized = JSON.stringify(answersRef.current || []);
+        if (currentSerialized !== lastSavedSerializedRef.current) {
+          saveProgressToServer(answersRef.current);
+        }
+      } catch (e) {
+        // serialization error - still attempt save
+        saveProgressToServer(answersRef.current);
+      }
+    }, 60000);
 
     return () => clearInterval(interval);
-  }, [answers]);
+  }, []);
 
-  const saveProgressToServer = async () => {
+  const saveProgressToServer = async (answersToSave: ExamAnswer[] = answersRef.current) => {
     try {
-      await fetch("/api/exam/save-progress", {
+      const res = await fetch("/api/exam/save-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId, answers }),
+        body: JSON.stringify({ attemptId, answers: answersToSave }),
       });
+
+      if (res.ok) {
+        try {
+          lastSavedSerializedRef.current = JSON.stringify(answersToSave || []);
+        } catch (e) {
+          // ignore serialization error
+        }
+      }
+      return res.ok;
     } catch (error) {
       console.error("Error saving progress:", error);
+      return false;
     }
   };
 
   const handleSelectOption = (optionId: string) => {
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer, idx) =>
         idx === currentQuestionIndex
           ? { ...answer, selectedOptionId: optionId }
@@ -113,7 +150,7 @@ export function ExamRunner({
   };
 
   const handleClearAnswer = () => {
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer, idx) =>
         idx === currentQuestionIndex
           ? { ...answer, selectedOptionId: null }
@@ -123,7 +160,7 @@ export function ExamRunner({
   };
 
   const handleToggleReview = () => {
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer, idx) =>
         idx === currentQuestionIndex
           ? { ...answer, isMarkedForReview: !answer.isMarkedForReview }
@@ -133,7 +170,7 @@ export function ExamRunner({
   };
 
   const handleToggleFlag = () => {
-    setAnswers((prev) =>
+    updateAnswers((prev) =>
       prev.map((answer, idx) =>
         idx === currentQuestionIndex
           ? { ...answer, isFlagged: !answer.isFlagged }
@@ -155,17 +192,27 @@ export function ExamRunner({
   };
 
   const handleSubmit = useCallback(async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || hasSubmittedExam.current) return;
 
+    hasSubmittedExam.current = true;
     setIsSubmitting(true);
     try {
+      const latestAnswers = answersRef.current.length > 0 ? answersRef.current : answers;
       const response = await fetch("/api/exam/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId, answers }),
+        body: JSON.stringify({ attemptId, answers: latestAnswers }),
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      let result: any = {};
+      if (responseText) {
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          result = { error: responseText };
+        }
+      }
 
       if (!response.ok) {
         console.error("Submit error:", result);
@@ -177,6 +224,7 @@ export function ExamRunner({
             description: "Too many submission attempts. Please wait before retrying.",
             variant: "destructive",
           });
+          hasSubmittedExam.current = false;
           return;
         }
 
@@ -195,6 +243,7 @@ export function ExamRunner({
         description: error.message || "Failed to submit exam. Please try again.",
         variant: "destructive",
       });
+      hasSubmittedExam.current = false;
       setIsSubmitting(false);
     }
   }, [attemptId, answers, router, toast, isSubmitting]);

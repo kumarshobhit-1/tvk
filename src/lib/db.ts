@@ -2,6 +2,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import type { Progress } from "./types";
 import { trackActivity } from "./activity-tracker";
+import { invalidateUserCache } from './user-cache';
 
 const getProgressRef = (userId: string) => doc(db, "users", userId);
 
@@ -67,6 +68,8 @@ export async function updateProgress(
     if (done && itemTitle && type) {
       await trackActivity(userId, itemId, itemTitle, type);
     }
+    // Invalidate cached user doc so subsequent reads get fresh data
+    try { invalidateUserCache(userId); } catch {}
   } catch (error: any) {
     console.error('Error updating progress:', error.code, error.message);
     

@@ -17,6 +17,30 @@ interface ResultSummaryProps {
 
 export function ResultSummary({ result, onReviewAnswers, studentName, studentEmail }: ResultSummaryProps) {
   const [copySuccess, setCopySuccess] = useState(false);
+
+  const formatSubmittedDate = (value: unknown): string => {
+    if (!value) return 'N/A';
+
+    if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
+      const date = (value as any).toDate();
+      return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('en-IN');
+    }
+
+    if (typeof value === 'string' || value instanceof Date) {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('en-IN');
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      const seconds = (value as any).seconds ?? (value as any)._seconds;
+      if (typeof seconds === 'number') {
+        const date = new Date(seconds * 1000);
+        return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('en-IN');
+      }
+    }
+
+    return 'N/A';
+  };
   
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -150,11 +174,7 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Date</p>
                   <p className="font-bold text-slate-900 dark:text-white">
-                    {result.submittedAt && typeof result.submittedAt === 'object' && 'toDate' in result.submittedAt
-                      ? result.submittedAt.toDate().toLocaleDateString('en-IN')
-                      : result.submittedAt && typeof result.submittedAt === 'string'
-                      ? new Date(result.submittedAt).toLocaleDateString('en-IN')
-                      : new Date().toLocaleDateString('en-IN')}
+                    {formatSubmittedDate(result.submittedAt)}
                   </p>
                 </div>
               </div>

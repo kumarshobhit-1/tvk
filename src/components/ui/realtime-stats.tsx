@@ -47,13 +47,7 @@ export function RealtimeStats() {
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      // Add random query param to prevent caching
-      const randomParam = Math.random().toString(36).substring(7);
-      const response = await fetch(`/api/platform/stats?_=${randomParam}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        },
+      const response = await fetch(`/api/platform/stats`, {
         signal: controller.signal
       });
 
@@ -80,10 +74,7 @@ export function RealtimeStats() {
           // second attempt with longer timeout
           const controller2 = new AbortController();
           const timeout2 = setTimeout(() => controller2.abort(), 10000);
-          const randomParam2 = Math.random().toString(36).substring(7);
-          const resp2 = await fetch(`/api/platform/stats?_=${randomParam2}`, {
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache' },
+          const resp2 = await fetch(`/api/platform/stats`, {
             signal: controller2.signal
           });
 
@@ -121,8 +112,13 @@ export function RealtimeStats() {
     // Initial fetch
     fetchStats();
 
-    // Set up interval to fetch stats every 15 seconds for faster updates
-    const interval = setInterval(() => fetchStats(), 15000);
+    // Refresh less often because the API already has a 10 minute server cache.
+    // Also avoid polling while the tab is hidden.
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchStats();
+      }
+    }, 5 * 60 * 1000);
 
     return () => {
       mountedRef.current = false;

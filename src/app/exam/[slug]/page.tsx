@@ -65,8 +65,8 @@ export default function ExamPage() {
 
     fetchExamData();
     
-    // Refresh exam data frequently to keep card/instructions in sync with admin edits.
-    const interval = setInterval(fetchExamData, 10000);
+    // Refresh exam data less aggressively; the intro screen does not need 10-second updates.
+    const interval = setInterval(fetchExamData, 30000);
     
     return () => clearInterval(interval);
   }, [examId, user]);

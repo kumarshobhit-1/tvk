@@ -22,7 +22,7 @@ interface UserExamResult {
   totalMarks: number;
   percentage: number;
   passed: boolean;
-  submittedAt: string;
+  submittedAt: string | null;
   timeTaken: number;
 }
 
@@ -129,8 +129,12 @@ export default function ResultPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
+    const parsed = new Date(dateString);
+    if (Number.isNaN(parsed.getTime())) return "N/A";
+
+    return parsed.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

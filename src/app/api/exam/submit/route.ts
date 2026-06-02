@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
-import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
+import { adminAuth, adminDB, FieldValue, increment } from "@/lib/firebase/firebase-admin";
 import type { Exam, ExamAttempt, ExamAnswer } from "@/lib/exam-types";
 
-const submitExamLimiter = new RateLimiter(RATE_LIMITS.examSubmit);
+function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
+  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
+  // If admin supplied an absolute penalty (>=1), treat it as absolute marks to subtract.
+  // Otherwise treat it as a fraction of question marks (e.g., 0.25 means 0.25 * marks).
+  if (nm >= 1) return nm;
+  return nm * questionMarks;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    if (!submitExamLimiter.isAllowed(request)) {
-      return NextResponse.json({ error: RATE_LIMITS.examSubmit.message }, { status: 429 });
-    }
-
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("session")?.value;
     if (!sessionCookie) {
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
         correctAnswers++;
       } else {
         wrongAnswers++;
-        score -= exam.negativeMarking * question.marks;
+        score -= computePenalty(exam.negativeMarking, question.marks);
       }
 
       return answer;
@@ -134,72 +135,18 @@ export async function POST(request: NextRequest) {
         };
       }
 
+      // Use per-user flags and atomic increments instead of scanning the entire collection.
+      // This avoids large collection reads which were causing excessive Firestore charges.
       let uniqueExamTakers = Number(statsSnap.data()?.uniqueExamTakers || 0);
-      const statsInitialized = statsSnap.exists && statsSnap.data()?.initialized === true;
-      const hasSubmittedExam = userSnap.exists && userSnap.data()?.hasSubmittedExam === true;
-      let userHasSubmittedBefore = hasSubmittedExam;
-
-      if (!userHasSubmittedBefore) {
-        const userSubmittedAttemptsSnap = await transaction.get(
-          adminDB.collection("exam_attempts")
-            .where("userId", "==", decodedToken.uid)
-            .where("status", "==", "submitted")
-            .select("userId")
-        );
-
-        userHasSubmittedBefore = !userSubmittedAttemptsSnap.empty;
-      }
-
-      if (!statsInitialized) {
-        const submittedAttemptsSnap = await transaction.get(
-          adminDB.collection("exam_attempts")
-            .where("status", "==", "submitted")
-            .select("userId")
-        );
-
-        uniqueExamTakers = new Set(
-          submittedAttemptsSnap.docs
-            .map((doc) => String(doc.data()?.userId || "").trim())
-            .filter(Boolean)
-        ).size;
-      }
-
-      const isFirstTimeExamTaker = !userHasSubmittedBefore;
-      const nextUniqueExamTakers = uniqueExamTakers + (isFirstTimeExamTaker ? 1 : 0);
-
       let uniquePassedUsers = Number(statsSnap.data()?.uniquePassedUsers || 0);
-      const passedUsersInitialized = statsSnap.exists && statsSnap.data()?.passedUsersInitialized === true;
-      const userHadPassed = userSnap.exists && userSnap.data()?.hasPassed === true;
-      let userHasPassedBefore = userHadPassed;
 
-      if (!userHasPassedBefore) {
-        const userPassedAttemptsSnap = await transaction.get(
-          adminDB.collection("exam_attempts")
-            .where("userId", "==", decodedToken.uid)
-            .where("status", "==", "submitted")
-            .where("passed", "==", true)
-            .select("userId")
-        );
+      const userHasSubmittedBefore = Boolean(userSnap.exists && userSnap.data()?.hasSubmittedExam === true);
+      const isFirstTimeExamTaker = !userHasSubmittedBefore;
 
-        userHasPassedBefore = !userPassedAttemptsSnap.empty;
-      }
-
-      if (!passedUsersInitialized) {
-        const passedAttemptsSnap = await transaction.get(
-          adminDB.collection("exam_attempts")
-            .where("status", "==", "submitted")
-            .where("passed", "==", true)
-            .select("userId")
-        );
-
-        uniquePassedUsers = new Set(
-          passedAttemptsSnap.docs
-            .map((doc) => String(doc.data()?.userId || "").trim())
-            .filter(Boolean)
-        ).size;
-      }
-
+      const userHasPassedBefore = Boolean(userSnap.exists && userSnap.data()?.hasPassed === true);
       const isFirstTimePassed = !userHasPassedBefore && passed;
+
+      const nextUniqueExamTakers = uniqueExamTakers + (isFirstTimeExamTaker ? 1 : 0);
       const nextUniquePassedUsers = uniquePassedUsers + (isFirstTimePassed ? 1 : 0);
       const successRate = nextUniqueExamTakers > 0 ? Math.round((nextUniquePassedUsers / nextUniqueExamTakers) * 100) : 0;
 
@@ -216,28 +163,33 @@ export async function POST(request: NextRequest) {
         status: "submitted",
       });
 
+      // Update user flags and atomically increment counters in stats doc.
       transaction.set(
         userRef,
         {
           hasSubmittedExam: true,
           firstExamSubmittedAt: userSnap.exists && userSnap.data()?.firstExamSubmittedAt ? userSnap.data()?.firstExamSubmittedAt : submittedAt,
-          hasPassed: passed || userHadPassed,
+          hasPassed: passed || userSnap.data()?.hasPassed || false,
         },
         { merge: true }
       );
 
-      transaction.set(
-        statsRef,
-        {
-          uniqueExamTakers: nextUniqueExamTakers,
-          uniquePassedUsers: nextUniquePassedUsers,
-          successRate,
-          initialized: true,
-          passedUsersInitialized: true,
-          updatedAt: submittedAt,
-        },
-        { merge: true }
-      );
+      // Prepare stats updates: use FieldValue.increment for atomic increments.
+      const statsUpdate: any = {
+        updatedAt: submittedAt,
+      };
+
+      // Only increment when this is the user's first submitted exam
+      if (isFirstTimeExamTaker) {
+        statsUpdate.uniqueExamTakers = FieldValue ? FieldValue.increment(1) : (increment ? increment(1) : 1);
+      }
+
+      if (isFirstTimePassed) {
+        statsUpdate.uniquePassedUsers = FieldValue ? FieldValue.increment(1) : (increment ? increment(1) : 1);
+      }
+
+      // Write stats update (atomic increments where supported). We avoid re-reading many docs here.
+      transaction.set(statsRef, statsUpdate, { merge: true });
 
       return {
         alreadySubmitted: false,

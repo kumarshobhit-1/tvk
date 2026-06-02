@@ -117,16 +117,38 @@ export default function CategoryExamsPage() {
         if (data.exams) {
           setExams(data.exams);
           
-          // Fetch status for each exam
+          // Fetch all statuses in one request to avoid the N+1 pattern.
+          const examIds = data.exams.map((exam: ExamListItem) => exam.id).filter(Boolean);
           const statuses: Record<string, ExamStatus> = {};
-          for (const exam of data.exams) {
+
+          if (examIds.length > 0) {
             try {
-              const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`, { cache: "no-store" });
-              statuses[exam.id] = await statusRes.json();
+              const statusRes = await fetch(`/api/exam/status?examIds=${encodeURIComponent(examIds.join(","))}`, { cache: "no-store" });
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (Array.isArray(statusData.statuses)) {
+                  for (const item of statusData.statuses) {
+                    if (item?.examId) {
+                      statuses[item.examId] = item;
+                    }
+                  }
+                }
+              } else {
+                // Safe fallback: preserve old behavior if the batch endpoint is unavailable.
+                for (const exam of data.exams) {
+                  try {
+                    const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`, { cache: "no-store" });
+                    statuses[exam.id] = await statusRes.json();
+                  } catch (err) {
+                    console.error(`Error fetching status for exam ${exam.id}:`, err);
+                  }
+                }
+              }
             } catch (err) {
-              console.error(`Error fetching status for exam ${exam.id}:`, err);
+              console.error("Error fetching batch exam statuses:", err);
             }
           }
+
           setExamStatuses(statuses);
         } else {
           setExams([]);

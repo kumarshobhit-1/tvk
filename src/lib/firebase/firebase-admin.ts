@@ -16,3 +16,6 @@ if (!getApps().length) {
 
 export const adminAuth = admin.auth();
 export const adminDB = admin.firestore();
+export const adminFirestore = admin;
+export const FieldValue = admin.firestore.FieldValue;
+export const increment = admin.firestore.FieldValue.increment;

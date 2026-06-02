@@ -15,71 +15,118 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const examId = searchParams.get("examId");
+    const examIdsParam = searchParams.get("examIds");
     const userId = decodedToken.uid;
 
-    if (!examId) {
+    const examIds = examIdsParam
+      ? examIdsParam.split(",").map((id) => id.trim()).filter(Boolean)
+      : examId
+        ? [examId]
+        : [];
+
+    if (examIds.length === 0) {
       return NextResponse.json({ error: "Exam ID required" }, { status: 400 });
     }
 
     const [userSnap, examSnap] = await Promise.all([
       adminDB.collection("users").doc(userId).get(),
-      adminDB.collection("exams").doc(examId).get(),
+      examIds.length === 1
+        ? adminDB.collection("exams").doc(examIds[0]).get()
+        : Promise.resolve(null),
     ]);
 
     const userData = userSnap.exists ? userSnap.data() : undefined;
-    const examData = examSnap.exists ? examSnap.data() : undefined;
+    const singleExamData = examIds.length === 1 && examSnap?.exists ? examSnap.data() : undefined;
     const premiumUser = isPremiumUser(userData);
-    const isLockedExam = examData?.isLocked === true;
-    const isPremiumExam = examData?.isPremium === true;
     const explicitExamIds: string[] = Array.isArray((userData as any)?.allowedExamIds)
       ? (userData as any).allowedExamIds.map((s: any) => String(s || "").trim()).filter(Boolean)
       : [];
-    const explicitExamAccess = premiumUser && explicitExamIds.length > 0 ? explicitExamIds.includes(examId) : null;
-    const premiumAccessForExam = explicitExamAccess === null
-      ? hasPremiumAccess(userData, examData?.category)
-      : explicitExamAccess;
-    const canAttemptExam = !isLockedExam && (!isPremiumExam || premiumAccessForExam);
+    const premiumCategories = normalizePremiumCategories(userData);
 
-    // Get all attempts for this exam by this user
+    // Single-exam path keeps the old response shape for existing callers.
+    if (examIds.length === 1) {
+      const examData = singleExamData;
+      const isLockedExam = examData?.isLocked === true;
+      const isPremiumExam = examData?.isPremium === true;
+      const explicitExamAccess = premiumUser && explicitExamIds.length > 0 ? explicitExamIds.includes(examIds[0]) : null;
+      const premiumAccessForExam = explicitExamAccess === null
+        ? hasPremiumAccess(userData, examData?.category)
+        : explicitExamAccess;
+      const canAttemptExam = !isLockedExam && (!isPremiumExam || premiumAccessForExam);
+
+      // Get all attempts for this exam by this user
+      const attemptsSnap = await adminDB.collection("exam_attempts")
+        .where("examId", "==", examIds[0])
+        .where("userId", "==", userId)
+        .where("status", "==", "submitted")
+        .select("examId", "userId", "passed", "score", "percentage", "timeTaken", "submittedAt")
+        .get();
+
+      const attempts = attemptsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const passedAttempt = attempts.find((a: any) => a.passed);
+      const attemptCount = attempts.length;
+      const canRetake = attemptCount < 5;
+      const hasInProgress = false;
+
+      return NextResponse.json({
+        hasPassed: !!passedAttempt,
+        attemptCount,
+        maxAttempts: 5,
+        canRetake,
+        isPremiumUser: premiumUser,
+        hasPremiumAccess: premiumAccessForExam,
+        premiumCategories,
+        isLocked: isLockedExam,
+        isPremiumExam,
+        canAttemptPremium: !isPremiumExam || premiumAccessForExam,
+        canAttemptExam,
+        hasInProgress,
+        lastAttemptId: attempts.length > 0 ? attempts[attempts.length - 1].id : null,
+        attempts: attempts.map((a: any) => ({
+          id: a.id,
+          score: a.score,
+          percentage: a.percentage,
+          passed: a.passed,
+          submittedAt: a.submittedAt,
+        })),
+      });
+    }
+
+    // Batch path for category pages: one Firestore query for multiple exam IDs.
     const attemptsSnap = await adminDB.collection("exam_attempts")
-      .where("examId", "==", examId)
+      .where("examId", "in", examIds.slice(0, 30))
       .where("userId", "==", userId)
       .where("status", "==", "submitted")
+      .select("examId", "userId", "passed", "score", "percentage", "timeTaken", "submittedAt")
       .get();
 
-    const attempts = attemptsSnap.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    const grouped = new Map<string, any[]>();
+    attemptsSnap.docs.forEach((doc) => {
+      const attempt = { id: doc.id, ...doc.data() };
+      const list = grouped.get(attempt.examId) || [];
+      list.push(attempt);
+      grouped.set(attempt.examId, list);
+    });
 
-    const passedAttempt = attempts.find((a: any) => a.passed);
-    const attemptCount = attempts.length;
-    // Passing should not block future attempts; only the max attempt limit should.
-    const canRetake = attemptCount < 5;
-    const hasInProgress = false; // Could add check for in-progress attempts
+    const statuses = examIds.map((id) => {
+      const attempts = grouped.get(id) || [];
+      const passedAttempt = attempts.find((a: any) => a.passed);
+      const attemptCount = attempts.length;
+      return {
+        examId: id,
+        hasPassed: !!passedAttempt,
+        attemptCount,
+        maxAttempts: 5,
+        canRetake: attemptCount < 5,
+        lastAttemptId: attempts.length > 0 ? attempts[attempts.length - 1].id : null,
+      };
+    });
 
     return NextResponse.json({
-      hasPassed: !!passedAttempt,
-      attemptCount,
-      maxAttempts: 5,
-      canRetake,
+      statuses,
       isPremiumUser: premiumUser,
-      hasPremiumAccess: premiumAccessForExam,
-      premiumCategories: normalizePremiumCategories(userData),
-      isLocked: isLockedExam,
-      isPremiumExam,
-      canAttemptPremium: !isPremiumExam || premiumAccessForExam,
-      canAttemptExam,
-      hasInProgress,
-      lastAttemptId: attempts.length > 0 ? attempts[attempts.length - 1].id : null,
-      attempts: attempts.map((a: any) => ({
-        id: a.id,
-        score: a.score,
-        percentage: a.percentage,
-        passed: a.passed,
-        submittedAt: a.submittedAt,
-      })),
+      premiumCategories,
     });
   } catch (error) {
     console.error("Error checking exam status:", error);
