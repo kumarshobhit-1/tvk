@@ -9,10 +9,7 @@ function computePenalty(negativeMarking: number | undefined, questionMarks: numb
   if (nm >= 1) return nm;
   return nm * questionMarks;
 }
-<<<<<<< HEAD
 
-=======
->>>>>>> 0a027e491f1cead2e0c80ea7b2b9acfde4dcf157
 // Get all published exams with their active attempt counts
 export async function GET(request: NextRequest) {
   // Temporarily disable auth check for debugging
