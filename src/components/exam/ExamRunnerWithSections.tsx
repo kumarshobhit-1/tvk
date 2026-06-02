@@ -92,10 +92,7 @@ export function ExamRunnerWithSections({
   const isProcessingTabSwitch = useRef(false);
   const hasSubmittedExam = useRef(false);
   const answersRef = useRef<ExamAnswer[]>([]);
-<<<<<<< HEAD
   const lastSavedSerializedRef = useRef<string>("");
-=======
->>>>>>> 0a027e491f1cead2e0c80ea7b2b9acfde4dcf157
 
   const updateAnswers = useCallback(
     (updater: ExamAnswer[] | ((prev: ExamAnswer[]) => ExamAnswer[])) => {
@@ -117,10 +114,7 @@ export function ExamRunnerWithSections({
         const parsedAnswers = JSON.parse(savedAnswers);
         answersRef.current = parsedAnswers;
         setAnswers(parsedAnswers);
-<<<<<<< HEAD
         lastSavedSerializedRef.current = JSON.stringify(parsedAnswers);
-=======
->>>>>>> 0a027e491f1cead2e0c80ea7b2b9acfde4dcf157
       } catch (error) {
         console.error("Error loading saved answers:", error);
       }
@@ -138,23 +132,23 @@ export function ExamRunnerWithSections({
 
   // Auto-save to server only when answers changed (every 60 seconds)
   useEffect(() => {
-    const interval = setInterval(() => {
-<<<<<<< HEAD
+    const tick = async () => {
       try {
         const currentSerialized = JSON.stringify(answersRef.current || []);
         if (currentSerialized !== lastSavedSerializedRef.current) {
-          saveProgressToServer(answersRef.current);
+          await saveProgressToServer(answersRef.current);
         }
       } catch (e) {
-        saveProgressToServer(answersRef.current);
+        await saveProgressToServer(answersRef.current);
       }
-    }, 60000);
-=======
-      saveProgressToServer(answersRef.current);
-    }, 30000);
->>>>>>> 0a027e491f1cead2e0c80ea7b2b9acfde4dcf157
+    };
+
+    // initial attempt
+    tick();
+
+    const interval = setInterval(tick, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [attemptId]);
 
   const saveProgressToServer = async (answersToSave: ExamAnswer[] = answersRef.current) => {
     try {
