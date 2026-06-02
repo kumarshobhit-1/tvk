@@ -231,7 +231,7 @@ export default function AdminUsersPage() {
   };
 
   if (authLoading || loading) {
-    return <Loading text="Loading admin users..." />;
+    return <Loading />;
   }
 
   return (

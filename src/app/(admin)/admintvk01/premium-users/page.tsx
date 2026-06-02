@@ -241,7 +241,7 @@ export default function PremiumUsersPage() {
       }
 
       setPreviewUser(data.user || null);
-      const nextCategories = (data.user?.premiumCategories || []).map((item: string) => normalizeCategory(item));
+      const nextCategories: string[] = (data.user?.premiumCategories || []).map((item: string) => normalizeCategory(item));
       setSelectedPremiumCategories(nextCategories);
       setActiveLoadCategory(nextCategories.find((category) => category !== "ALL") || "");
       setAllowedExamIdsInput((data.user?.allowedExamIds || []).join(", "));
@@ -512,7 +512,7 @@ export default function PremiumUsersPage() {
   };
 
   if (authLoading || loading) {
-    return <Loading text="Loading premium controls..." />;
+    return <Loading />;
   }
 
   return (

@@ -103,10 +103,12 @@ export async function GET(request: NextRequest) {
 
     const grouped = new Map<string, any[]>();
     attemptsSnap.docs.forEach((doc) => {
-      const attempt = { id: doc.id, ...doc.data() };
-      const list = grouped.get(attempt.examId) || [];
+      const data = doc.data() as any;
+      const attempt: any = { id: doc.id, ...data };
+      const examId = String(attempt.examId || data.examId || "");
+      const list = grouped.get(examId) || [];
       list.push(attempt);
-      grouped.set(attempt.examId, list);
+      grouped.set(examId, list);
     });
 
     const statuses = examIds.map((id) => {

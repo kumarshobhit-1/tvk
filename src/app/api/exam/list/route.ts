@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { adminDB } from "@/lib/firebase/firebase-admin";
+import { adminDB, adminAuth as firebaseAdminAuth } from "@/lib/firebase/firebase-admin";
 import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
 const EXAM_LIST_TTL_MS = 5 * 60 * 1000;
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       const authHeader = request.headers.get("authorization");
       if (authHeader && authHeader.startsWith("Bearer ")) {
         const token = authHeader.split("Bearer ")[1];
-        const decoded = await adminAuth.verifyIdToken(token);
+        const decoded = await firebaseAdminAuth.verifyIdToken(token);
         userId = decoded.uid;
         const userSnap = await adminDB.collection("users").doc(decoded.uid).get();
         userData = userSnap.exists ? userSnap.data() : undefined;
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
         if (sessionCookie) {
-          const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+          const decodedToken = await firebaseAdminAuth.verifySessionCookie(sessionCookie);
           userId = decodedToken.uid;
           const userSnap = await adminDB.collection("users").doc(decodedToken.uid).get();
           userData = userSnap.exists ? userSnap.data() : undefined;
