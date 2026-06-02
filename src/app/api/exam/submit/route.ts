@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+<<<<<<< HEAD
 import { adminAuth, adminDB, FieldValue, increment } from "@/lib/firebase/firebase-admin";
+=======
+import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
+>>>>>>> 0a027e491f1cead2e0c80ea7b2b9acfde4dcf157
 import type { Exam, ExamAttempt, ExamAnswer } from "@/lib/exam-types";
 
 function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
