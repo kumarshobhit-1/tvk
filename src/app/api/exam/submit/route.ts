@@ -153,6 +153,9 @@ export async function POST(request: NextRequest) {
       transaction.update(adminDB.collection("exam_attempts").doc(attemptId), {
         submittedAt,
         answers: updatedAnswers,
+        examTitle: exam.title,        // ADD THIS
+        examCategory: exam.category,  // ADD THIS
+        examPremium: exam.isPremium,  // ADD THIS
         score,
         correctAnswers,
         wrongAnswers,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { adminAuth } from '@/lib/firebase/firebase-admin'
+import { adminAuth, adminDB } from '@/lib/firebase/firebase-admin'
 
 export async function POST(req: Request) {
   try {
@@ -8,6 +8,35 @@ export async function POST(req: Request) {
       console.error('Session API: Missing idToken')
       return NextResponse.json({ error: 'Missing idToken' }, { status: 400 })
     }
+
+    // Verify token and get user info
+    const decodedToken = await adminAuth.verifyIdToken(idToken)
+    const uid = decodedToken.uid
+
+    // Sync user profile to Firestore
+    const userRef = adminDB.collection('users').doc(uid)
+    const userSnap = await userRef.get()
+    
+    let profileData: Record<string, any> = {
+      uid,
+      email: decodedToken.email || null,
+      displayName: (decodedToken as any).name || 'Student',
+      photoURL: (decodedToken as any).picture || null,
+      // Preserve existing fields if doc exists
+      ...(userSnap.exists ? userSnap.data() : {})
+    }
+
+    // Add timestamps if creating new user
+    if (!userSnap.exists) {
+      profileData.createdAt = new Date()
+      profileData.isPremium = false
+      profileData.streakCount = 0
+    }
+
+    profileData.lastLoginAt = new Date()
+
+    await userRef.set(profileData, { merge: true })
+    console.log(`Session API: User profile synced for ${uid}`)
 
     const expiresIn = 14 * 24 * 60 * 60 * 1000 // 14 days (ms)
     
