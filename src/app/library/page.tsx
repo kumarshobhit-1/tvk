@@ -20,7 +20,9 @@ import {
   ExternalLink
 } from "lucide-react";
 import Loading from "@/components/ui/loading";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { PDFFolderWithFiles, PDFFile } from "@/lib/pdf-types";
+
 
 export default function LibraryPage() {
   const { user, loading: authLoading } = useRequireAuth();
@@ -32,8 +34,11 @@ export default function LibraryPage() {
   const [selectedFolder, setSelectedFolder] = useState<PDFFolderWithFiles | null>(null);
   const [folderStack, setFolderStack] = useState<PDFFolderWithFiles[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [folderFilesCache, setFolderFilesCache] = useState<Record<string, PDFFile[]>>({});
+  const [folderLoadingMap, setFolderLoadingMap] = useState<Record<string, boolean>>({});
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get("category") ?? "";
+
 
   function toSlug(value: string) {
     return String(value || "").trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -59,32 +64,42 @@ export default function LibraryPage() {
     if (authLoading) return;
     if (!user) return;
 
-    const fetchData = async () => {
+    const fetchFoldersOnly = async () => {
       try {
         const response = await fetch("/api/pdf/list");
         const data = await response.json();
-        
+
         if (response.ok) {
           const foldersRes = data.folders || [];
-          setFolders(foldersRes);
-          // If a category query param is present, try to pre-select the folder
+          // Ensure all folders start with files=[] (backend returns empty when no folderId)
+          setFolders(
+            foldersRes.map((f: PDFFolderWithFiles) => ({ ...f, files: f.files || [], subfolders: f.subfolders || [] }))
+          );
+
+          // If a category query param is present, auto-open matching folder.
           if (categoryParam) {
             const match = findFolderBySlug(foldersRes, categoryParam);
             if (match) {
               setSelectedFolder(match);
               setFolderStack([match]);
+              // Lazy-load only for the auto-selected category folder (once).
+              // Avoid duplicate requests via folderLoadingMap/cache.
+              loadFilesForFolder(match);
             }
           }
+
         }
       } catch (error) {
-        console.error("Error fetching PDFs:", error);
+        console.error("Error fetching PDF folders:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [user, authLoading]);
+
+    fetchFoldersOnly();
+  }, [user, authLoading, categoryParam]);
+
 
   const trackAction = async (fileId: string, action: "view" | "download") => {
     try {
@@ -106,6 +121,64 @@ export default function LibraryPage() {
       "noopener,noreferrer"
     );
   };
+
+  const loadFilesForFolder = async (folder: PDFFolderWithFiles) => {
+    if (!folder?.id) return;
+
+    // Cache hit: no API call.
+    if (folderFilesCache[folder.id] && folderFilesCache[folder.id].length >= 0) {
+      setSelectedFolder((prev) => (prev && prev.id === folder.id ? { ...prev, files: folderFilesCache[folder.id] } : folder));
+      return;
+    }
+
+    // Avoid duplicate in-flight calls.
+    if (folderLoadingMap[folder.id]) return;
+
+    setFolderLoadingMap((prev) => ({ ...prev, [folder.id]: true }));
+    try {
+      const url = `/api/pdf/list?folderId=${encodeURIComponent(folder.id)}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to load folder files");
+      }
+
+      // Backend returns: { folders: [...], totalFiles }
+      // The requested folder's root node may appear anywhere in the returned tree.
+      const flat: PDFFile[] = [];
+      const collect = (nodes: PDFFolderWithFiles[]) => {
+        for (const n of nodes) {
+          if (n.id === folder.id) {
+            flat.push(...(n.files || []));
+          }
+          if (n.subfolders?.length) collect(n.subfolders);
+        }
+      };
+      collect(data?.folders || []);
+
+      setFolderFilesCache((prev) => ({ ...prev, [folder.id]: flat }));
+      setFolders((prev) =>
+        prev.map((f) => {
+          // Update the actual folder node (top-level only). Subfolder nodes are nested inside each root.
+          // To preserve UI correctness, also update selected folder directly.
+          if (f.id === folder.id) return { ...f, files: flat };
+          return f;
+        })
+      );
+      setSelectedFolder((prev) => (prev ? { ...prev, files: flat } : { ...folder, files: flat }));
+    } catch (error) {
+      console.error("Error loading folder files:", error);
+      toast({
+        title: "Failed to load PDFs",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setFolderLoadingMap((prev) => ({ ...prev, [folder.id]: false }));
+    }
+  };
+
 
   const handleDownloadPDF = (file: PDFFile) => {
     trackAction(file.id, "download");
@@ -177,8 +250,12 @@ export default function LibraryPage() {
         <div
           className="p-3 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50"
           style={{ paddingLeft: 12 + depth * 18 }}
-          onClick={() => setSelectedFolder(folder)}
+          onClick={() => {
+            setSelectedFolder(folder);
+            loadFilesForFolder(folder);
+          }}
         >
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-md flex items-center justify-center text-2xl" style={{ backgroundColor: `${folder.color}20` }}>
@@ -186,7 +263,10 @@ export default function LibraryPage() {
               </div>
               <div className="min-w-0">
                 <div className="font-medium text-sm truncate">{folder.name}</div>
-                <div className="text-xs text-muted-foreground">{folder.files.length} files</div>
+                <div className="text-xs text-muted-foreground">
+                  {folder.files && folder.files.length > 0 ? `${folder.files.length} files` : (folder.files ? "" : "")}
+                </div>
+
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -231,12 +311,23 @@ export default function LibraryPage() {
             <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
           </button>
 
-          <div className="flex items-center gap-2 min-w-0 flex-1" onClick={() => { setFolderStack([folder]); setSelectedFolder(folder); }}>
+          <div
+            className="flex items-center gap-2 min-w-0 flex-1"
+            onClick={() => {
+              setFolderStack([folder]);
+              setSelectedFolder(folder);
+              loadFilesForFolder(folder);
+            }}
+          >
+
             <span className="shrink-0">{folder.icon}</span>
             <div className="min-w-0">
               <div className="text-sm font-medium truncate">{folder.name}</div>
               <div className="text-xs text-muted-foreground flex items-center gap-2">
-                <span>{folder.files.length} files</span>
+                <span>
+                  {folder.files && folder.files.length > 0 ? `${folder.files.length} files` : ""}
+                </span>
+
                 {hasChildren && <span>· {children.length} subfolder{children.length > 1 ? "s" : ""}</span>}
               </div>
             </div>
@@ -280,8 +371,10 @@ export default function LibraryPage() {
   };
 
   const getTotalFiles = () => {
-    return folders.reduce((sum, folder) => sum + folder.files.length, 0);
+    // Only count files when loaded; folders not opened will have empty/undefined files.
+    return folders.reduce((sum, folder) => sum + (folder.files?.length || 0), 0);
   };
+
 
   if (authLoading || loading) {
     return <Loading />;
@@ -300,9 +393,9 @@ export default function LibraryPage() {
             <Badge variant="secondary" className="text-sm">
               {folders.length} Folders
             </Badge>
-            <Badge variant="secondary" className="text-sm">
+            {/* <Badge variant="secondary" className="text-sm">
               {getTotalFiles()} Files
-            </Badge>
+            </Badge> */}
           </div>
         </div>
 
@@ -391,9 +484,17 @@ export default function LibraryPage() {
                     </div>
                     <div className="space-y-2">
                       {selectedFolder.subfolders.map((sub) => (
-                        <div key={sub.id} onClick={() => { setFolderStack(prev => [...prev, sub]); setSelectedFolder(sub); }}>
+                        <div
+                          key={sub.id}
+                          onClick={() => {
+                            setFolderStack((prev) => [...prev, sub]);
+                            setSelectedFolder(sub);
+                            loadFilesForFolder(sub);
+                          }}
+                        >
                           {renderPublicFolderNode(sub, 1, false)}
                         </div>
+
                       ))}
                     </div>
                   </div>
@@ -401,48 +502,91 @@ export default function LibraryPage() {
 
                 {/* Files list */}
                 <div className="space-y-2">
-                  {getFilteredFiles(selectedFolder).length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">No files in this folder</div>
-                  ) : (
-                    getFilteredFiles(selectedFolder).map((file) => (
-                      <div key={file.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-secondary/50 transition-colors">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                            <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium text-sm truncate">{file.name}</div>
-                              {file.isLocked && (
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                  Locked
-                                </Badge>
-                              )}
+                  {selectedFolder && folderLoadingMap[selectedFolder.id] ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 6 }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 rounded-lg border"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Skeleton className="w-10 h-10 rounded-md" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-4 w-44 rounded" />
+                                <Skeleton className="h-4 w-16 rounded" />
+                              </div>
+                              <Skeleton className="mt-2 h-3 w-32 rounded" />
                             </div>
-                            <div className="text-xs text-muted-foreground">{formatFileSize(file.fileSize)}{file.pageCount ? ` · ${file.pageCount} pages` : ""}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-3 w-28 rounded" />
+                            <Skeleton className="h-8 w-20 rounded-md" />
+                            <Skeleton className="h-8 w-20 rounded-md" />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs text-muted-foreground min-w-fit ml-2 flex items-center gap-3">
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
-                              {file.viewCount}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Download className="h-3 w-3" />
-                              {file.downloadCount}
-                            </span>
+                      ))}
+                    </div>
+                                    ) : (
+                    getFilteredFiles(selectedFolder).length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">No files in this folder</div>
+                    ) : (
+                      getFilteredFiles(selectedFolder).map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-secondary/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                              <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium text-sm truncate">{file.name}</div>
+                                {file.isLocked && (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    Locked
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatFileSize(file.fileSize)}
+                                {file.pageCount ? ` · ${file.pageCount} pages` : ""}
+                              </div>
+                            </div>
                           </div>
-                          <Button variant="ghost" size="sm" disabled={file.canAccess === false} onClick={() => handleViewPDF(file)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" disabled={file.canAccess === false} onClick={() => handleDownloadPDF(file)}>
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs text-muted-foreground min-w-fit ml-2 flex items-center gap-3">
+                              <span className="flex items-center gap-1">
+                                <Eye className="h-3 w-3" />
+                                {file.viewCount}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Download className="h-3 w-3" />
+                                {file.downloadCount}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={file.canAccess === false}
+                              onClick={() => handleViewPDF(file)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={file.canAccess === false}
+                              onClick={() => handleDownloadPDF(file)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))
+                    )
                   )}
+
                 </div>
               </div>
             )}

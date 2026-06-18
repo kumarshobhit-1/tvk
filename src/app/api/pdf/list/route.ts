@@ -1,11 +1,12 @@
 // Public API for listing published PDFs
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
+import { adminAuth, adminDB, increment } from "@/lib/firebase/firebase-admin";
+
 import type { PDFFolder, PDFFile, PDFFolderWithFiles } from "@/lib/pdf-types";
 import { buildPdfAccessUrl, canUserAccessPdf } from "@/lib/pdf-access";
 
-// GET - List all published folders and files
+// GET - List published folders (optionally files for a single folder)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -24,17 +25,14 @@ export async function GET(request: NextRequest) {
       userData = undefined;
     }
 
-    // Get all folders and filter/sort in memory (avoids composite index requirement)
+    // 1) Fetch ONLY published folders. No pdf_files full scan.
     const foldersSnapshot = await adminDB
       .collection("pdf_folders")
+      .where("isPublished", "==", true)
       .get();
 
     const folders: PDFFolder[] = foldersSnapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }) as PDFFolder)
-      .filter((folder) => folder.isPublished === true)
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as PDFFolder)
       .map((folder) => ({
         ...folder,
         // Folder stays browsable; access gating is enforced at file level.
@@ -42,58 +40,54 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    const folderMap = new Map(folders.map((folder) => [folder.id, folder]));
+    const folderMap = new Map<string, PDFFolder>();
+    folders.forEach((f) => folderMap.set(f.id, f));
 
-    // Get all published files and filter/sort in memory
-    const filesSnapshot = await adminDB
-      .collection("pdf_files")
-      .get();
-
-    let files: PDFFile[] = filesSnapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }) as PDFFile)
-      .filter((file) => file.isPublished === true)
-      .filter((file) => folderMap.has(file.folderId))
-      .map((file) => {
-        const folder = folderMap.get(file.folderId)!;
-        const effectiveCategory = file.category || folder.category || "";
-        const isLocked = file.isLocked === true;
-        const canAccess = canUserAccessPdf(userData, { ...file, category: effectiveCategory }, folder);
-        const { cloudinaryUrl, cloudinarySecureUrl, ...safeFile } = file as PDFFile & {
-          cloudinaryUrl?: string;
-          cloudinarySecureUrl?: string;
-        };
-
-        return {
-          ...safeFile,
-          category: effectiveCategory,
-          isPremium: file.premiumOverridden === true ? file.isPremium === true : folder.isPremium === true,
-          isLocked,
-          canAccess,
-          viewUrl: buildPdfAccessUrl(file.id, "view"),
-          downloadUrl: buildPdfAccessUrl(file.id, "download"),
-        } as PDFFile;
-      })
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-    
+    // 2) If folderId is present, fetch ONLY files from that folder.
+    // If not present: return folders with empty files array (library sidebar stays fast).
+    let files: PDFFile[] = [];
     if (folderId) {
-      files = files.filter((file) => file.folderId === folderId);
+      const filesSnapshot = await adminDB
+        .collection("pdf_files")
+        .where("isPublished", "==", true)
+        .where("folderId", "==", folderId)
+        .get();
+
+      files = filesSnapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }) as PDFFile)
+        .filter((file) => folderMap.has(file.folderId))
+        .map((file) => {
+          const folder = folderMap.get(file.folderId)!;
+          const effectiveCategory = file.category || folder.category || "";
+          const isLocked = file.isLocked === true;
+          const canAccess = canUserAccessPdf(userData, { ...file, category: effectiveCategory }, folder);
+          const { cloudinaryUrl, cloudinarySecureUrl, ...safeFile } = file as PDFFile & {
+            cloudinaryUrl?: string;
+            cloudinarySecureUrl?: string;
+          };
+
+          return {
+            ...safeFile,
+            category: effectiveCategory,
+            isPremium: file.premiumOverridden === true ? file.isPremium === true : folder.isPremium === true,
+            isLocked,
+            canAccess,
+            viewUrl: buildPdfAccessUrl(file.id, "view"),
+            downloadUrl: buildPdfAccessUrl(file.id, "download"),
+          } as PDFFile;
+        })
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
     }
 
-    // Build folder objects with files and nest subfolders by parentId
+    // 3) Build folder objects and nest subfolders by parentId.
+    // Each folder gets `files` only if folderId filter is provided.
     const folderMap2 = new Map<string, PDFFolderWithFiles>();
-
-    // initialize entries with files
     folders.forEach((folder) => {
-      const folderFiles = files.filter((file) => file.folderId === folder.id);
+      const folderFiles = folderId ? files.filter((file) => file.folderId === folder.id) : [];
       folderMap2.set(folder.id, { ...folder, files: folderFiles, subfolders: [] });
     });
 
     const roots: PDFFolderWithFiles[] = [];
-
-    // attach children to parents
     for (const folder of folderMap2.values()) {
       const parentId = folder.parentId || null;
       if (parentId && folderMap2.has(parentId)) {
@@ -105,24 +99,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // sort subfolders in each parent by order
     const sortRecursively = (nodeList: PDFFolderWithFiles[] | undefined) => {
       if (!nodeList) return;
       nodeList.sort((a, b) => (a.order || 0) - (b.order || 0));
       nodeList.forEach((n) => sortRecursively(n.subfolders));
     };
-
     sortRecursively(roots);
 
     return NextResponse.json({ folders: roots, totalFiles: files.length });
   } catch (error: any) {
     console.error("Error fetching PDFs:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch PDFs" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch PDFs" }, { status: 500 });
   }
 }
+
 
 // POST - Track view/download
 export async function POST(request: NextRequest) {
@@ -134,25 +124,31 @@ export async function POST(request: NextRequest) {
     }
 
     const fileRef = adminDB.collection("pdf_files").doc(fileId);
-    const fileDoc = await fileRef.get();
 
+    // FieldValue.increment avoids an extra read (no doc.get())
+    const field = action === "view" ? "viewCount" : "downloadCount";
+
+    // We still perform a cheap existence check to preserve current 404 behavior.
+    const fileDoc = await fileRef.get();
     if (!fileDoc.exists) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    const field = action === "view" ? "viewCount" : "downloadCount";
-    const currentCount = fileDoc.data()?.[field] || 0;
-
+    // Atomic increment (no read-before-write).
+    // Note: we keep a small doc.get() only for existence/404 behavior.
+    // Atomic increment counter.
     await fileRef.update({
-      [field]: currentCount + 1,
+      [field]: increment(1),
     });
+
+
+
+
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Error tracking:", error);
-    return NextResponse.json(
-      { error: "Failed to track action" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to track action" }, { status: 500 });
   }
 }
+
