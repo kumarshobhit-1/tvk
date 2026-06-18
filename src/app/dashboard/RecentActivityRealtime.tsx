@@ -1,27 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Database, Code, Clock } from 'lucide-react';
+import { Code, Clock, Database } from 'lucide-react';
 
 type Activity = { id: string; title: string; type: 'dsa' | 'cs'; timestamp: any };
 
-export default function RecentActivityRealtime({ userId, initial = [] }: { userId: string; initial?: Activity[] }) {
-  const [items, setItems] = useState<Activity[]>(initial || []);
-
-  useEffect(() => {
-    if (!userId) return;
-    const ref = doc(db, 'users', userId);
-    const unsub = onSnapshot(ref, (snap) => {
-      const data = snap.data() as any;
-      const recent = Array.isArray(data?.recentActivity) ? data.recentActivity.slice(0, 5) : [];
-      setItems(recent.map((r: any, i: number) => ({ id: r.id || `${i}`, title: r.title, type: r.type || 'dsa', timestamp: r.timestamp })));
-    });
-    return () => unsub();
-  }, [userId]);
+export default function RecentActivityRealtime({ initial = [] }: { userId: string; initial?: Activity[] }) {
+  const items = initial || [];
 
   return (
     <ScrollArea className="max-h-80">

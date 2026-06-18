@@ -1,54 +1,28 @@
 // /app/dashboard/ExamStatsRealtime.tsx
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { collection, limit, orderBy, onSnapshot, query, where, doc, onSnapshot as onDocSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import React from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Trophy, TrendingUp, Flame, LayoutGrid } from 'lucide-react';
+import { Flame, LayoutGrid, Trophy, TrendingUp } from 'lucide-react';
 
-export default function ExamStatsRealtime({ userId, initial }: { userId: string; initial: { totalAttempts: number; passedExams: number; averageScore: number; currentStreak: number } }) {
-  const [stats, setStats] = useState(() => ({
+type Props = {
+  userId: string;
+  initial: {
+    totalAttempts: number;
+    passedExams: number;
+    averageScore: number;
+    currentStreak: number;
+  };
+};
+
+export default function ExamStatsRealtime({ initial }: Props) {
+  const stats = {
     totalAttempts: initial?.totalAttempts ?? 0,
     passedExams: initial?.passedExams ?? 0,
     averageScore: initial?.averageScore ?? 0,
     currentStreak: initial?.currentStreak ?? 0,
-  }));
-
-  useEffect(() => {
-    if (!userId) return;
-
-    // Listen to exam_attempts for counts and averages
-    // const q = query(collection(db, 'exam_attempts'), where('userId', '==', userId));
-  const q = query(
-    collection(db, "exam_attempts"),
-    where("userId", "==", userId),
-    orderBy("submittedAt", "desc"),
-    limit(20)
-  );
-    const unsubAttempts = onSnapshot(q, (snap) => {
-      const attempts = snap.docs.map(d => d.data() as any);
-      const submitted = attempts.filter(a => a.status === 'submitted' || a.submittedAt);
-      const totalAttempts = submitted.length;
-      const passedExams = submitted.filter(a => a.passed).length;
-      const averageScore = totalAttempts > 0 ? submitted.reduce((s, a) => s + Number(a.percentage || 0), 0) / totalAttempts : 0;
-      setStats(prev => ({ ...prev, totalAttempts, passedExams, averageScore }));
-    });
-
-    // Listen to user doc for streak changes
-    const userRef = doc(db, 'users', userId);
-    const unsubUser = onDocSnapshot(userRef, (snap) => {
-      const d = snap.data() as any;
-      const streak = typeof d?.streakCount === 'number' ? d.streakCount : Number(d?.streakCount ?? 0);
-      setStats(prev => ({ ...prev, currentStreak: streak }));
-    });
-
-    return () => {
-      unsubAttempts();
-      unsubUser();
-    };
-  }, [userId]);
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
