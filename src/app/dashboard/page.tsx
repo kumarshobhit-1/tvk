@@ -431,6 +431,13 @@ export default async function DashboardPage() {
     ? premiumCategories[0].toLowerCase()
     : null;
 
+function toCategorySlug(category: string) {
+  return category
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+}
+
     const totalPremiumExams = payload.learningProgress.totalPremiumExams;
 const attemptedPremiumExams = payload.learningProgress.attemptedExams;
 const passedPremiumExams = payload.learningProgress.passedExams;
@@ -445,11 +452,11 @@ const passPercent =
     ? Math.round((passedPremiumExams / totalPremiumExams) * 100)
     : 0;
 const pdfHref = premiumCategory
-  ? `/library?category=${encodeURIComponent(premiumCategory)}`
+  ? `/library?category=${toCategorySlug(premiumCategory)}`
   : "/library";
 
 const examHref = premiumCategory
-  ? `/exam/category/${encodeURIComponent(premiumCategory)}`
+  ? `/exam/category/${toCategorySlug(premiumCategory)}`
   : "/exam";
   const streak = Number(payload.examStats.currentStreak || user.streakCount || 0);
   const progressPercent =

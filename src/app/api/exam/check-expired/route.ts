@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { ExamAttempt, Exam } from "@/lib/exam-types";
+import { FieldValue } from "firebase-admin/firestore";
+
 
 const checkExpiredLimiter = new RateLimiter(RATE_LIMITS.general);
 
@@ -97,7 +99,17 @@ export async function POST(request: NextRequest) {
           autoExpired: true, // Flag to indicate auto-expiration
         });
 
+        // Denormalized counters: decrement activeCount for this exam
+        await adminDB.collection("exams").doc(attempt.examId).set(
+          {
+            activeCount: FieldValue.increment(-1),
+            countersUpdatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
         expiredAttempts.push(attemptId);
+
       }
     }
 

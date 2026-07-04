@@ -4,6 +4,8 @@ import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { Exam, ExamAttempt, ExamQuestion } from "@/lib/exam-types";
 import { hasPremiumAccess } from "@/lib/premium-access";
+import { FieldValue } from "firebase-admin/firestore";
+
 
 const startExamLimiter = new RateLimiter(RATE_LIMITS.general);
 
@@ -238,7 +240,50 @@ export async function POST(request: NextRequest) {
     (attemptData as any).sectionsSnapshot = sectionsSnapshot;
 
     const sanitizedAttemptData = sanitizeFirestoreValue(attemptData);
-    const attemptRef = await adminDB.collection("exam_attempts").add(sanitizedAttemptData);
+
+    // Counters maintenance (denormalized to avoid scanning exam_attempts)
+    // We also prevent double-counting uniqueStudents via a per-(examId,userId) participant marker.
+    const participantRef = adminDB.collection("exam_participants").doc(`${examId}_${userId}`);
+
+    const startAndIncrement = await adminDB.runTransaction(async (tx) => {
+      const participantSnap = await tx.get(participantRef);
+      const participantExists = participantSnap.exists;
+
+      const countersRef = adminDB.collection("exams").doc(examId);
+
+      // Create attempt doc in the same transaction.
+      // Note: we need an auto-id. Use a deterministic doc ref by pre-creating one.
+      const attemptRef = adminDB.collection("exam_attempts").doc();
+
+      tx.set(attemptRef, sanitizedAttemptData);
+
+      // Increment totals and active count.
+      tx.set(
+        countersRef,
+        {
+          totalAttempts: FieldValue.increment(1),
+          activeCount: FieldValue.increment(1),
+          // uniqueStudents: only increment when participant marker doesn't exist.
+          uniqueStudents: participantExists ? FieldValue.increment(0) : FieldValue.increment(1),
+          countersUpdatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // Mark participant for uniqueStudents.
+      if (!participantExists) {
+        tx.set(participantRef, {
+          examId,
+          userId,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      return { attemptId: attemptRef.id };
+    });
+
+    const attemptId = startAndIncrement.attemptId;
+
 
     // Return attempt ID, start time, and questions (without correct answers)
     const questionsWithoutAnswers = questions.map((q) => ({
@@ -266,7 +311,8 @@ export async function POST(request: NextRequest) {
     const startTime = currentTime.getTime();
 
     return NextResponse.json({
-      attemptId: attemptRef.id,
+      attemptId: attemptId,
+
       startedAt: startTime,
       // client will manage per-section timers; provide grouped sections
       sections: sectionsForClient,

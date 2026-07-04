@@ -166,33 +166,44 @@ export async function POST(request: NextRequest) {
         status: "submitted",
       });
 
-      // Update user flags and atomically increment counters in stats doc.
-      transaction.set(
-        userRef,
-        {
-          hasSubmittedExam: true,
-          firstExamSubmittedAt: userSnap.exists && userSnap.data()?.firstExamSubmittedAt ? userSnap.data()?.firstExamSubmittedAt : submittedAt,
-          hasPassed: passed || userSnap.data()?.hasPassed || false,
-        },
-        { merge: true }
-      );
+    // Update user flags and atomically increment counters in stats doc.
+    transaction.set(
+      userRef,
+      {
+        hasSubmittedExam: true,
+        firstExamSubmittedAt: userSnap.exists && userSnap.data()?.firstExamSubmittedAt ? userSnap.data()?.firstExamSubmittedAt : submittedAt,
+        hasPassed: passed || userSnap.data()?.hasPassed || false,
+      },
+      { merge: true }
+    );
 
-      // Prepare stats updates: use FieldValue.increment for atomic increments.
-      const statsUpdate: any = {
-        updatedAt: submittedAt,
-      };
+    // Update exam counters (denormalized) to avoid scanning exam_attempts.
+    // This decrements ONLY activeCount (in-progress attempts) when a submission happens.
+    const countersRef = adminDB.collection("exams").doc(attempt.examId);
+    transaction.set(
+      countersRef,
+      {
+        activeCount: FieldValue.increment(-1),
+        countersUpdatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 
-      // Only increment when this is the user's first submitted exam
-      if (isFirstTimeExamTaker) {
-        statsUpdate.uniqueExamTakers = FieldValue ? FieldValue.increment(1) : (increment ? increment(1) : 1);
-      }
+    // Prepare platform stats updates: keep existing global behavior unchanged.
+    const statsUpdate: any = {
+      updatedAt: submittedAt,
+    };
 
-      if (isFirstTimePassed) {
-        statsUpdate.uniquePassedUsers = FieldValue ? FieldValue.increment(1) : (increment ? increment(1) : 1);
-      }
+    if (isFirstTimeExamTaker) {
+      statsUpdate.uniqueExamTakers = FieldValue ? FieldValue.increment(1) : (increment ? increment(1) : 1);
+    }
 
-      // Write stats update (atomic increments where supported). We avoid re-reading many docs here.
-      transaction.set(statsRef, statsUpdate, { merge: true });
+    if (isFirstTimePassed) {
+      statsUpdate.uniquePassedUsers = FieldValue ? FieldValue.increment(1) : (increment ? increment(1) : 1);
+    }
+
+    transaction.set(statsRef, statsUpdate, { merge: true });
+
 
       return {
         alreadySubmitted: false,

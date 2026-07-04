@@ -57,7 +57,19 @@ export interface Exam {
   createdBy: string; // User ID of admin who created it
   createdAt: Timestamp;
   updatedAt?: Timestamp;
+
+  /**
+   * Denormalized counters to avoid scanning exam_attempts.
+   *
+   * totalAttempts: total number of attempts ever created for this exam.
+   * uniqueStudents: distinct userId who ever created an attempt for this exam.
+   * activeCount: current number of attempts in status "in-progress".
+   */
+  totalAttempts?: number;
+  uniqueStudents?: number;
+  activeCount?: number;
 }
+
 
 export interface ExamAnswer {
   questionId: string;

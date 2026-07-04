@@ -10,8 +10,10 @@ function computePenalty(negativeMarking: number | undefined, questionMarks: numb
   return nm * questionMarks;
 }
 
-// Get all published exams with their active attempt counts
+// Get all published exams (admin panel)
+// Counters now come from denormalized fields on exams/{examId}.
 export async function GET(request: NextRequest) {
+
   // Temporarily disable auth check for debugging
   // const auth = await verifyAdminPermission(request, "canManageExamAttempts");
   // if (!auth.isValid) {
@@ -34,6 +36,7 @@ export async function GET(request: NextRequest) {
       const attemptsSnap = await adminDB
         .collection("exam_attempts")
         .where("examId", "==", exam.id)
+        .where("status", "==", "in-progress")
         .select("status", "startedAt", "userId", "userName")
         .get();
 
@@ -74,68 +77,16 @@ export async function GET(request: NextRequest) {
         ...doc.data()
       }));
 
-      // Auto-cleanup stale attempts (expired OR inactive)
-      const staleAttempts = attemptsSnap.docs.filter(doc => {
-        const attemptData = doc.data();
-        if (attemptData.status !== "in-progress") {
-          return false;
-        }
-        const startedAt = attemptData.startedAt;
-        let startTime: number;
-        if (startedAt && typeof startedAt === 'object') {
-          if ('seconds' in startedAt) {
-            startTime = startedAt.seconds * 1000;
-          } else if ('toMillis' in startedAt) {
-            startTime = startedAt.toMillis();
-          } else {
-            startTime = new Date(startedAt).getTime();
-          }
-        } else {
-          startTime = new Date(startedAt).getTime();
-        }
-        
-        const examDurationMs = exam.durationMinutes * 60 * 1000;
-        const examExpireTime = startTime + examDurationMs;
-        const timeSinceStart = currentTime - startTime;
-        const inactiveThresholdMs = 5 * 60 * 1000; // 5 minutes
-        
-        const isExpired = currentTime > examExpireTime;
-        const isInactive = timeSinceStart > (examDurationMs + inactiveThresholdMs);
-        
-        return isExpired || isInactive;
-      });
 
-      // Update stale attempts to 'expired' status
-      if (staleAttempts.length > 0) {
-        console.log(`Auto-cleaning ${staleAttempts.length} stale attempts for exam ${exam.id}`);
-        const batch = adminDB.batch();
-        staleAttempts.forEach(doc => {
-          console.log(`Cleaning stale attempt by ${doc.data().userName}`);
-          batch.update(doc.ref, { 
-            status: 'expired',
-            expiredAt: FieldValue.serverTimestamp(),
-            autoCleanedUp: true
-          });
-        });
-        await batch.commit();
-      }
-
-      // Count unique students (not total attempts)
-      const uniqueStudents = new Set();
-      attemptsSnap.docs.forEach(doc => {
-        const attemptData = doc.data();
-        if (attemptData.userId) {
-          uniqueStudents.add(attemptData.userId);
-        }
-      });
 
       examsWithAttempts.push({
         ...exam,
-        activeAttempts: activeAttempts,
-        activeCount: activeAttempts.length,
-        totalAttempts: attemptsSnap.docs.length, // Total attempts count
-        uniqueStudents: uniqueStudents.size // Unique students count
+        activeAttempts,
+        activeCount: typeof exam.activeCount === "number" ? exam.activeCount : activeAttempts.length,
+        totalAttempts: typeof exam.totalAttempts === "number" ? exam.totalAttempts : attemptsSnap.docs.length,
+        uniqueStudents: typeof exam.uniqueStudents === "number" ? exam.uniqueStudents : activeAttempts.length
       });
+
     }
 
     return NextResponse.json({ exams: examsWithAttempts });
@@ -186,6 +137,7 @@ export async function POST(request: NextRequest) {
     if (action === "end") {
       // Get exam details for scoring
       const examSnap = await adminDB.collection("exams").doc(attempt.examId).get();
+
 
       if (!examSnap.exists) {
         return NextResponse.json(
@@ -243,7 +195,17 @@ export async function POST(request: NextRequest) {
         endedByAdmin: true, // Flag to indicate admin ended it
       });
 
+      // Denormalized counter maintenance (avoid scanning exam_attempts)
+      await adminDB.collection("exams").doc(attempt.examId).set(
+        {
+          activeCount: FieldValue.increment(-1),
+          countersUpdatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
       return NextResponse.json({
+
         message: "Exam ended successfully",
         score,
         percentage,
@@ -304,10 +266,19 @@ export async function PATCH(request: NextRequest) {
       const batch = adminDB.batch();
       let processedCount = 0;
       
+      // Decrement activeCount for each attempt moved out of in-progress.
+      // We keep it simple (best-effort). Since this is admin emergency stop,
+      // activeCount should reflect forced-submitted attempts.
+      const batchExamUpdate = adminDB.batch();
       activeAttempts.docs.forEach(doc => {
         const attempt = doc.data() as ExamAttempt;
-        
+
+        batchExamUpdate.update(adminDB.collection("exams").doc(examId), {
+          activeCount: FieldValue.increment(-1),
+        });
+
         // Calculate scores for each attempt
+
         const startTime = attempt.startedAt && typeof attempt.startedAt === 'object' && 'toMillis' in attempt.startedAt
           ? attempt.startedAt.toMillis()
           : (typeof attempt.startedAt === 'number' ? attempt.startedAt : Date.now());
@@ -357,12 +328,15 @@ export async function PATCH(request: NextRequest) {
         processedCount++;
       });
       
+      // Commit exam activeCount decrements best-effort.
+      await batchExamUpdate.commit();
       await batch.commit();
       
       return NextResponse.json({ 
         success: true, 
         message: `Exam emergency stopped. ${processedCount} student attempts force-submitted and scored.`
       });
+
     }
     
     if (action === "emergency_delete_all") {
@@ -447,8 +421,19 @@ export async function PATCH(request: NextRequest) {
             cleanedByAdmin: true
           });
         });
+
+        // Decrement activeCount by number of attempts moved out of in-progress.
+        await adminDB.collection("exams").doc(examId).set(
+          {
+            activeCount: FieldValue.increment(-staleAttempts.length),
+            countersUpdatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
         await batch.commit();
       }
+
       
       return NextResponse.json({ 
         success: true, 
