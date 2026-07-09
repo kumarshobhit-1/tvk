@@ -122,14 +122,15 @@ const QUICK_LINKS: QuickLink[] = [
 
 const spotlightPaths = [
   {
-    title: "Asst Dir Income Tax",
+    title: "Asst Dir IT",
     href: "/adit",
-    note: "focused IT leadership prep",
+    note: "UPSC IT Exam prep",
   },
   {
-    title: "RBI Grade B",
-    href: "/rbi",
-    note: "High priority finance prep",
+    title: "IBPS SO IT",
+    href: "/ibps",
+    note: "Specialist officer IT tests",
+    
   },
   {
     title: "SEBI Grade A",
