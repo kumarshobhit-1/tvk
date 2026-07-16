@@ -87,11 +87,68 @@ export default function PremiumUsersPage() {
   const [premiumUsers, setPremiumUsers] = useState<PremiumUserRow[]>([]);
   const [listSearchQuery, setListSearchQuery] = useState("");
   const [listCategoryFilter, setListCategoryFilter] = useState("ALL");
+  const [premiumStats, setPremiumStats] = useState<any>({ totalPremiumUsers: 0, categoryCounts: {} });
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const previewCategories = (previewUser?.premiumCategories || []).map((item) => normalizeCategory(item));
   const effectiveSelectedCategories =
     selectedPremiumCategories.length > 0 ? selectedPremiumCategories : previewCategories;
   const loadableSelectedCategories = effectiveSelectedCategories.filter((category) => category !== "ALL");
+
+  // Dynamic Client-side Category statistics and counts to guarantee matching alignment
+  const categoryCountsMap = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // Initialize available categories from availableCourses
+    const allCats = new Set<string>();
+    availableCourses.forEach(c => {
+      const norm = normalizeCategory(c);
+      if (norm && norm !== "ALL") allCats.add(norm);
+    });
+
+    // Add any categories present on the fetched users
+    premiumUsers.forEach(u => {
+      (u.premiumCategories || []).forEach(c => {
+        const norm = normalizeCategory(c);
+        if (norm && norm !== "ALL") allCats.add(norm);
+      });
+    });
+
+    // Initialize counts to 0 for all active categories
+    allCats.forEach(cat => {
+      counts[cat] = 0;
+    });
+
+    // Count premium users per category
+    premiumUsers.forEach(u => {
+      const userCats = (u.premiumCategories || []).map(c => normalizeCategory(c));
+      const hasAll = userCats.includes("ALL");
+      
+      allCats.forEach(cat => {
+        if (hasAll || userCats.includes(cat)) {
+          counts[cat] = (counts[cat] || 0) + 1;
+        }
+      });
+
+      if (hasAll) {
+        counts["ALL"] = (counts["ALL"] || 0) + 1;
+      }
+    });
+
+    return counts;
+  }, [availableCourses, premiumUsers]);
+
+  const normalizedFilter = normalizeCategory(listCategoryFilter || "ALL");
+  const totalPremiumUsers = premiumUsers.length;
+  const totalCategories = Object.keys(categoryCountsMap).filter(k => k !== "ALL").length;
+  const activeCategoriesCount = Object.keys(categoryCountsMap)
+    .filter(k => k !== "ALL")
+    .filter(k => categoryCountsMap[k] > 0).length;
+
+  const selectedCategoryCount = normalizedFilter === "ALL"
+    ? totalPremiumUsers
+    : (categoryCountsMap[normalizedFilter] || 0);
 
   const listCategoryOptions = useMemo(() => {
     const categoriesFromUsers = premiumUsers.flatMap((u) =>
@@ -128,6 +185,16 @@ export default function PremiumUsersPage() {
       return searchableText.includes(query);
     });
   }, [premiumUsers, listSearchQuery, listCategoryFilter]);
+
+  const totalPages = Math.ceil(filteredPremiumUsers.length / ITEMS_PER_PAGE);
+  const paginatedPremiumUsers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredPremiumUsers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredPremiumUsers, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [listSearchQuery, listCategoryFilter]);
 
   const addCourseToSelection = (course: string) => {
     const normalized = normalizeCategory(course);
@@ -205,6 +272,7 @@ export default function PremiumUsersPage() {
 
       const data = await res.json();
       setPremiumUsers(data.users || []);
+      setPremiumStats(data.stats || { totalPremiumUsers: 0, categoryCounts: {} });
     } catch {
       toast({
         title: "Error",
@@ -529,6 +597,58 @@ export default function PremiumUsersPage() {
         </Button>
       </div>
 
+      {/* Admin Dashboard Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border/60 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Premium Users</p>
+              <p className="mt-2 text-2xl font-extrabold text-primary">{totalPremiumUsers}</p>
+            </div>
+            <div className="rounded-lg bg-primary/10 p-3 text-primary">
+              <Crown className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Categories</p>
+              <p className="mt-2 text-2xl font-extrabold text-sky-600 dark:text-sky-400">{totalCategories}</p>
+            </div>
+            <div className="rounded-lg bg-sky-500/10 p-3 text-sky-600">
+              <UserRound className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Selected Category Users</p>
+              <p className="mt-2 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{selectedCategoryCount}</p>
+              <p className="text-[10px] text-muted-foreground mt-1 truncate max-w-[160px]">{listCategoryFilter === "ALL" ? "All Courses" : listCategoryFilter}</p>
+            </div>
+            <div className="rounded-lg bg-emerald-500/10 p-3 text-emerald-600">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Categories</p>
+              <p className="mt-2 text-2xl font-extrabold text-amber-600 dark:text-amber-400">{activeCategoriesCount}</p>
+            </div>
+            <div className="rounded-lg bg-amber-500/10 p-3 text-amber-600">
+              <Crown className="h-5 w-5 animate-pulse" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -778,100 +898,208 @@ export default function PremiumUsersPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5" /> Current Premium Users
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="md:col-span-2">
-              <Label htmlFor="premium-users-list-search">Search Users</Label>
-              <Input
-                id="premium-users-list-search"
-                placeholder="Search by name, email, or course"
-                value={listSearchQuery}
-                onChange={(e) => setListSearchQuery(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="premium-users-category-filter">Category Filter</Label>
-              <Select value={listCategoryFilter} onValueChange={setListCategoryFilter}>
-                <SelectTrigger id="premium-users-category-filter">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Categories</SelectItem>
-                  {listCategoryOptions.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3">
+          <Card className="border-border/60 shadow-sm bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" /> 
+                  Current Premium Users ({totalPremiumUsers})
+                </div>
+                <div className="flex items-center gap-2">
+                  {listCategoryFilter !== "ALL" && (
+                    <Badge variant="outline" className="text-xs">
+                      {listCategoryFilter}: {selectedCategoryCount} {selectedCategoryCount === 1 ? 'User' : 'Users'}
+                    </Badge>
+                  )}
+                  {(listCategoryFilter !== "ALL" || listSearchQuery !== "") && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => { setListCategoryFilter("ALL"); setListSearchQuery(""); }}
+                      className="h-7 text-[10px] px-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="md:col-span-2">
+                  <Label htmlFor="premium-users-list-search">Search Users</Label>
+                  <Input
+                    id="premium-users-list-search"
+                    placeholder="Search by name, email, or course"
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="premium-users-category-filter">Category Filter</Label>
+                  <Select value={listCategoryFilter} onValueChange={setListCategoryFilter}>
+                    <SelectTrigger id="premium-users-category-filter">
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Categories</SelectItem>
+                      {listCategoryOptions.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPremiumUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    No users match your search/filter
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPremiumUsers.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>
-                      <div className="font-medium">{u.displayName || "Unnamed"}</div>
-                      <div className="text-xs text-muted-foreground">{u.email || "No email"}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Courses: {formatPremiumCategories(u.premiumCategories)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {u.isPremium ? <Badge>Premium</Badge> : <Badge variant="secondary">Non Premium</Badge>}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatPremiumUpdatedAt(u.premiumUpdatedAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={refreshing}
-                          onClick={() => handleEditFromTable(u)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={refreshing}
-                          onClick={() => handleInlineToggle(u, !u.isPremium)}
-                        >
-                          {u.isPremium ? "Remove" : "Make Premium"}
-                        </Button>
-                      </div>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Updated</TableHead>
+                    <TableHead>Action</TableHead>
                   </TableRow>
-                ))
+                </TableHeader>
+                <TableBody>
+                  {filteredPremiumUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                        No users match your search/filter
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedPremiumUsers.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell>
+                          <div className="font-medium">{u.displayName || "Unnamed"}</div>
+                          <div className="text-xs text-muted-foreground">{u.email || "No email"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Courses: {formatPremiumCategories(u.premiumCategories)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {u.isPremium ? <Badge>Premium</Badge> : <Badge variant="secondary">Non Premium</Badge>}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatPremiumUpdatedAt(u.premiumUpdatedAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={refreshing}
+                              onClick={() => handleEditFromTable(u)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={refreshing}
+                              onClick={() => handleInlineToggle(u, !u.isPremium)}
+                            >
+                              {u.isPremium ? "Remove" : "Make Premium"}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 border-t pt-4">
+                  <div className="text-xs text-muted-foreground">
+                    Showing {Math.min(filteredPremiumUsers.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} to{" "}
+                    {Math.min(filteredPremiumUsers.length, currentPage * ITEMS_PER_PAGE)} of{" "}
+                    {filteredPremiumUsers.length} premium users
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-1">
+          <Card className="border-border/60 shadow-sm bg-card hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Crown className="h-4 w-4 text-amber-500 animate-bounce" />
+                Category Statistics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                {/* Show All Categories / Clear Filter Button */}
+                <button 
+                  onClick={() => setListCategoryFilter("ALL")}
+                  className={`w-full flex justify-between items-center text-xs p-2 rounded-lg border text-left transition-all hover:bg-muted/50 ${
+                    listCategoryFilter === "ALL" 
+                      ? "bg-primary/5 border-primary/20 font-bold text-primary" 
+                      : "border-transparent text-muted-foreground"
+                  }`}
+                >
+                  <span className="font-semibold uppercase">Show All Categories</span>
+                  <Badge variant={listCategoryFilter === "ALL" ? "default" : "secondary"}>
+                    {totalPremiumUsers} Users
+                  </Badge>
+                </button>
+
+                {Object.keys(categoryCountsMap).length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No active categories</p>
+                ) : (
+                  Object.entries(categoryCountsMap)
+                    .filter(([category]) => category !== "ALL")
+                    .map(([category, count]) => (
+                      <button 
+                        key={category} 
+                        onClick={() => setListCategoryFilter(category === "ALL" ? "ALL" : category)}
+                        className={`w-full flex justify-between items-center text-xs p-2 rounded-lg border text-left transition-all hover:bg-muted/50 ${
+                          category === normalizedFilter 
+                            ? "bg-primary/5 border-primary/20 font-bold text-primary" 
+                            : "border-transparent"
+                        }`}
+                      >
+                        <span className="truncate max-w-[130px] uppercase">{category.toLowerCase()}</span>
+                        <div className="flex items-center gap-1 shrink-0 ml-auto">
+                          <span className="text-muted-foreground/60 mr-1">.......</span>
+                          <Badge variant={category === normalizedFilter ? "default" : "secondary"}>
+                            {count} {count === 1 ? "User" : "Users"}
+                          </Badge>
+                        </div>
+                      </button>
+                    ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

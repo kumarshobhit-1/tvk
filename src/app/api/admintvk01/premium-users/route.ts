@@ -110,7 +110,47 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const premiumSnap = await adminDB.collection("users").where("isPremium", "==", true).limit(100).get();
+    // Fetch cached premium stats or bootstrap them
+    const statsRef = adminDB.collection("system_config").doc("premium_stats");
+    const statsSnap = await statsRef.get();
+    
+    let statsData: any = null;
+    
+    if (statsSnap.exists && statsSnap.data()?.initialized === true) {
+      statsData = statsSnap.data();
+    } else {
+      // One-off bootstrap scan to build aggregated stats
+      const premiumUsersSnap = await adminDB.collection("users")
+        .where("isPremium", "==", true)
+        .select("premiumCategories")
+        .get();
+      
+      let totalPremiumUsers = 0;
+      const categoryCounts: Record<string, number> = {};
+      
+      premiumUsersSnap.docs.forEach((doc) => {
+        totalPremiumUsers++;
+        const data = doc.data() || {};
+        const categories = Array.isArray(data.premiumCategories) ? data.premiumCategories : [];
+        categories.forEach((cat: string) => {
+          const norm = String(cat || "").trim().toUpperCase();
+          if (norm) {
+            categoryCounts[norm] = (categoryCounts[norm] || 0) + 1;
+          }
+        });
+      });
+      
+      statsData = {
+        totalPremiumUsers,
+        categoryCounts,
+        initialized: true,
+        updatedAt: new Date(),
+      };
+      
+      await statsRef.set(statsData);
+    }
+
+    const premiumSnap = await adminDB.collection("users").where("isPremium", "==", true).get();
     const users = await Promise.all(premiumSnap.docs.map(async (doc) => {
       const data = doc.data() || {};
 
@@ -138,7 +178,14 @@ export async function GET(request: NextRequest) {
       };
     }));
 
-    return NextResponse.json({ users, total: users.length });
+    return NextResponse.json({ 
+      users, 
+      total: users.length,
+      stats: {
+        totalPremiumUsers: statsData.totalPremiumUsers || 0,
+        categoryCounts: statsData.categoryCounts || {},
+      }
+    });
   } catch (error) {
     console.error("Error fetching premium users:", error);
     return NextResponse.json({ error: "Failed to fetch premium users" }, { status: 500 });
@@ -215,8 +262,10 @@ export async function PATCH(request: NextRequest) {
     await ensured.userRef.update(updatePayload);
 
     const statsRef = adminDB.collection("system_config").doc("platform_stats");
+    const premiumStatsRef = adminDB.collection("system_config").doc("premium_stats");
 
     await adminDB.runTransaction(async (transaction) => {
+      // 1. Fetch platform_stats
       const statsSnap = await transaction.get(statsRef);
       let premiumUsersCount = Number(statsSnap.data()?.premiumUsersCount || 0);
       const statsInitialized = statsSnap.exists && statsSnap.data()?.premiumUsersInitialized === true;
@@ -225,24 +274,105 @@ export async function PATCH(request: NextRequest) {
         const premiumUsersSnap = await transaction.get(
           adminDB.collection("users").where("isPremium", "==", true).select("isPremium")
         );
-
         premiumUsersCount = premiumUsersSnap.size;
       }
 
-      const wasPremium = Boolean(ensured.userData?.isPremium || ensured.userData?.premium);
+      // 2. Fetch premium_stats
+      const premiumStatsSnap = await transaction.get(premiumStatsRef);
+      let totalPremiumUsers = Number(premiumStatsSnap.data()?.totalPremiumUsers || 0);
+      let categoryCounts = premiumStatsSnap.data()?.categoryCounts || {};
+      const premiumStatsInitialized = premiumStatsSnap.exists && premiumStatsSnap.data()?.initialized === true;
 
-      if (isPremium && !wasPremium) {
-        premiumUsersCount += 1;
-      } else if (!isPremium && wasPremium) {
-        premiumUsersCount = Math.max(0, premiumUsersCount - 1);
+      if (!premiumStatsInitialized) {
+        // One-off load inside transaction if not initialized
+        const pUsers = await transaction.get(
+          adminDB.collection("users").where("isPremium", "==", true).select("premiumCategories")
+        );
+        totalPremiumUsers = pUsers.size;
+        categoryCounts = {};
+        pUsers.docs.forEach((doc) => {
+          const data = doc.data() || {};
+          const categories = Array.isArray(data.premiumCategories) ? data.premiumCategories : [];
+          categories.forEach((cat: string) => {
+            const norm = String(cat || "").trim().toUpperCase();
+            if (norm) {
+              categoryCounts[norm] = (categoryCounts[norm] || 0) + 1;
+            }
+          });
+        });
       }
 
+      const wasPremium = Boolean(ensured.userData?.isPremium || ensured.userData?.premium);
+      const oldCategories = Array.isArray(ensured.userData?.premiumCategories)
+        ? ensured.userData.premiumCategories.map((c: string) => String(c || "").trim().toUpperCase()).filter(Boolean)
+        : [];
+      
+      const newCategories = isPremium
+        ? (grantAllAccess ? ["ALL"] : normalizedCategories)
+        : [];
+
+      // Create a clean copy of category counts to update
+      const updatedCategoryCounts = { ...categoryCounts };
+
+      if (isPremium && !wasPremium) {
+        // Non-premium to premium
+        premiumUsersCount += 1;
+        totalPremiumUsers += 1;
+        newCategories.forEach((cat: string) => {
+          updatedCategoryCounts[cat] = (updatedCategoryCounts[cat] || 0) + 1;
+        });
+      } else if (!isPremium && wasPremium) {
+        // Premium to non-premium
+        premiumUsersCount = Math.max(0, premiumUsersCount - 1);
+        totalPremiumUsers = Math.max(0, totalPremiumUsers - 1);
+        oldCategories.forEach((cat: string) => {
+          if (updatedCategoryCounts[cat] !== undefined) {
+            updatedCategoryCounts[cat] = Math.max(0, updatedCategoryCounts[cat] - 1);
+            if (updatedCategoryCounts[cat] === 0) {
+              delete updatedCategoryCounts[cat];
+            }
+          }
+        });
+      } else if (isPremium && wasPremium) {
+        // Premium categories modification
+        // Increment newly added categories
+        newCategories.forEach((cat: string) => {
+          if (!oldCategories.includes(cat)) {
+            updatedCategoryCounts[cat] = (updatedCategoryCounts[cat] || 0) + 1;
+          }
+        });
+        // Decrement removed categories
+        oldCategories.forEach((cat: string) => {
+          if (!newCategories.includes(cat)) {
+            if (updatedCategoryCounts[cat] !== undefined) {
+              updatedCategoryCounts[cat] = Math.max(0, updatedCategoryCounts[cat] - 1);
+              if (updatedCategoryCounts[cat] === 0) {
+                delete updatedCategoryCounts[cat];
+              }
+            }
+          }
+        });
+      }
+
+      // Write platform stats changes
       transaction.set(
         statsRef,
         {
           premiumUsersCount,
           premiumUsersInitialized: true,
           premiumUsersUpdatedAt: new Date(),
+        },
+        { merge: true }
+      );
+
+      // Write premium stats changes
+      transaction.set(
+        premiumStatsRef,
+        {
+          totalPremiumUsers: Math.max(0, totalPremiumUsers),
+          categoryCounts: updatedCategoryCounts,
+          initialized: true,
+          updatedAt: new Date(),
         },
         { merge: true }
       );
