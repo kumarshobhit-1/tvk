@@ -43,14 +43,12 @@ export function Hero() {
             </div>
 
             <div className="hero-cta">
-              <a
+              <Link
                 className="btn btn-gold"
-                href="https://thevictorykey.com/contact"
-                // target="_blank"
-                rel="noopener noreferrer"
+                href="/ibps/course-overview"
               >
                 Join the IT Officer course
-              </a>
+              </Link>
 
               <a
                 className="btn btn-outline"

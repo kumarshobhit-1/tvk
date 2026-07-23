@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { ArrowRight, Home, Layers3 } from "lucide-react";
 import { Hero } from "@/components/ibps/Hero";
@@ -52,6 +52,13 @@ const PAGE_KEYWORDS = [
 
 export const dynamic = "force-static";
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+  ],
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(IBPS_SITE.siteUrl),
@@ -96,10 +103,6 @@ export async function generateMetadata(): Promise<Metadata> {
       description: PAGE_DESCRIPTION,
       images: [IBPS_SITE.ogImageUrl],
     },
-    themeColor: [
-      { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-      { media: "(prefers-color-scheme: dark)", color: "#020617" },
-    ],
     icons: {
       icon: "/favicon.ico",
       shortcut: "/favicon.ico",
