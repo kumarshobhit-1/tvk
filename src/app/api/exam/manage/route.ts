@@ -5,9 +5,7 @@ import type { ExamAttempt, Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
-  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
-  if (nm >= 1) return nm;
-  return nm * questionMarks;
+  return typeof negativeMarking === 'number' ? negativeMarking : 0;
 }
 
 // Get all published exams (admin panel)
@@ -156,6 +154,29 @@ export async function POST(request: NextRequest) {
       // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
       const questionsToScore = (attempt as any).questionsSnapshot || exam.questions;
 
+      const sectionsSnapshot = (attempt as any).sectionsSnapshot || exam.sections || [];
+
+      const getQuestionScoring = (questionId: string, q: any) => {
+        let correctMarks = q.marks ?? 1;
+        let negativeMarking = exam.negativeMarking ?? 0;
+
+        const section = sectionsSnapshot.find((s: any) => {
+          const qIds = s.questionIds || s.questions?.map((qi: any) => qi.id) || [];
+          return qIds.includes(questionId);
+        });
+
+        if (section) {
+          if (typeof section.correctMarks === 'number') {
+            correctMarks = section.correctMarks;
+          }
+          if (typeof section.negativeMarking === 'number') {
+            negativeMarking = section.negativeMarking;
+          }
+        }
+
+        return { correctMarks, negativeMarking };
+      };
+
       // Calculate scores
       let score = 0;
       let correctAnswers = 0;
@@ -166,14 +187,16 @@ export async function POST(request: NextRequest) {
         const question = questionsToScore.find((q: any) => q.id === answer.questionId);
         if (!question) return;
 
+        const { correctMarks, negativeMarking } = getQuestionScoring(answer.questionId, question);
+
         if (!answer.selectedOptionId) {
           unanswered++;
         } else if (answer.selectedOptionId === question.correctOptionId) {
           correctAnswers++;
-          score += question.marks;
+          score += correctMarks;
         } else {
           wrongAnswers++;
-          score -= computePenalty(exam.negativeMarking, question.marks);
+          score -= computePenalty(negativeMarking, correctMarks);
         }
       });
 
@@ -288,6 +311,29 @@ export async function PATCH(request: NextRequest) {
         // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
         const questionsToScore = (attempt as any).questionsSnapshot || exam.questions;
 
+        const sectionsSnapshot = (attempt as any).sectionsSnapshot || exam.sections || [];
+
+        const getQuestionScoring = (questionId: string, q: any) => {
+          let correctMarks = q.marks ?? 1;
+          let negativeMarking = exam.negativeMarking ?? 0;
+
+          const section = sectionsSnapshot.find((s: any) => {
+            const qIds = s.questionIds || s.questions?.map((qi: any) => qi.id) || [];
+            return qIds.includes(questionId);
+          });
+
+          if (section) {
+            if (typeof section.correctMarks === 'number') {
+              correctMarks = section.correctMarks;
+            }
+            if (typeof section.negativeMarking === 'number') {
+              negativeMarking = section.negativeMarking;
+            }
+          }
+
+          return { correctMarks, negativeMarking };
+        };
+
         let score = 0;
         let correctAnswers = 0;
         let wrongAnswers = 0;
@@ -297,14 +343,16 @@ export async function PATCH(request: NextRequest) {
           const question = questionsToScore.find((q: any) => q.id === answer.questionId);
           if (!question) return;
 
+          const { correctMarks, negativeMarking } = getQuestionScoring(answer.questionId, question);
+
           if (!answer.selectedOptionId) {
             unanswered++;
           } else if (answer.selectedOptionId === question.correctOptionId) {
             correctAnswers++;
-            score += question.marks;
+            score += correctMarks;
           } else {
             wrongAnswers++;
-            score -= computePenalty(exam.negativeMarking, question.marks);
+            score -= computePenalty(negativeMarking, correctMarks);
           }
         });
 

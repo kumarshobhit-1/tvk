@@ -41,9 +41,12 @@ function toPublicExamSummary(id: string, examData: any) {
           id: s.id || `s${idx+1}`,
           title: s.title || `Section ${idx+1}`,
           durationMinutes: s.durationMinutes || Math.round((examData.durationMinutes || 0) / (examData.sections.length || 1)),
-          questionCount: s.questionIds ? s.questionIds.length : (s.questions ? s.questions.length : 0)
+          questionCount: s.questionIds ? s.questionIds.length : (s.questions ? s.questions.length : 0),
+          correctMarks: s.correctMarks !== undefined ? s.correctMarks : null,
+          negativeMarking: s.negativeMarking !== undefined ? s.negativeMarking : null,
+          passingMarks: s.passingMarks !== undefined ? s.passingMarks : null,
         }))
-      : [{ id: 's1', title: 'Section 1', durationMinutes: examData.durationMinutes || 0, questionCount: examData.questions?.length || 0 }],
+      : [{ id: 's1', title: 'Section 1', durationMinutes: examData.durationMinutes || 0, questionCount: examData.questions?.length || 0, correctMarks: null, negativeMarking: null, passingMarks: null }],
     negativeMarking: examData.negativeMarking,
     instructions: examData.instructions,
     isPublished: examData.isPublished,

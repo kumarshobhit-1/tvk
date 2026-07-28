@@ -138,12 +138,13 @@ export async function POST(request: NextRequest) {
         const questionsForSection = qList.map((qid: string) => {
           const q = exam.questions.find((qq: any) => qq.id === qid);
           if (!q) return null;
+          const qMarks = typeof s.correctMarks === 'number' ? s.correctMarks : (q.marks || 1);
           return {
             id: q.id,
             text: q.text,
             imageUrl: q.imageUrl,
             options: q.options,
-            marks: q.marks,
+            marks: qMarks,
             difficulty: q.difficulty,
             subject: q.subject,
           };
@@ -153,6 +154,9 @@ export async function POST(request: NextRequest) {
           id: s.id || `s-${Math.random().toString(36).slice(2,8)}`,
           title: s.title || 'Section',
           durationMinutes: s.durationMinutes || 0,
+          correctMarks: typeof s.correctMarks === 'number' ? s.correctMarks : null,
+          negativeMarking: typeof s.negativeMarking === 'number' ? s.negativeMarking : null,
+          passingMarks: typeof s.passingMarks === 'number' ? s.passingMarks : null,
           questions: questionsForSection,
         };
       });
@@ -186,8 +190,26 @@ export async function POST(request: NextRequest) {
 
     for (const s of sectionsData) {
       const qIds = (s as any).questionIds || ((s as any).questions && (s as any).questions.map((q:any) => q.id)) || [];
-      const questionsForSection = qIds.map((qid: string) => exam.questions.find((qq: any) => qq.id === qid)).filter(Boolean);
-      sectionsSnapshot.push({ id: (s as any).id || `s-${Math.random().toString(36).slice(2,8)}`, title: (s as any).title || 'Section', durationMinutes: (s as any).durationMinutes || 0, questions: questionsForSection.map((q:any) => ({ id: q.id, marks: q.marks, imageUrl: q.imageUrl ?? null })) });
+      const questionsForSection = qIds.map((qid: string) => {
+        const q = exam.questions.find((qq: any) => qq.id === qid);
+        if (!q) return null;
+        const qMarks = typeof (s as any).correctMarks === 'number' ? (s as any).correctMarks : (q.marks || 1);
+        return {
+          ...q,
+          marks: qMarks,
+          negativeMarking: typeof (s as any).negativeMarking === 'number' ? (s as any).negativeMarking : null
+        };
+      }).filter(Boolean);
+
+      sectionsSnapshot.push({
+        id: (s as any).id || `s-${Math.random().toString(36).slice(2,8)}`,
+        title: (s as any).title || 'Section',
+        durationMinutes: (s as any).durationMinutes || 0,
+        correctMarks: typeof (s as any).correctMarks === 'number' ? (s as any).correctMarks : null,
+        negativeMarking: typeof (s as any).negativeMarking === 'number' ? (s as any).negativeMarking : null,
+        passingMarks: typeof (s as any).passingMarks === 'number' ? (s as any).passingMarks : null,
+        questions: questionsForSection.map((q:any) => ({ id: q.id, marks: q.marks, imageUrl: q.imageUrl ?? null }))
+      });
       questions = questions.concat(questionsForSection);
     }
 
@@ -214,6 +236,7 @@ export async function POST(request: NextRequest) {
       correctOptionId: q.correctOptionId,
       explanation: q.explanation ?? null,
       marks: q.marks,
+      negativeMarking: q.negativeMarking ?? null,
       difficulty: q.difficulty,
       subject: q.subject ?? null,
     }));

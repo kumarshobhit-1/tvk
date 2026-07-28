@@ -39,20 +39,57 @@ function ensureQuestionIds(items: ExamQuestion[] = []): ExamQuestion[] {
   }));
 }
 
-function ensureSectionsForLegacyExam(existingSections: any[] = [], examQuestions: ExamQuestion[] = [], fallbackDuration = 60) {
-  if (Array.isArray(existingSections) && existingSections.length > 0) return existingSections;
+function ensureSectionsForLegacyExam(
+  existingSections: any[] = [],
+  examQuestions: ExamQuestion[] = [],
+  fallbackDuration = 60,
+  examPassingMarks = 40,
+  examNegativeMarking = 0.25
+) {
+  let sections = [...existingSections];
 
-  const questionIds = examQuestions.map((q) => q.id).filter(Boolean);
-  if (questionIds.length === 0) return [];
+  if (!Array.isArray(sections) || sections.length === 0) {
+    const questionIds = examQuestions.map((q) => q.id).filter(Boolean);
+    sections = [
+      {
+        id: "default-section",
+        title: "General",
+        durationMinutes: fallbackDuration,
+        questionIds,
+      },
+    ];
+  }
 
-  return [
-    {
-      id: "default-section",
-      title: "General",
-      durationMinutes: fallbackDuration,
-      questionIds,
-    },
-  ];
+  return sections.map((s, index, arr) => {
+    let correctMarks = s.correctMarks;
+    if (correctMarks === undefined || correctMarks === null) {
+      const firstQId = s.questionIds?.[0];
+      const firstQ = firstQId ? examQuestions.find((q) => q.id === firstQId) : null;
+      correctMarks = firstQ?.marks !== undefined && firstQ?.marks !== null ? firstQ.marks : 1;
+    }
+
+    let negativeMarking = s.negativeMarking;
+    if (negativeMarking === undefined || negativeMarking === null) {
+      negativeMarking = typeof examNegativeMarking === "number" ? examNegativeMarking : 0.25;
+    }
+
+    let passingMarks = s.passingMarks;
+    if (passingMarks === undefined || passingMarks === null) {
+      if (arr.length <= 1) {
+        passingMarks = typeof examPassingMarks === "number" ? examPassingMarks : 40;
+      } else {
+        const totalSections = arr.length;
+        passingMarks = Math.round((typeof examPassingMarks === "number" ? examPassingMarks : 40) / totalSections);
+      }
+    }
+
+    return {
+      ...s,
+      correctMarks,
+      negativeMarking,
+      passingMarks,
+    };
+  });
 }
 
 export default function EditExamPage() {
@@ -204,7 +241,9 @@ export default function EditExamPage() {
       const normalizedSections = ensureSectionsForLegacyExam(
         exam.sections || [],
         normalizedQuestions,
-        typeof exam.durationMinutes === "number" && exam.durationMinutes > 0 ? exam.durationMinutes : 60
+        typeof exam.durationMinutes === "number" && exam.durationMinutes > 0 ? exam.durationMinutes : 60,
+        exam.passingMarks,
+        exam.negativeMarking
       );
 
       setQuestions(normalizedQuestions);
@@ -401,6 +440,38 @@ export default function EditExamPage() {
       return false;
     }
 
+    for (let si = 0; si < sections.length; si++) {
+      const s = sections[si];
+      if (!s.title || !s.title.trim()) {
+        toast({ title: "Validation Error", description: `Section ${si + 1} must have a valid title`, variant: "destructive" });
+        return false;
+      }
+      if (!Array.isArray(s.questionIds) || s.questionIds.length === 0) {
+        toast({ title: "Validation Error", description: `Section "${s.title || si + 1}" must have at least one question`, variant: "destructive" });
+        return false;
+      }
+      if (typeof s.durationMinutes !== 'number' || s.durationMinutes <= 0) {
+        toast({ title: "Validation Error", description: `Section "${s.title || si + 1}" must have a valid duration in minutes`, variant: "destructive" });
+        return false;
+      }
+      if (typeof s.correctMarks !== 'number' || s.correctMarks <= 0) {
+        toast({
+          title: "Validation Error",
+          description: `Correct marks for section "${s.title || si + 1}" is required and must be greater than 0`,
+          variant: "destructive"
+        });
+        return false;
+      }
+      if (typeof s.passingMarks !== 'number' || s.passingMarks < 0) {
+        toast({
+          title: "Validation Error",
+          description: `Passing marks for section "${s.title || si + 1}" is required and must be 0 or greater`,
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+
     const allSectionQIds = sections.flatMap((s: any) => s.questionIds || []);
     if (allSectionQIds.length === 0) {
       toast({ title: "Validation Error", description: "Sections must include question assignments", variant: "destructive" });
@@ -437,7 +508,35 @@ export default function EditExamPage() {
 
     setSaving(true);
     try {
-      const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
+      const normalizedSections = sections.map((section) => ({
+        ...section,
+        durationMinutes: section.durationMinutes,
+        questionIds: Array.isArray(section.questionIds) ? section.questionIds.filter(Boolean) : [],
+        correctMarks: typeof section.correctMarks === 'number' ? section.correctMarks : null,
+        negativeMarking: typeof section.negativeMarking === 'number' ? section.negativeMarking : null,
+        passingMarks: typeof section.passingMarks === 'number' ? section.passingMarks : null,
+      }));
+
+      // Calculate total marks: sum of section.questionIds.length * correctMarks if defined, otherwise question.marks
+      const computedTotalMarks = normalizedSections.reduce((sum, s) => {
+        const qCount = s.questionIds?.length || 0;
+        if (typeof s.correctMarks === 'number') {
+          return sum + (qCount * s.correctMarks);
+        }
+        const sectionQuestions = s.questionIds?.map((qid: any) => questions.find((q: any) => q.id === qid)).filter(Boolean) || [];
+        return sum + sectionQuestions.reduce((qSum: number, q: any) => qSum + (q.marks || 1), 0);
+      }, 0);
+
+      const updatedQuestions = questions.map((q) => {
+        const section = normalizedSections.find((s) => s.questionIds.includes(q.id));
+        const marks = section && typeof section.correctMarks === 'number' ? section.correctMarks : (q.marks || 1);
+        return { ...q, marks };
+      });
+
+      // Compute overall passingMarks as sum of section passingMarks, falling back to state passingMarks if zero
+      const computedPassingMarks = normalizedSections.reduce((sum, s) => {
+        return sum + (typeof s.passingMarks === 'number' ? s.passingMarks : 0);
+      }, 0) || passingMarks;
 
       const examData = {
         examId,
@@ -447,15 +546,15 @@ export default function EditExamPage() {
         isPremium,
         isLocked,
         durationMinutes: totalSectionDuration,
-        totalMarks,
-        passingMarks,
+        totalMarks: computedTotalMarks,
+        passingMarks: computedPassingMarks,
         negativeMarking,
         shuffleQuestions,
         shuffleOptions,
         isPublished,
         instructions,
-        questions,
-        sections,
+        questions: updatedQuestions,
+        sections: normalizedSections,
       };
 
       const response = await authenticatedFetch("/api/exam/admintvk01", {
@@ -488,7 +587,34 @@ export default function EditExamPage() {
   };
 
   const downloadExamJSON = () => {
-    const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+    const normalizedSections = sections.map((section) => ({
+      ...section,
+      durationMinutes: section.durationMinutes,
+      questionIds: Array.isArray(section.questionIds) ? section.questionIds.filter(Boolean) : [],
+      correctMarks: typeof section.correctMarks === 'number' ? section.correctMarks : null,
+      negativeMarking: typeof section.negativeMarking === 'number' ? section.negativeMarking : null,
+      passingMarks: typeof section.passingMarks === 'number' ? section.passingMarks : null,
+    }));
+
+    const computedTotalMarks = normalizedSections.reduce((sum, s) => {
+      const qCount = s.questionIds?.length || 0;
+      if (typeof s.correctMarks === 'number') {
+        return sum + (qCount * s.correctMarks);
+      }
+      const sectionQuestions = s.questionIds?.map((qid: any) => questions.find((q: any) => q.id === qid)).filter(Boolean) || [];
+      return sum + sectionQuestions.reduce((qSum: number, q: any) => qSum + (q.marks || 1), 0);
+    }, 0);
+
+    const updatedQuestions = questions.map((q) => {
+      const section = normalizedSections.find((s) => s.questionIds.includes(q.id));
+      const marks = section && typeof section.correctMarks === 'number' ? section.correctMarks : (q.marks || 1);
+      return { ...q, marks };
+    });
+
+    const computedPassingMarks = normalizedSections.reduce((sum, s) => {
+      return sum + (typeof s.passingMarks === 'number' ? s.passingMarks : 0);
+    }, 0) || passingMarks;
+
     const examData = {
       examId,
       title,
@@ -497,15 +623,15 @@ export default function EditExamPage() {
       isPremium,
       isLocked,
       durationMinutes: totalSectionDuration,
-      totalMarks,
-      passingMarks,
+      totalMarks: computedTotalMarks,
+      passingMarks: computedPassingMarks,
       negativeMarking,
       shuffleQuestions,
       shuffleOptions,
       isPublished,
       instructions,
-      questions,
-      sections,
+      questions: updatedQuestions,
+      sections: normalizedSections,
     };
 
     const blob = new Blob([JSON.stringify(examData, null, 2)], { type: "application/json" });
@@ -521,21 +647,43 @@ export default function EditExamPage() {
 
   const copyExam = async () => {
     try {
+      const normalizedSections = sections.map((section) => ({
+        ...section,
+        durationMinutes: section.durationMinutes,
+        questionIds: Array.isArray(section.questionIds) ? section.questionIds.filter(Boolean) : [],
+        correctMarks: typeof section.correctMarks === 'number' ? section.correctMarks : null,
+        negativeMarking: typeof section.negativeMarking === 'number' ? section.negativeMarking : null,
+        passingMarks: typeof section.passingMarks === 'number' ? section.passingMarks : null,
+      }));
+
       // Create fresh IDs for questions and sections
       const idMap: Record<string, string> = {};
       const newQuestions = questions.map((q) => {
         const newId = `copy_q_${Math.random().toString(36).slice(2,9)}_${Date.now()}`;
         idMap[q.id] = newId;
-        return { ...q, id: newId };
+        const section = normalizedSections.find((s) => s.questionIds.includes(q.id));
+        const marks = section && typeof section.correctMarks === 'number' ? section.correctMarks : (q.marks || 1);
+        return { ...q, id: newId, marks };
       });
 
-      const newSections = sections.map((s) => ({
+      const newSections = normalizedSections.map((s) => ({
         ...s,
         id: `copy_s_${Math.random().toString(36).slice(2,9)}_${Date.now()}`,
         questionIds: (s.questionIds || []).map((qid: string) => idMap[qid] || qid),
       }));
 
-      const totalMarks = newQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+      const computedTotalMarks = newSections.reduce((sum, s) => {
+        const qCount = s.questionIds?.length || 0;
+        if (typeof s.correctMarks === 'number') {
+          return sum + (qCount * s.correctMarks);
+        }
+        const sectionQuestions = s.questionIds?.map((qid: any) => newQuestions.find((q: any) => q.id === qid)).filter(Boolean) || [];
+        return sum + sectionQuestions.reduce((qSum: number, q: any) => qSum + (q.marks || 1), 0);
+      }, 0);
+
+      const computedPassingMarks = newSections.reduce((sum, s) => {
+        return sum + (typeof s.passingMarks === 'number' ? s.passingMarks : 0);
+      }, 0) || passingMarks;
 
       const payload = {
         title: `Copy of ${title}`,
@@ -543,8 +691,8 @@ export default function EditExamPage() {
         category,
         isPremium,
         durationMinutes: totalSectionDuration,
-        totalMarks,
-        passingMarks,
+        totalMarks: computedTotalMarks,
+        passingMarks: computedPassingMarks,
         negativeMarking,
         shuffleQuestions,
         shuffleOptions,
@@ -711,34 +859,9 @@ export default function EditExamPage() {
                     </p>
                   </div>
                 </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="passing">Passing Marks</Label>
-                    <Input
-                      id="passing"
-                      type="number"
-                      min="0"
-                      value={passingMarks}
-                      onChange={(e) => setPassingMarks(parseInt(e.target.value) || 0)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="negative">Negative Marking</Label>
-                    <Input
-                      id="negative"
-                      type="number"
-                      min="0"
-                      step="0.25"
-                      value={negativeMarking}
-                      onChange={(e) => setNegativeMarking(parseFloat(e.target.value) || 0)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Fraction of marks deducted for wrong answers
-                    </p>
-                  </div>
-                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Passing marks and negative marking settings are configured per-section inside the <strong>Sections</strong> card below.
+                </p>
               </CardContent>
             </Card>
 
@@ -824,10 +947,14 @@ export default function EditExamPage() {
                       return;
                     }
 
+                    const targetSectionObj = sections.find((s) => s.id === target);
+                    const targetSectionQIds = targetSectionObj?.questionIds || [];
+
                     setQuestions((currentQuestions) => {
-                      const newQuestions = mode === "replace"
-                        ? importedQuestions
-                        : [...currentQuestions, ...importedQuestions];
+                      const preservedQuestions = mode === "replace"
+                        ? currentQuestions.filter((q) => !targetSectionQIds.includes(q.id))
+                        : currentQuestions;
+                      const newQuestions = [...preservedQuestions, ...importedQuestions];
                       setTimeout(() => {
                         questionsContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                       }, 100);
@@ -851,199 +978,229 @@ export default function EditExamPage() {
               </div>
             </div>
 
-            {questions.map((question, qIndex) => (
-              <Card id={`question-card-${question.id}`} key={question.id} className="question-card">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Question {qIndex + 1}</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeQuestion(qIndex)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Question Text *</Label>
-                    <Textarea
-                      placeholder="Enter question..."
-                      value={question.text}
-                      onChange={(e) =>
-                        updateQuestion(qIndex, { text: e.target.value })
-                      }
-                      rows={2}
-                    />
-                  </div>
+            {(() => {
+              const currentSection = sections.find((s) => s.id === selectedSectionIdForAdd);
+              const sectionQuestionIds = currentSection?.questionIds || [];
+              const filteredList = questions
+                .map((q, idx) => ({ q, originalIndex: idx }))
+                .filter(({ q }) => selectedSectionIdForAdd ? sectionQuestionIds.includes(q.id) : true);
 
-                  <div className="space-y-2">
-                    <Label>Question Photo URL (Optional)</Label>
-                    <Input
-                      type="url"
-                      placeholder="https://..."
-                      value={question.imageUrl || ''}
-                      onChange={(e) => updateQuestion(qIndex, { imageUrl: e.target.value })}
-                    />
-                    {question.imageUrl && (
-                      <div className="space-y-2">
+              if (filteredList.length === 0) {
+                return (
+                  <div className="text-center py-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/10">
+                    {selectedSectionIdForAdd ? "No questions in this section yet. Click 'Add Question' or 'Bulk Import' to add questions." : "Please create/select a section first to add or view questions."}
+                  </div>
+                );
+              }
+
+              return filteredList.map(({ q: question, originalIndex }, displayIndex) => (
+                <Card id={`question-card-${question.id}`} key={question.id} className="question-card">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">Question {displayIndex + 1}</CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeQuestion(originalIndex)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Question Text *</Label>
+                      <Textarea
+                        placeholder="Enter question..."
+                        value={question.text}
+                        onChange={(e) =>
+                          updateQuestion(originalIndex, { text: e.target.value })
+                        }
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Question Photo URL (Optional)</Label>
+                      <Input
+                        type="url"
+                        placeholder="https://..."
+                        value={question.imageUrl || ''}
+                        onChange={(e) => updateQuestion(originalIndex, { imageUrl: e.target.value })}
+                      />
+                      {question.imageUrl && (
+                        <div className="space-y-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setVisibleQuestionPreviews((prev) => ({
+                                ...prev,
+                                [question.id]: !prev[question.id],
+                              }))
+                            }
+                          >
+                            {visibleQuestionPreviews[question.id] ? "Hide Preview" : "Show Preview"}
+                          </Button>
+                          {visibleQuestionPreviews[question.id] && (
+                            <div className="overflow-hidden rounded-lg border bg-muted/30">
+                              <img
+                                src={question.imageUrl}
+                                alt={`Question ${displayIndex + 1} preview`}
+                                className="max-h-64 w-full object-contain"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Upload Question Photo From Device</Label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            void uploadQuestionImage(originalIndex, file);
+                            e.target.value = "";
+                          }
+                        }}
+                        disabled={uploadingQuestionImageIndex === originalIndex}
+                      />
+                      {uploadingQuestionImageIndex === originalIndex && (
+                        <p className="text-xs text-muted-foreground">Uploading image...</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label>Options *</Label>
+                      {question.options.map((option) => (
+                        <div key={option.id} className="flex items-start gap-2">
+                          <input
+                            type="radio"
+                            name={`correct-${question.id}`}
+                            checked={question.correctOptionId === option.id}
+                            onChange={() =>
+                              updateQuestion(originalIndex, { correctOptionId: option.id })
+                            }
+                            className="cursor-pointer mt-3"
+                          />
+                          <Badge variant="outline" className="min-w-[24px] justify-center mt-2">
+                            {option.id.toUpperCase()}
+                          </Badge>
+                          <Textarea
+                            placeholder={`Option ${option.id.toUpperCase()}`}
+                            value={option.text}
+                            onChange={(e) =>
+                              updateOption(originalIndex, option.id, e.target.value)
+                            }
+                            rows={2}
+                            className="flex-1 min-h-[60px]"
+                          />
+                          {question.options.length > 2 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeOption(originalIndex, option.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 mt-2"
+                              title="Remove option"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {question.options.length < 5 && (
                         <Button
-                          type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() =>
-                            setVisibleQuestionPreviews((prev) => ({
-                              ...prev,
-                              [question.id]: !prev[question.id],
-                            }))
+                          onClick={() => addOption(originalIndex)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Option
+                        </Button>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Select the correct answer using the radio button (2-5 options allowed)
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>Marks</Label>
+                        {(() => {
+                          const questionSection = sections.find((s) => s.questionIds?.includes(question.id));
+                          const displayMarks = questionSection ? (questionSection.correctMarks !== undefined && questionSection.correctMarks !== null ? questionSection.correctMarks : "") : question.marks;
+                          return (
+                            <>
+                              <Input
+                                type="number"
+                                value={displayMarks}
+                                onChange={(e) =>
+                                  updateQuestion(originalIndex, { marks: parseInt(e.target.value) || 1 })
+                                }
+                                disabled={!!questionSection}
+                                min={1}
+                              />
+                              {questionSection && (
+                                <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                  Set from section: {questionSection.title || "Untitled Section"}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Difficulty</Label>
+                        <Select
+                          value={question.difficulty}
+                          onValueChange={(value) =>
+                            updateQuestion(originalIndex, { difficulty: value as DifficultyLevel })
                           }
                         >
-                          {visibleQuestionPreviews[question.id] ? "Hide Preview" : "Show Preview"}
-                        </Button>
-                        {visibleQuestionPreviews[question.id] && (
-                          <div className="overflow-hidden rounded-lg border bg-muted/30">
-                            <img
-                              src={question.imageUrl}
-                              alt={`Question ${qIndex + 1} preview`}
-                              className="max-h-64 w-full object-contain"
-                            />
-                          </div>
-                        )}
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Easy">Easy</SelectItem>
+                            <SelectItem value="Medium">Medium</SelectItem>
+                            <SelectItem value="Hard">Hard</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label>Upload Question Photo From Device</Label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          void uploadQuestionImage(qIndex, file);
-                          e.target.value = "";
-                        }
-                      }}
-                      disabled={uploadingQuestionImageIndex === qIndex}
-                    />
-                    {uploadingQuestionImageIndex === qIndex && (
-                      <p className="text-xs text-muted-foreground">Uploading image...</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label>Options *</Label>
-                    {question.options.map((option) => (
-                      <div key={option.id} className="flex items-start gap-2">
-                        <input
-                          type="radio"
-                          name={`correct-${question.id}`}
-                          checked={question.correctOptionId === option.id}
-                          onChange={() =>
-                            updateQuestion(qIndex, { correctOptionId: option.id })
-                          }
-                          className="cursor-pointer mt-3"
-                        />
-                        <Badge variant="outline" className="min-w-[24px] justify-center mt-2">
-                          {option.id.toUpperCase()}
-                        </Badge>
-                        <Textarea
-                          placeholder={`Option ${option.id.toUpperCase()}`}
-                          value={option.text}
+                      <div className="space-y-2">
+                        <Label>Subject/Topic</Label>
+                        <Input
+                          placeholder="e.g., Economics"
+                          value={question.subject}
                           onChange={(e) =>
-                            updateOption(qIndex, option.id, e.target.value)
+                            updateQuestion(originalIndex, { subject: e.target.value })
                           }
-                          rows={2}
-                          className="flex-1 min-h-[60px]"
                         />
-                        {question.options.length > 2 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeOption(qIndex, option.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 mt-2"
-                            title="Remove option"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
-                    ))}
-                    {question.options.length < 5 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addOption(qIndex)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Option
-                      </Button>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Select the correct answer using the radio button (2-5 options allowed)
-                    </p>
-                  </div>
+                    </div>
 
-                  <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
-                      <Label>Marks</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={question.marks}
+                      <Label>Explanation (Optional)</Label>
+                      <Textarea
+                        placeholder="Explain the correct answer..."
+                        value={question.explanation}
                         onChange={(e) =>
-                          updateQuestion(qIndex, { marks: parseInt(e.target.value) || 1 })
+                          updateQuestion(originalIndex, { explanation: e.target.value })
                         }
+                        rows={2}
                       />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label>Difficulty</Label>
-                      <Select
-                        value={question.difficulty}
-                        onValueChange={(value) =>
-                          updateQuestion(qIndex, { difficulty: value as DifficultyLevel })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Easy">Easy</SelectItem>
-                          <SelectItem value="Medium">Medium</SelectItem>
-                          <SelectItem value="Hard">Hard</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Subject/Topic</Label>
-                      <Input
-                        placeholder="e.g., Economics"
-                        value={question.subject}
-                        onChange={(e) =>
-                          updateQuestion(qIndex, { subject: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Explanation (Optional)</Label>
-                    <Textarea
-                      placeholder="Explain the correct answer..."
-                      value={question.explanation}
-                      onChange={(e) =>
-                        updateQuestion(qIndex, { explanation: e.target.value })
-                      }
-                      rows={2}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ));
+            })()}
 
             {questions.length > 0 && (
               <div className="sticky bottom-4 z-10 mt-4 flex justify-end">

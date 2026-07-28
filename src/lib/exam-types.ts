@@ -28,6 +28,9 @@ export interface ExamSection {
   questionIds?: string[];
   questions?: ExamQuestion[];
   totalMarks?: number;
+  correctMarks?: number;
+  negativeMarking?: number;
+  passingMarks?: number;
 }
 
 export interface Exam {
@@ -127,6 +130,7 @@ export interface ExamResult {
     explanation?: string;
     options: ExamOption[];
   }>;
+  sections?: ExamSection[];
 }
 
 export interface LeaderboardEntry {

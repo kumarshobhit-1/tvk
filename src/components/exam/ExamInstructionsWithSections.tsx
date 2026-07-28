@@ -14,6 +14,9 @@ interface Section {
   questionCount?: number;
   questionIds?: string[];
   questions?: Array<{ id: string; marks: number }>;
+  correctMarks?: number;
+  negativeMarking?: number;
+  passingMarks?: number;
 }
 
 interface ExamInfo {
@@ -73,12 +76,28 @@ export function ExamInstructionsWithSections({
     : (safeExam.questionCount || 0);
 
   const getMaxScoreForSection = (section: Section) => {
+    if (typeof section.correctMarks === 'number') {
+      const qCount = section.questionCount ?? section.questionIds?.length ?? section.questions?.length ?? 0;
+      return qCount * section.correctMarks;
+    }
     if (section.questions) {
       return section.questions.reduce((sum, q) => sum + q.marks, 0);
     }
     const questionCount = section.questionCount ?? section.questionIds?.length ?? 0;
     if (questionCount === 0) return 0;
     return Math.round(((questionCount) / (totalQuestions || 1)) * safeExam.totalMarks);
+  };
+
+  const getSectionScoring = (sec: Section) => {
+    const correctMarks = sec.correctMarks ?? 1;
+    const negativeMarking = sec.negativeMarking ?? safeExam.negativeMarking ?? 0;
+
+    let negDisplay = "0";
+    if (negativeMarking > 0) {
+      negDisplay = `-${negativeMarking}`;
+    }
+
+    return { correctMarks, negDisplay };
   };
 
   return (
@@ -119,22 +138,14 @@ export function ExamInstructionsWithSections({
           {/* Exam Overview Grid */}
           <div>
             <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-4 text-lg underline">EXAMINATION DETAILS</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4 max-w-md">
               <div className="border-2 border-gray-300 p-4 rounded bg-gray-50 dark:bg-gray-800">
                 <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total Questions</div>
                 <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{totalQuestions}</div>
               </div>
               <div className="border-2 border-gray-300 p-4 rounded bg-gray-50 dark:bg-gray-800">
-                <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total Marks</div>
-                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{safeExam.totalMarks}</div>
-              </div>
-              <div className="border-2 border-gray-300 p-4 rounded bg-gray-50 dark:bg-gray-800">
                 <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Duration</div>
                 <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{safeExam.durationMinutes} min</div>
-              </div>
-              <div className="border-2 border-gray-300 p-4 rounded bg-gray-50 dark:bg-gray-800">
-                <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Passing Marks</div>
-                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{safeExam.passingMarks}</div>
               </div>
             </div>
           </div>
@@ -144,28 +155,35 @@ export function ExamInstructionsWithSections({
           {hasSections && (
             <div>
               <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-4 text-lg underline">SECTION-WISE DETAILS</h3>
-              <div className="overflow-x-auto border-2 border-gray-300 rounded">
-                <table className="w-full border-collapse">
+              <div className="overflow-x-visible border-2 border-gray-300 rounded">
+                <table className="w-full table-auto border-collapse">
                   <thead>
-                    <tr className="bg-blue-900 dark:bg-blue-800 text-white">
-                      <th className="border border-gray-300 px-4 py-3 text-left font-bold">S. No.</th>
-                      <th className="border border-gray-300 px-4 py-3 text-left font-bold">Section Name</th>
-                      <th className="border border-gray-300 px-4 py-3 text-center font-bold">No. of Questions</th>
-                      <th className="border border-gray-300 px-4 py-3 text-center font-bold">Max Marks</th>
-                      <th className="border border-gray-300 px-4 py-3 text-center font-bold">Duration (min)</th>
+                    <tr className="bg-blue-900 dark:bg-blue-800 text-white text-xs sm:text-sm">
+                      <th className="border border-gray-300 px-2 py-2.5 text-left font-bold w-12">S.No.</th>
+                      <th className="border border-gray-300 px-3 py-2.5 text-left font-bold">Section Name</th>
+                      <th className="border border-gray-300 px-2 py-2.5 text-center font-bold">No. of Questions</th>
+                      <th className="border border-gray-300 px-2 py-2.5 text-center font-bold">Correct Marks/question</th>
+                      <th className="border border-gray-300 px-2 py-2.5 text-center font-bold">Neg. Marking/question</th>
+                      <th className="border border-gray-300 px-2 py-2.5 text-center font-bold">Passing Marks</th>
+                      <th className="border border-gray-300 px-2 py-2.5 text-center font-bold">Max Marks</th>
+                      <th className="border border-gray-300 px-2 py-2.5 text-center font-bold">Duration (min)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sections.map((section, idx) => {
                       const sectionQCount = section.questionCount ?? section.questionIds?.length ?? section.questions?.length ?? 0;
                       const maxScore = getMaxScoreForSection(section);
+                      const { correctMarks, negDisplay } = getSectionScoring(section);
                       return (
-                        <tr key={section.id} className={idx % 2 === 0 ? "bg-gray-50 dark:bg-gray-800" : ""}>
-                          <td className="border border-gray-300 px-4 py-3 font-semibold">{idx + 1}</td>
-                          <td className="border border-gray-300 px-4 py-3 font-medium">{section.title}</td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">{sectionQCount}</td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">{maxScore}</td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-semibold">{section.durationMinutes}</td>
+                        <tr key={section.id} className={`${idx % 2 === 0 ? "bg-gray-50 dark:bg-gray-800" : ""} text-xs sm:text-sm`}>
+                          <td className="border border-gray-300 px-2 py-2.5 font-semibold text-center">{idx + 1}</td>
+                          <td className="border border-gray-300 px-3 py-2.5 font-medium">{section.title}</td>
+                          <td className="border border-gray-300 px-2 py-2.5 text-center">{sectionQCount}</td>
+                          <td className="border border-gray-300 px-2 py-2.5 text-center">{correctMarks}</td>
+                          <td className="border border-gray-300 px-2 py-2.5 text-center text-red-600 font-medium">{negDisplay}</td>
+                          <td className="border border-gray-300 px-2 py-2.5 text-center font-semibold text-emerald-600 dark:text-emerald-400">{section.passingMarks !== undefined && section.passingMarks !== null ? section.passingMarks : "N/A"}</td>
+                          <td className="border border-gray-300 px-2 py-2.5 text-center font-bold">{maxScore}</td>
+                          <td className="border border-gray-300 px-2 py-2.5 text-center font-semibold">{section.durationMinutes}</td>
                         </tr>
                       );
                     })}
@@ -217,11 +235,28 @@ export function ExamInstructionsWithSections({
               </li>
 
               <li><strong>Marking Scheme:</strong>
-                <ul className="list-disc space-y-1 mt-2 ml-4">
+                {hasSections ? (
+                  <div className="mt-2 ml-4 space-y-2">
+                    <p className="font-semibold text-gray-700 dark:text-gray-300">Marking scheme varies by section (see Section-Wise Details above):</p>
+                    <ul className="list-disc ml-4 space-y-1">
+                      {sections.map((section) => {
+                        const { correctMarks, negDisplay } = getSectionScoring(section);
+                        const sPassing = section.passingMarks !== undefined && section.passingMarks !== null ? section.passingMarks : "N/A";
+                        return (
+                          <li key={section.id}>
+                            <strong>{section.title}:</strong> Correct Answer: +{correctMarks} marks | Wrong Answer: {negDisplay} marks | Passing Marks: {sPassing}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : (
+                  <ul className="list-disc space-y-1 mt-2 ml-4">
                     <li>Correct Answer: +{totalQuestions > 0 ? (safeExam.totalMarks / totalQuestions).toFixed(2) : 0} marks</li>
                     <li>Wrong Answer: -{totalQuestions > 0 ? (safeExam.negativeMarking * (safeExam.totalMarks / totalQuestions)).toFixed(2) : 0} marks</li>
-                  <li>Unanswered: 0 marks</li>
-                </ul>
+                    <li>Unanswered: 0 marks</li>
+                  </ul>
+                )}
               </li>
 
               <li>The 'Marked for Review' status indicates you wish to review that question later. If a question is answered and marked for review, your answer will be considered for evaluation.</li>

@@ -4,9 +4,7 @@ import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam, ExamAttempt, ExamResult } from "@/lib/exam-types";
 
 function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
-  const nm = typeof negativeMarking === 'number' ? negativeMarking : 0;
-  if (nm >= 1) return nm;
-  return nm * questionMarks;
+  return typeof negativeMarking === 'number' ? negativeMarking : 0;
 }
 
 export async function GET(request: NextRequest) {
@@ -63,6 +61,29 @@ export async function GET(request: NextRequest) {
 
     const exam = { id: examSnap.id, ...examSnap.data() } as Exam & { id: string };
 
+    const sectionsSnapshot = (attempt as any).sectionsSnapshot || exam.sections || [];
+
+    const getQuestionScoring = (questionId: string, q: any) => {
+      let correctMarks = q.marks ?? 1;
+      let negativeMarking = exam.negativeMarking ?? 0;
+
+      const section = sectionsSnapshot.find((s: any) => {
+        const qIds = s.questionIds || s.questions?.map((qi: any) => qi.id) || [];
+        return qIds.includes(questionId);
+      });
+
+      if (section) {
+        if (typeof section.correctMarks === 'number') {
+          correctMarks = section.correctMarks;
+        }
+        if (typeof section.negativeMarking === 'number') {
+          negativeMarking = section.negativeMarking;
+        }
+      }
+
+      return { correctMarks, negativeMarking };
+    };
+
     // Build detailed result
     const result: ExamResult = {
       attemptId: attempt.id,
@@ -79,6 +100,7 @@ export async function GET(request: NextRequest) {
       passed: attempt.passed || false,
       timeTaken: attempt.timeTaken || 0,
       submittedAt: attempt.submittedAt!,
+      sections: sectionsSnapshot,
       answers: attempt.answers.map((answer) => {
         // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
         const questionsToUse = (attempt as any).questionsSnapshot || exam.questions;
@@ -98,12 +120,14 @@ export async function GET(request: NextRequest) {
           };
         }
 
+        const { correctMarks, negativeMarking } = getQuestionScoring(answer.questionId, question);
+
         const isCorrect = answer.selectedOptionId === question.correctOptionId;
         const marksAwarded = !answer.selectedOptionId
           ? 0
           : isCorrect
-          ? question.marks
-          : -computePenalty(exam.negativeMarking, question.marks);
+          ? correctMarks
+          : -computePenalty(negativeMarking, correctMarks);
 
         return {
           questionId: question.id,

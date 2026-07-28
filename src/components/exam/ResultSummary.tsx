@@ -18,6 +18,10 @@ interface ResultSummaryProps {
 export function ResultSummary({ result, onReviewAnswers, studentName, studentEmail }: ResultSummaryProps) {
   const [copySuccess, setCopySuccess] = useState(false);
 
+  const formatScore = (val: number): string => {
+    return Number(val.toFixed(2)).toString();
+  };
+
   const formatSubmittedDate = (value: unknown): string => {
     if (!value) return 'N/A';
 
@@ -114,6 +118,8 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
   const totalQuestions = result.correctAnswers + result.wrongAnswers + result.unanswered;
   const percentage = result.percentage.toFixed(0);
   const passingPercentage = result.passingPercentage || (result.passingMarks ? ((result.passingMarks / result.totalMarks) * 100).toFixed(0) : '50');
+  const sections = result.sections || [];
+  const hasMultipleSections = sections.length > 1;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-slate-900 dark:to-gray-900 py-8 px-4">
@@ -228,12 +234,96 @@ export function ResultSummary({ result, onReviewAnswers, studentName, studentEma
                   <div className="text-right">
                     <div className="font-bold text-slate-700 dark:text-slate-300">Total</div>
                     <div className="text-2xl font-black text-slate-900 dark:text-white">
-                      {result.score.toFixed(1)}/{result.totalMarks}
+                      {formatScore(result.score)}/{result.totalMarks}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Section-wise Breakdown */}
+            {hasMultipleSections && (
+              <div className="border-2 border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden">
+                <div className="bg-indigo-500 text-white p-3 font-bold">
+                  Section-wise Performance Breakdown
+                </div>
+                <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                  <div className="grid grid-cols-1 md:grid-cols-6 p-3 bg-slate-100 dark:bg-slate-900 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 gap-2">
+                    <div className="md:col-span-2">Section</div>
+                    <div className="text-center font-semibold">Score / Max</div>
+                    <div className="text-center font-semibold">Correct / Total</div>
+                    <div className="text-center font-semibold">Status</div>
+                    <div className="text-center font-semibold">Percentage</div>
+                  </div>
+
+                  {sections.map((section) => {
+                    const qIds = section.questionIds || section.questions?.map((q: any) => q.id) || [];
+                    const sectionAnswers = result.answers.filter(ans => qIds.includes(ans.questionId));
+
+                    let sCorrect = 0;
+                    let sWrong = 0;
+                    let sUnanswered = 0;
+                    let sScore = 0;
+                    let sMaxMarks = 0;
+
+                    sectionAnswers.forEach(ans => {
+                      if (!ans.selectedOptionId) {
+                        sUnanswered++;
+                      } else if (ans.isCorrect) {
+                        sCorrect++;
+                        sScore += ans.marksAwarded;
+                      } else {
+                        sWrong++;
+                        sScore += ans.marksAwarded;
+                      }
+
+                      const sQMarks = typeof section.correctMarks === 'number' ? section.correctMarks : 1;
+                      sMaxMarks += sQMarks;
+                    });
+
+                    const sTotalQuestions = sectionAnswers.length || qIds.length || 1;
+                    const accuracy = sMaxMarks > 0 ? Math.max(0, Math.round((sScore / sMaxMarks) * 100)) : 0;
+                    
+                    const isSectionPassed = typeof section.passingMarks === 'number' ? (sScore >= section.passingMarks) : true;
+                    const statusText = typeof section.passingMarks === 'number'
+                      ? (isSectionPassed ? "PASSED" : "FAILED")
+                      : "N/A";
+                    const statusBadgeClass = typeof section.passingMarks === 'number'
+                      ? (isSectionPassed ? "bg-emerald-600 hover:bg-emerald-600" : "bg-red-600 hover:bg-red-600")
+                      : "bg-slate-500 hover:bg-slate-500";
+
+                    return (
+                      <div key={section.id} className="grid grid-cols-1 md:grid-cols-6 p-3 items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                        <div className="md:col-span-2 font-semibold text-slate-800 dark:text-slate-200">
+                          {section.title}
+                          {typeof section.passingMarks === 'number' && (
+                            <span className="block text-xs font-normal text-slate-500">
+                              (Pass Marks: {section.passingMarks})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-center font-bold text-slate-900 dark:text-white">
+                          {formatScore(sScore)} / {sMaxMarks}
+                        </div>
+                        <div className="text-center text-sm text-slate-600 dark:text-slate-400">
+                          {sCorrect} / {sTotalQuestions}
+                        </div>
+                        <div className="text-center">
+                          <Badge className={statusBadgeClass}>
+                            {statusText}
+                          </Badge>
+                        </div>
+                        <div className="text-center">
+                          <Badge className={accuracy >= 70 ? "bg-emerald-600" : accuracy >= 40 ? "bg-amber-500" : "bg-red-500"}>
+                            {accuracy}%
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Result Status Box */}
             <div className={`border-2 rounded-lg p-4 text-center ${
