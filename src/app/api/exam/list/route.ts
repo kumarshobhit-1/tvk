@@ -37,16 +37,38 @@ function toPublicExamSummary(id: string, examData: any) {
     questionCount: examData.questions?.length || 0,
     // Sections summary: if exam has sections, expose section-level summary; else derive single section
     sections: (examData.sections && Array.isArray(examData.sections) && examData.sections.length > 0)
-      ? examData.sections.map((s: any, idx: number) => ({
-          id: s.id || `s${idx+1}`,
-          title: s.title || `Section ${idx+1}`,
-          durationMinutes: s.durationMinutes || Math.round((examData.durationMinutes || 0) / (examData.sections.length || 1)),
-          questionCount: s.questionIds ? s.questionIds.length : (s.questions ? s.questions.length : 0),
-          correctMarks: s.correctMarks !== undefined ? s.correctMarks : null,
-          negativeMarking: s.negativeMarking !== undefined ? s.negativeMarking : null,
-          passingMarks: s.passingMarks !== undefined ? s.passingMarks : null,
-        }))
-      : [{ id: 's1', title: 'Section 1', durationMinutes: examData.durationMinutes || 0, questionCount: examData.questions?.length || 0, correctMarks: null, negativeMarking: null, passingMarks: null }],
+      ? examData.sections.map((s: any, idx: number) => {
+          const sQIds = s.questionIds || [];
+          const sectionQuestions = (examData.questions || []).filter((q: any) => sQIds.includes(q.id));
+          const fallbackCorrectMarks = sectionQuestions.length > 0
+            ? (typeof sectionQuestions[0].marks === 'number' ? sectionQuestions[0].marks : 1)
+            : 1;
+
+          const fallbackPassingMarks = (function() {
+            const sectionsCount = examData.sections.length;
+            const totalPassingMarks = typeof examData.passingMarks === 'number' ? examData.passingMarks : 40;
+            return Math.round(totalPassingMarks / sectionsCount);
+          })();
+
+          return {
+            id: s.id || `s${idx+1}`,
+            title: s.title || `Section ${idx+1}`,
+            durationMinutes: s.durationMinutes || Math.round((examData.durationMinutes || 0) / (examData.sections.length || 1)),
+            questionCount: sQIds.length ? sQIds.length : (s.questions ? s.questions.length : 0),
+            correctMarks: (s.correctMarks !== undefined && s.correctMarks !== null) ? s.correctMarks : fallbackCorrectMarks,
+            negativeMarking: (s.negativeMarking !== undefined && s.negativeMarking !== null) ? s.negativeMarking : (examData.negativeMarking !== undefined ? examData.negativeMarking : 0.25),
+            passingMarks: (s.passingMarks !== undefined && s.passingMarks !== null) ? s.passingMarks : fallbackPassingMarks,
+          };
+        })
+      : [{
+          id: 's1',
+          title: 'Section 1',
+          durationMinutes: examData.durationMinutes || 0,
+          questionCount: examData.questions?.length || 0,
+          correctMarks: examData.questions?.[0]?.marks !== undefined ? examData.questions[0].marks : 1,
+          negativeMarking: examData.negativeMarking !== undefined ? examData.negativeMarking : 0.25,
+          passingMarks: examData.passingMarks !== undefined ? examData.passingMarks : 40
+        }],
     negativeMarking: examData.negativeMarking,
     instructions: examData.instructions,
     isPublished: examData.isPublished,
