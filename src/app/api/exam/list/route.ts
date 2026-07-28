@@ -23,6 +23,11 @@ function jsonNoStore(body: any, init?: ResponseInit) {
 }
 
 function toPublicExamSummary(id: string, examData: any) {
+  const hasSections = examData.sections && Array.isArray(examData.sections) && examData.sections.length > 0;
+  const totalAssignedQuestions = hasSections
+    ? examData.sections.reduce((sum: number, s: any) => sum + (s.questionIds?.length || s.questions?.length || 0), 0)
+    : (examData.questions?.length || 0);
+
   return {
     id,
     title: examData.title,
@@ -34,7 +39,7 @@ function toPublicExamSummary(id: string, examData: any) {
     totalMarks: examData.totalMarks,
     passingMarks: examData.passingMarks,
     category: examData.category,
-    questionCount: examData.questions?.length || 0,
+    questionCount: totalAssignedQuestions,
     // Sections summary: if exam has sections, expose section-level summary; else derive single section
     sections: (examData.sections && Array.isArray(examData.sections) && examData.sections.length > 0)
       ? examData.sections.map((s: any, idx: number) => {

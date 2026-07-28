@@ -931,6 +931,11 @@ export default function EditExamPage() {
                       {sections.map((section) => (
                         <SelectItem key={section.id} value={section.id}>{section.title || section.id}</SelectItem>
                       ))}
+                      {questions.some((q) => !sections.some((s) => (s.questionIds || []).includes(q.id))) && (
+                        <SelectItem value="unassigned" className="text-amber-600 font-semibold">
+                          [Unassigned Questions]
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -939,7 +944,7 @@ export default function EditExamPage() {
                   existingCount={questions.length}
                   sections={sections}
                   initialSectionId={selectedSectionIdForAdd}
-                  disabled={!selectedSectionIdForAdd}
+                  disabled={!selectedSectionIdForAdd || selectedSectionIdForAdd === "unassigned"}
                   onImport={(importedQuestions, mode, sectionId) => {
                     const target = sectionId || selectedSectionIdForAdd;
                     if (!target) {
@@ -971,7 +976,7 @@ export default function EditExamPage() {
                   }}
                 />
 
-                <Button onClick={addQuestion} variant="outline" disabled={!selectedSectionIdForAdd}>
+                <Button onClick={addQuestion} variant="outline" disabled={!selectedSectionIdForAdd || selectedSectionIdForAdd === "unassigned"}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Question
                 </Button>
@@ -979,16 +984,26 @@ export default function EditExamPage() {
             </div>
 
             {(() => {
-              const currentSection = sections.find((s) => s.id === selectedSectionIdForAdd);
-              const sectionQuestionIds = currentSection?.questionIds || [];
               const filteredList = questions
                 .map((q, idx) => ({ q, originalIndex: idx }))
-                .filter(({ q }) => selectedSectionIdForAdd ? sectionQuestionIds.includes(q.id) : true);
+                .filter(({ q }) => {
+                  if (!selectedSectionIdForAdd) return false;
+                  if (selectedSectionIdForAdd === "unassigned") {
+                    return !sections.some((s) => (s.questionIds || []).includes(q.id));
+                  }
+                  const currentSection = sections.find((s) => s.id === selectedSectionIdForAdd);
+                  const sectionQuestionIds = currentSection?.questionIds || [];
+                  return sectionQuestionIds.includes(q.id);
+                });
 
               if (filteredList.length === 0) {
                 return (
                   <div className="text-center py-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/10">
-                    {selectedSectionIdForAdd ? "No questions in this section yet. Click 'Add Question' or 'Bulk Import' to add questions." : "Please create/select a section first to add or view questions."}
+                    {selectedSectionIdForAdd === "unassigned"
+                      ? "All questions are assigned to sections. No unassigned questions found."
+                      : selectedSectionIdForAdd
+                        ? "No questions in this section yet. Click 'Add Question' or 'Bulk Import' to add questions."
+                        : "Please create/select a section first to add or view questions."}
                   </div>
                 );
               }

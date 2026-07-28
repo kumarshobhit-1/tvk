@@ -770,6 +770,11 @@ export default function AdminExamsPage() {
                           {section.title || section.id}
                         </SelectItem>
                       ))}
+                      {questions.some((q) => !sections.some((s) => (s.questionIds || []).includes(q.id))) && (
+                        <SelectItem value="unassigned" className="text-amber-600 font-semibold">
+                          [Unassigned Questions]
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -777,7 +782,7 @@ export default function AdminExamsPage() {
                   existingCount={questions.length}
                   sections={sections}
                   initialSectionId={selectedSectionIdForAdd}
-                  disabled={!selectedSectionIdForAdd}
+                  disabled={!selectedSectionIdForAdd || selectedSectionIdForAdd === "unassigned"}
                   onImport={(importedQuestions, mode, sectionId) => {
                     const targetSection = sectionId || selectedSectionIdForAdd;
                     if (!targetSection) {
@@ -818,7 +823,7 @@ export default function AdminExamsPage() {
                     });
                   }}
                 />
-                <Button onClick={addQuestion} variant="outline">
+                <Button onClick={addQuestion} variant="outline" disabled={!selectedSectionIdForAdd || selectedSectionIdForAdd === "unassigned"}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Question
                 </Button>
@@ -826,11 +831,17 @@ export default function AdminExamsPage() {
             </div>
 
             {(() => {
-              const currentSection = sections.find((s) => s.id === selectedSectionIdForAdd);
-              const sectionQuestionIds = currentSection?.questionIds || [];
               const filteredList = questions
                 .map((q, idx) => ({ q, originalIndex: idx }))
-                .filter(({ q }) => selectedSectionIdForAdd ? sectionQuestionIds.includes(q.id) : true);
+                .filter(({ q }) => {
+                  if (!selectedSectionIdForAdd) return false;
+                  if (selectedSectionIdForAdd === "unassigned") {
+                    return !sections.some((s) => (s.questionIds || []).includes(q.id));
+                  }
+                  const currentSection = sections.find((s) => s.id === selectedSectionIdForAdd);
+                  const sectionQuestionIds = currentSection?.questionIds || [];
+                  return sectionQuestionIds.includes(q.id);
+                });
 
               if (filteredList.length === 0) {
                 return (
