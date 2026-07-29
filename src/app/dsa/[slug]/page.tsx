@@ -49,39 +49,51 @@ export async function generateStaticParams() {
 }
 
 // --- बदलाव यहाँ है: params की टाइप परिभाषा को सरल बनाया गया है ---
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+
 export default async function DsaTopicPage(
   props: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = await props.params; // await params
+  const { slug } = await props.params;
 
   // 1. Find the topic document based on the slug
-  const topicsSnapshot = await adminDB.collection("dsa_topics").where("slug", "==", slug).get();
-  const topicDoc = topicsSnapshot.docs[0];
+  const topic = await cacheAside(
+    CacheKeys.dsaTopicBySlug(slug),
+    async () => {
+      const snap = await adminDB.collection("dsa_topics").where("slug", "==", slug).get();
+      const topicDoc = snap.docs[0];
+      if (!topicDoc) return null;
+      const topicData = topicDoc.data();
+      return { 
+        ...topicData,
+        id: topicDoc.id,
+        createdAt: topicData.createdAt?.toDate?.().toISOString() || null,
+      } as DsaTopic;
+    }
+  );
   
-  if (!topicDoc) {
+  if (!topic) {
     notFound();
   }
-  const topicData = topicDoc.data();
-  const topic = { 
-    ...topicData,
-    id: topicDoc.id,
-    createdAt: topicData.createdAt?.toDate?.().toISOString() || null,
-  } as DsaTopic;
 
   // 2. Fetch all questions that belong to this topic
-  const questionsSnapshot = await adminDB.collection("dsa_questions")
-    .where("dsaTopicId", "==", topic.id)
-    .orderBy("createdAt", "asc")
-    .get();
-  
-  const questions = questionsSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      ...data,
-      firebaseDocId: doc.id,
-      createdAt: data.createdAt?.toDate?.().toISOString() || null,
-    } as DsaQuestion;
-  });
+  const questions = await cacheAside(
+    CacheKeys.dsaTopicQuestions(topic.id),
+    async () => {
+      const snap = await adminDB.collection("dsa_questions")
+        .where("dsaTopicId", "==", topic.id)
+        .orderBy("createdAt", "asc")
+        .get();
+      return snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          firebaseDocId: doc.id,
+          createdAt: data.createdAt?.toDate?.().toISOString() || null,
+        } as DsaQuestion;
+      });
+    }
+  );
 
   // 3. Get user progress on the server
   let userProgress: Record<string, boolean> = {};

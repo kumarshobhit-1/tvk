@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { adminDB } from "@/lib/firebase/firebase-admin";
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
 type FeaturedTrack = {
   title: string;
@@ -173,44 +174,54 @@ function toSlug(value: string) {
 }
 
 export default async function Home() {
-  let totalPublishedExams = 0;
-  let totalFeaturedTracks = FEATURED_TRACKS.length;
-  let totalPremiumExams = 0;
-  const trackCounts = new Map<string, number>();
+  const stats = await cacheAside(
+    CacheKeys.homeStats(),
+    async () => {
+      let totalPublishedExams = 0;
+      let totalPremiumExams = 0;
+      let totalFeaturedTracks = FEATURED_TRACKS.length;
+      const trackCounts: Record<string, number> = {};
 
-  try {
-    const publishedSnap = await adminDB
-      .collection("exams")
-      .where("isPublished", "==", true)
-      .select("category", "isPremium")
-      .get();
+      const publishedSnap = await adminDB
+        .collection("exams")
+        .where("isPublished", "==", true)
+        .select("category", "isPremium")
+        .get();
 
-    totalPublishedExams = publishedSnap.size;
+      totalPublishedExams = publishedSnap.size;
 
-    const uniqueCategories = new Set<string>();
-    publishedSnap.docs.forEach((doc) => {
-      const data = doc.data() as { category?: string; isPremium?: boolean };
-      const category = normalizeCategory(String(data.category || "OTHER"));
-      uniqueCategories.add(category);
-      if (data.isPremium) totalPremiumExams += 1;
-    });
+      const uniqueCategories = new Set<string>();
+      publishedSnap.docs.forEach((doc) => {
+        const data = doc.data() as { category?: string; isPremium?: boolean };
+        const category = normalizeCategory(String(data.category || "OTHER"));
+        uniqueCategories.add(category);
+        if (data.isPremium) totalPremiumExams += 1;
+      });
 
-    totalFeaturedTracks = Math.max(totalFeaturedTracks, uniqueCategories.size);
+      totalFeaturedTracks = Math.max(totalFeaturedTracks, uniqueCategories.size);
 
-    FEATURED_TRACKS.forEach((track) => {
-      const count = publishedSnap.docs.filter((doc) => {
-        const data = doc.data() as { category?: string };
-        const docCat = String(data.category || "");
-        if (track.slug) {
-          return toSlug(docCat) === toSlug(track.slug);
-        }
-        return normalizeCategory(String(docCat || "OTHER")) === normalizeCategory(track.category);
-      }).length;
-      trackCounts.set(track.category, count);
-    });
-  } catch (error) {
-    console.error("Failed to fetch home page exam counts:", error);
-  }
+      FEATURED_TRACKS.forEach((track) => {
+        const count = publishedSnap.docs.filter((doc) => {
+          const data = doc.data() as { category?: string };
+          const docCat = String(data.category || "");
+          if (track.slug) {
+            return toSlug(docCat) === toSlug(track.slug);
+          }
+          return normalizeCategory(String(docCat || "OTHER")) === normalizeCategory(track.category);
+        }).length;
+        trackCounts[track.category] = count;
+      });
+
+      return {
+        totalPublishedExams,
+        totalFeaturedTracks,
+        totalPremiumExams,
+        trackCounts,
+      };
+    }
+  );
+
+  const { totalPublishedExams, totalFeaturedTracks, totalPremiumExams, trackCounts } = stats;
 
   return (
     <main className="bg-background text-foreground">
@@ -369,7 +380,7 @@ export default async function Home() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {FEATURED_TRACKS.map((track) => {
             const Icon = track.icon;
-            const count = trackCounts.get(track.category) ?? 0;
+            const count = trackCounts[track.category] ?? 0;
             return (
                     <Link key={track.category} href={`/exam/category/${track.slug ?? track.category.toLowerCase().replace(/\s+/g, "-")}`} className="group">
                 <Card className="h-full overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-950">

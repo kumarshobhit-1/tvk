@@ -14,31 +14,38 @@ export const metadata: Metadata = {
   description: "Your guide to mastering DSA and CS fundamentals.",
 };
 
-export default async function DsaPage() {
-  
-  // Fetch both topics and questions on the server
-  const [topicsSnapshot, questionsSnapshot] = await Promise.all([
-    adminDB.collection("dsa_topics").orderBy("createdAt", "asc").get(),
-    adminDB.collection("dsa_questions").get(),
-  ]);
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
-  const dsaTopics = topicsSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      ...data,
-      id: doc.id,
-      createdAt: data.createdAt?.toDate?.().toISOString() || null, // Convert Timestamp
-    } as DsaTopic;
-  });
-  
-  const allDsaQuestions = questionsSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      ...data,
-      firebaseDocId: doc.id,
-      createdAt: data.createdAt?.toDate?.().toISOString() || null, // Convert Timestamp
-    } as DsaQuestion;
-  });
+export default async function DsaPage() {
+  const dsaTopics = await cacheAside(
+    CacheKeys.dsaTopics(),
+    async () => {
+      const snap = await adminDB.collection("dsa_topics").orderBy("createdAt", "asc").get();
+      return snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          createdAt: data.createdAt?.toDate?.().toISOString() || null,
+        } as DsaTopic;
+      });
+    }
+  );
+
+  const allDsaQuestions = await cacheAside(
+    CacheKeys.dsaQuestions(),
+    async () => {
+      const snap = await adminDB.collection("dsa_questions").get();
+      return snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          firebaseDocId: doc.id,
+          createdAt: data.createdAt?.toDate?.().toISOString() || null,
+        } as DsaQuestion;
+      });
+    }
+  );
   return (
     <div className="container mx-auto px-4 py-8">
             <div className="mb-8">

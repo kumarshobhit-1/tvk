@@ -17,53 +17,65 @@ function normalizeCategory(value: string) {
   return String(value || "").trim().toLowerCase();
 }
 
-export default async function Page() {
-  let examCount = 0;
-  let premiumExamCount = 0;
-  let pdfCount = 0;
-  let premiumPdfCount = 0;
+import { cacheAside, CacheKeys, CACHE_TTL } from "@/lib/cache-strategy";
 
+export default async function Page() {
   const cilSlug = toSlug("Coal India Limited");
 
-  try {
-    const examSnap = await adminDB.collection("exams").where("isPublished", "==", true).select("category", "isPremium").get();
-    examSnap.docs.forEach((doc) => {
-      const data = doc.data() as { category?: string; isPremium?: boolean };
-      const slug = toSlug(data.category || "");
-      if (slug === cilSlug || normalizeCategory(data.category || "") === normalizeCategory("Coal India Limited")) {
-        examCount += 1;
-        if (data.isPremium) premiumExamCount += 1;
-      }
-    });
-  } catch (error) {
-    console.error("Failed to fetch CIL exam counts:", error);
-  }
+  const counts = await cacheAside(
+    CacheKeys.cilCounts(),
+    async () => {
+      let examCount = 0;
+      let premiumExamCount = 0;
+      let pdfCount = 0;
+      let premiumPdfCount = 0;
 
-  try {
-    const folderSnap = await adminDB.collection("pdf_folders").where("isPublished", "==", true).select("category", "isPremium").get();
-    const folderIds = new Set<string>();
-    folderSnap.docs.forEach((doc) => {
-      const data = doc.data() as { category?: string; isPremium?: boolean };
-      const slug = toSlug(data.category || "");
-      if (slug === cilSlug || normalizeCategory(data.category || "") === normalizeCategory("Coal India Limited")) {
-        folderIds.add(doc.id);
+      try {
+        const examSnap = await adminDB.collection("exams").where("isPublished", "==", true).select("category", "isPremium").get();
+        examSnap.docs.forEach((doc) => {
+          const data = doc.data() as { category?: string; isPremium?: boolean };
+          const slug = toSlug(data.category || "");
+          if (slug === cilSlug || normalizeCategory(data.category || "") === normalizeCategory("Coal India Limited")) {
+            examCount += 1;
+            if (data.isPremium) premiumExamCount += 1;
+          }
+        });
+      } catch (error) {
+        console.error("Failed to fetch CIL exam counts:", error);
       }
-    });
 
-    const pdfSnap = await adminDB.collection("pdf_files").where("isPublished", "==", true).select("folderId", "category", "isPremium", "premiumOverridden").get();
-    pdfSnap.docs.forEach((doc) => {
-      const data = doc.data() as { folderId?: string; category?: string; isPremium?: boolean; premiumOverridden?: boolean };
-      const slug = toSlug(data.category || "");
-      const matchesCategory = slug === cilSlug || normalizeCategory(data.category || "") === normalizeCategory("Coal India Limited");
-      const matchesFolder = data.folderId ? folderIds.has(data.folderId) : false;
-      if (matchesCategory || matchesFolder) {
-        pdfCount += 1;
-        if (data.isPremium) premiumPdfCount += 1;
+      try {
+        const folderSnap = await adminDB.collection("pdf_folders").where("isPublished", "==", true).select("category", "isPremium").get();
+        const folderIds = new Set<string>();
+        folderSnap.docs.forEach((doc) => {
+          const data = doc.data() as { category?: string; isPremium?: boolean };
+          const slug = toSlug(data.category || "");
+          if (slug === cilSlug || normalizeCategory(data.category || "") === normalizeCategory("Coal India Limited")) {
+            folderIds.add(doc.id);
+          }
+        });
+
+        const pdfSnap = await adminDB.collection("pdf_files").where("isPublished", "==", true).select("folderId", "category", "isPremium", "premiumOverridden").get();
+        pdfSnap.docs.forEach((doc) => {
+          const data = doc.data() as { folderId?: string; category?: string; isPremium?: boolean; premiumOverridden?: boolean };
+          const slug = toSlug(data.category || "");
+          const matchesCategory = slug === cilSlug || normalizeCategory(data.category || "") === normalizeCategory("Coal India Limited");
+          const matchesFolder = data.folderId ? folderIds.has(data.folderId) : false;
+          if (matchesCategory || matchesFolder) {
+            pdfCount += 1;
+            if (data.isPremium) premiumPdfCount += 1;
+          }
+        });
+      } catch (error) {
+        console.error("Failed to fetch CIL PDF counts:", error);
       }
-    });
-  } catch (error) {
-    console.error("Failed to fetch CIL PDF counts:", error);
-  }
+
+      return { examCount, premiumExamCount, pdfCount, premiumPdfCount };
+    },
+    CACHE_TTL.SHORT // 5 minutes cache
+  );
+
+  const { examCount, premiumExamCount, pdfCount, premiumPdfCount } = counts;
 
   return (
     <main className="bg-background text-foreground">

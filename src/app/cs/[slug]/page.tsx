@@ -30,37 +30,51 @@ export async function generateStaticParams() {
   })).filter(Boolean);
 }
 
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+
 export default async function CsSubjectPage(
   props: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = await props.params; // await params
+  const { slug } = await props.params;
 
-  const subjectsSnapshot = await adminDB.collection("cs_subjects").where("slug", "==", slug).get();
-  const subjectDoc = subjectsSnapshot.docs[0];
+  // 1. Find the subject document based on the slug
+  const subject = await cacheAside(
+    CacheKeys.csSubjectBySlug(slug),
+    async () => {
+      const snap = await adminDB.collection("cs_subjects").where("slug", "==", slug).get();
+      const subjectDoc = snap.docs[0];
+      if (!subjectDoc) return null;
+      const subjectData = subjectDoc.data();
+      return { 
+        ...subjectData,
+        id: subjectDoc.id,
+        createdAt: subjectData.createdAt?.toDate?.().toISOString() || null,
+      } as CsSubject;
+    }
+  );
   
-  if (!subjectDoc) {
+  if (!subject) {
     notFound();
   }
-  const subjectData = subjectDoc.data();
-  const subject = { 
-    ...subjectData,
-    id: subjectDoc.id,
-    createdAt: subjectData.createdAt?.toDate?.().toISOString() || null,
-  } as CsSubject;
 
-  const topicsSnapshot = await adminDB.collection("cs_topics")
-    .where("csSubjectId", "==", subject.id)
-    .orderBy("createdAt", "asc")
-    .get();
-  
-  const topics = topicsSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      ...data,
-      firebaseDocId: doc.id,
-      createdAt: data.createdAt?.toDate?.().toISOString() || null,
-    } as CsTopic;
-  });
+  // 2. Fetch all topics that belong to this subject
+  const topics = await cacheAside(
+    CacheKeys.csTopicList(subject.id),
+    async () => {
+      const snap = await adminDB.collection("cs_topics")
+        .where("csSubjectId", "==", subject.id)
+        .orderBy("createdAt", "asc")
+        .get();
+      return snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          firebaseDocId: doc.id,
+          createdAt: data.createdAt?.toDate?.().toISOString() || null,
+        } as CsTopic;
+      });
+    }
+  );
 
   let userProgress: Record<string, boolean> = {};
   const cookiesStore = await cookies();

@@ -11,29 +11,38 @@ export const metadata: Metadata = {
   description: "Your guide to mastering core computer science subjects.",
 };
 
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+
 export default async function CsPage() {
-  const [subjectsSnapshot, topicsSnapshot] = await Promise.all([
-    adminDB.collection("cs_subjects").orderBy("createdAt", "asc").get(),
-    adminDB.collection("cs_topics").get(),
-  ]);
+  const csSubjects = await cacheAside(
+    CacheKeys.csSubjects(),
+    async () => {
+      const snap = await adminDB.collection("cs_subjects").orderBy("createdAt", "asc").get();
+      return snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          createdAt: data.createdAt?.toDate?.().toISOString() || null,
+        } as CsSubject;
+      });
+    }
+  );
 
-  const csSubjects = subjectsSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      ...data,
-      id: doc.id,
-      createdAt: data.createdAt?.toDate?.().toISOString() || null,
-    } as CsSubject;
-  });
-
-  const allCsTopics = topicsSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      ...data,
-      firebaseDocId: doc.id,
-      createdAt: data.createdAt?.toDate?.().toISOString() || null,
-    } as CsTopic;
-  });
+  const allCsTopics = await cacheAside(
+    CacheKeys.csAllTopics(),
+    async () => {
+      const snap = await adminDB.collection("cs_topics").get();
+      return snap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          firebaseDocId: doc.id,
+          createdAt: data.createdAt?.toDate?.().toISOString() || null,
+        } as CsTopic;
+      });
+    }
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
