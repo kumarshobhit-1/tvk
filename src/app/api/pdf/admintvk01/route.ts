@@ -4,6 +4,7 @@ import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { uploadPDFToCloudinary, deletePDFFromCloudinary } from "@/lib/cloudinary";
 import type { PDFFolder, PDFFile } from "@/lib/pdf-types";
+import { invalidatePdfCaches } from "@/lib/cache-strategy";
 
 // POST - Create folder or upload PDF
 export async function POST(request: NextRequest) {
@@ -92,6 +93,7 @@ export async function POST(request: NextRequest) {
 
           const fileRef = await adminDB.collection("pdf_files").add(pdfFile);
           uploadedFiles.push({ ...pdfFile, id: fileRef.id } as PDFFile);
+          invalidatePdfCaches(folderId);
         } catch (error: any) {
           console.error(`Error uploading ${file.name}:`, error);
           errors.push(`${file.name}: ${error.message}`);
@@ -136,6 +138,8 @@ export async function POST(request: NextRequest) {
       };
 
       const folderRef = await adminDB.collection("pdf_folders").add(folder);
+
+      invalidatePdfCaches(folder.parentId || undefined);
 
       return NextResponse.json({
         success: true,
@@ -271,6 +275,8 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    invalidatePdfCaches(type === "file" ? (normalizedUpdates.folderId || undefined) : id);
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Error updating:", error);
@@ -300,8 +306,8 @@ export async function DELETE(request: NextRequest) {
     if (type === "folder") {
       const foldersSnapshot = await adminDB.collection("pdf_folders").get();
       const allFolders = foldersSnapshot.docs.map((doc) => ({
-        id: doc.id,
         ...(doc.data() as PDFFolder),
+        id: doc.id,
       }));
 
       const folderMap = new Map(allFolders.map((folder) => [folder.id, folder]));
@@ -345,6 +351,8 @@ export async function DELETE(request: NextRequest) {
         await fileDoc.ref.delete();
       }
     }
+
+    invalidatePdfCaches(type === "file" ? id : undefined);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

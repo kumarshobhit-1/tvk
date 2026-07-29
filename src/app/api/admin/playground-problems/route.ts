@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { invalidatePlaygroundCache } from "@/lib/cache-strategy";
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,6 +37,8 @@ export async function POST(request: NextRequest) {
     data.createdAt = new Date();
     
     const docRef = await adminDB.collection("playground_problems").add(data);
+    
+    invalidatePlaygroundCache();
     
     return NextResponse.json({ 
       success: true, 

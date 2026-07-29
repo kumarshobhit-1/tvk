@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { adminAuth } from "@/lib/firebase/firebase-admin";
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
 export async function GET() {
   try {
@@ -13,11 +14,16 @@ export async function GET() {
 
     await adminAuth.verifySessionCookie(sessionCookie);
 
-    const snapshot = await adminDB.collection("playground_problems").get();
-    const problems = snapshot.docs.map(doc => ({ 
-      ...doc.data(), 
-      id: doc.id 
-    }));
+    const problems = await cacheAside(
+      CacheKeys.playgroundProblems(),
+      async () => {
+        const snapshot = await adminDB.collection("playground_problems").get();
+        return snapshot.docs.map(doc => ({ 
+          ...doc.data(), 
+          id: doc.id 
+        }));
+      }
+    );
     
     return NextResponse.json({ problems });
   } catch (error) {

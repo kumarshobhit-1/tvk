@@ -56,6 +56,8 @@ function invalidateExamCaches(examId?: string) {
     cache.invalidate(CacheKeys.exam(examId));
   }
   cache.invalidatePattern(/^exams:list:/);
+  cache.invalidate('cil:counts');
+  cache.invalidate('home:stats');
 }
 
 export async function POST(request: NextRequest) {

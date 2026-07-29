@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { invalidateDsaTopics } from "@/lib/cache-strategy";
 
 export async function GET(request: NextRequest) {
   const auth = await verifyAdminPermission(request, "canManageTopics");
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest) {
     data.createdAt = new Date();
     
     const docRef = await adminDB.collection("dsa_topics").add(data);
+    
+    invalidateDsaTopics(data.slug);
     
     return NextResponse.json({ 
       success: true, 

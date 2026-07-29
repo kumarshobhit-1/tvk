@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { invalidateCsContent } from "@/lib/cache-strategy";
 
 export async function GET(request: NextRequest) {
   const auth = await verifyAdminPermission(request, "canManageSubjects");
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest) {
     data.createdAt = new Date();
     
     const docRef = await adminDB.collection("cs_subjects").add(data);
+    
+    invalidateCsContent(data.slug);
     
     return NextResponse.json({ 
       success: true, 

@@ -1,3 +1,5 @@
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+
 // Public API for listing published PDFs
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -26,19 +28,22 @@ export async function GET(request: NextRequest) {
     }
 
     // 1) Fetch ONLY published folders. No pdf_files full scan.
-    const foldersSnapshot = await adminDB
-      .collection("pdf_folders")
-      .where("isPublished", "==", true)
-      .get();
-
-    const folders: PDFFolder[] = foldersSnapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }) as PDFFolder)
-      .map((folder) => ({
-        ...folder,
-        // Folder stays browsable; access gating is enforced at file level.
-        canAccess: true,
-      }))
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    const folders = await cacheAside(
+      CacheKeys.pdfFolders(),
+      async () => {
+        const snap = await adminDB
+          .collection("pdf_folders")
+          .where("isPublished", "==", true)
+          .get();
+        return snap.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }) as PDFFolder)
+          .map((folder) => ({
+            ...folder,
+            canAccess: true,
+          }))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+      }
+    );
 
     const folderMap = new Map<string, PDFFolder>();
     folders.forEach((f) => folderMap.set(f.id, f));
@@ -47,14 +52,19 @@ export async function GET(request: NextRequest) {
     // If not present: return folders with empty files array (library sidebar stays fast).
     let files: PDFFile[] = [];
     if (folderId) {
-      const filesSnapshot = await adminDB
-        .collection("pdf_files")
-        .where("isPublished", "==", true)
-        .where("folderId", "==", folderId)
-        .get();
+      const rawFiles = await cacheAside(
+        CacheKeys.pdfFolderFiles(folderId),
+        async () => {
+          const snap = await adminDB
+            .collection("pdf_files")
+            .where("isPublished", "==", true)
+            .where("folderId", "==", folderId)
+            .get();
+          return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as PDFFile);
+        }
+      );
 
-      files = filesSnapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }) as PDFFile)
+      files = rawFiles
         .filter((file) => folderMap.has(file.folderId))
         .map((file) => {
           const folder = folderMap.get(file.folderId)!;

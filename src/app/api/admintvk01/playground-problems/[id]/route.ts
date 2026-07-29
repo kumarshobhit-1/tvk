@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { invalidatePlaygroundCache } from "@/lib/cache-strategy";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await verifyAdminPermission(request, "canManagePlayground");
   if (!auth.isValid) {
@@ -12,11 +13,13 @@ export async function PUT(
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
     delete data.createdAt;
     
     await adminDB.collection("playground_problems").doc(id).update(data);
+    
+    invalidatePlaygroundCache();
     
     return NextResponse.json({ 
       success: true, 
@@ -33,7 +36,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await verifyAdminPermission(request, "canManagePlayground");
   if (!auth.isValid) {
@@ -41,9 +44,11 @@ export async function DELETE(
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
     
     await adminDB.collection("playground_problems").doc(id).delete();
+    
+    invalidatePlaygroundCache();
     
     return NextResponse.json({ 
       success: true, 

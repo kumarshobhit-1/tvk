@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { invalidateDsaQuestions } from "@/lib/cache-strategy";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await verifyAdminPermission(request, "canEditQAQuestion");
@@ -12,11 +13,13 @@ export async function PUT(
       return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
     delete data.createdAt;
     
     await adminDB.collection("dsa_questions").doc(id).update(data);
+    
+    invalidateDsaQuestions(data.dsaTopicId);
     
     return NextResponse.json({ 
       success: true, 
@@ -33,7 +36,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await verifyAdminPermission(request, "canDeleteQAQuestion");
@@ -41,9 +44,11 @@ export async function DELETE(
       return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     await adminDB.collection("dsa_questions").doc(id).delete();
+    
+    invalidateDsaQuestions();
     
     return NextResponse.json({ 
       success: true, 

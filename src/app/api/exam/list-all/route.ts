@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { getCache, CacheKeys } from "@/lib/cache-strategy";
 
 // Get all exams (for admin)
 export async function GET(request: NextRequest) {
@@ -17,9 +18,16 @@ export async function GET(request: NextRequest) {
     const examsRef = adminDB.collection("exams");
     const examsSnap = await examsRef.orderBy("createdAt", "desc").get();
 
-    const exams: (Exam & { id: string })[] = [];
+    const exams: any[] = [];
     examsSnap.forEach((doc) => {
-      exams.push({ id: doc.id, ...doc.data() } as Exam & { id: string });
+      const data = doc.data();
+      const questionCount = data.questions ? data.questions.length : 0;
+      delete data.questions;
+      exams.push({
+        id: doc.id,
+        ...data,
+        questions: new Array(questionCount).fill(null),
+      });
     });
 
     return NextResponse.json({ exams });
@@ -63,6 +71,12 @@ export async function DELETE(request: NextRequest) {
 
     // Now delete the exam
     await adminDB.collection("exams").doc(examId).delete();
+
+    const cache = getCache();
+    cache.invalidate(CacheKeys.exam(examId));
+    cache.invalidatePattern(/^exams:list:/);
+    cache.invalidate('cil:counts');
+    cache.invalidate('home:stats');
 
     return NextResponse.json({ 
       message: "Exam and all related attempts deleted successfully",
