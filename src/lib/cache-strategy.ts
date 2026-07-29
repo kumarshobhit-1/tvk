@@ -99,11 +99,25 @@ export const CacheKeys = {
   qaQuestions: (topic: string) => `qa:questions:${topic}`,
   qaTopics: (subject: string) => `qa:topics:${subject}`,
   dsaTopics: () => 'qa:dsa:topics',
+  dsaQuestions: () => 'qa:dsa:questions',
+  dsaTopicQuestions: (topicId: string) => `qa:dsa:questions:${topicId}`,
+  dsaTopicBySlug: (slug: string) => `qa:dsa:topic:slug:${slug}`,
   csTopics: () => 'qa:cs:topics',
+  csSubjects: () => 'qa:cs:subjects',
+  csSubjectBySlug: (slug: string) => `qa:cs:subject:slug:${slug}`,
+  csTopicList: (subjectId: string) => `qa:cs:topics:${subjectId}`,
+  csAllTopics: () => 'qa:cs:all_topics',
   
   // PDFs
   pdfList: () => 'pdfs:list',
+  pdfFolders: () => 'pdfs:folders',
+  pdfFolderFiles: (folderId: string) => `pdfs:files:${folderId}`,
   pdf: (pdfId: string) => `pdf:${pdfId}`,
+
+  // Playground & CIL
+  playgroundProblems: () => 'playground:problems',
+  cilCounts: () => 'cil:counts',
+  homeStats: () => 'home:stats',
 } as const;
 
 // Cache TTLs (Time To Live in milliseconds)
@@ -151,4 +165,53 @@ export async function cacheAside<T>(
   } finally {
     inFlightFetches.delete(key);
   }
+}
+
+export function invalidateDsaTopics(slug?: string) {
+  const cache = getCache();
+  cache.invalidate(CacheKeys.dsaTopics());
+  if (slug) {
+    cache.invalidate(CacheKeys.dsaTopicBySlug(slug));
+  }
+  cache.invalidatePattern(/^qa:dsa:topic:slug:/);
+  cache.invalidate(CacheKeys.cilCounts());
+}
+
+export function invalidateDsaQuestions(topicId?: string) {
+  const cache = getCache();
+  cache.invalidate(CacheKeys.dsaQuestions());
+  if (topicId) {
+    cache.invalidate(CacheKeys.dsaTopicQuestions(topicId));
+  }
+}
+
+export function invalidateCsContent(subjectSlug?: string, subjectId?: string) {
+  const cache = getCache();
+  cache.invalidate(CacheKeys.csSubjects());
+  cache.invalidate(CacheKeys.csAllTopics());
+  if (subjectSlug) {
+    cache.invalidate(CacheKeys.csSubjectBySlug(subjectSlug));
+  }
+  if (subjectId) {
+    cache.invalidate(CacheKeys.csTopicList(subjectId));
+  }
+  cache.invalidatePattern(/^qa:cs:subject:slug:/);
+  cache.invalidatePattern(/^qa:cs:topics:/);
+  cache.invalidate(CacheKeys.cilCounts());
+}
+
+export function invalidatePdfCaches(folderId?: string) {
+  const cache = getCache();
+  cache.invalidate(CacheKeys.pdfFolders());
+  cache.invalidate(CacheKeys.pdfList());
+  if (folderId) {
+    cache.invalidate(CacheKeys.pdfFolderFiles(folderId));
+  }
+  cache.invalidatePattern(/^pdfs:files:/);
+  cache.invalidate(CacheKeys.cilCounts());
+}
+
+export function invalidatePlaygroundCache() {
+  const cache = getCache();
+  cache.invalidate(CacheKeys.playgroundProblems());
 }

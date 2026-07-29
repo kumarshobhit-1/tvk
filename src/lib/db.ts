@@ -2,20 +2,16 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import type { Progress } from "./types";
 import { trackActivity } from "./activity-tracker";
-import { invalidateUserCache } from './user-cache';
+import { invalidateUserCache, getUserDocCached } from './user-cache';
 
 const getProgressRef = (userId: string) => doc(db, "users", userId);
 
 export async function getProgress(userId: string): Promise<Progress> {
-  const progressRef = getProgressRef(userId);
-  const docSnap = await getDoc(progressRef);
-
-  if (docSnap.exists()) {
-    return (docSnap.data().progress || {}) as Progress;
-  } else {
-    // await setDoc(progressRef, { progress: {} });
-    return {};
+  const userData = await getUserDocCached(userId);
+  if (userData && userData.progress) {
+    return userData.progress as Progress;
   }
+  return {};
 }
 
 export async function updateProgress(
