@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { isPremiumUser, normalizePremiumCategories } from "@/lib/premium-access";
+import { cacheAside } from "@/lib/cache-strategy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -181,6 +182,43 @@ function getPremiumDestinations(user: UserDoc) {
   // };
 }
 
+async function getCachedExamsList() {
+  return cacheAside(
+    "dashboard:exams_metadata",
+    async () => {
+      const snap = await adminDB
+        .collection("exams")
+        .where("isPublished", "==", true)
+        .select("category", "isPremium")
+        .get();
+      return snap.docs.map(doc => ({
+        id: doc.id,
+        category: String(doc.data().category || "").trim().toUpperCase(),
+        isPremium: doc.data().isPremium === true
+      }));
+    },
+    30 * 60 * 1000 // 30 minutes cache
+  );
+}
+
+async function getCachedPlatformStats() {
+  return cacheAside(
+    "dashboard:platform_stats",
+    async () => {
+      const statsRef = adminDB.collection("system_config").doc("platform_stats");
+      const snap = await statsRef.get();
+      if (!snap.exists) return { activeUsersCount: 0, successRate: 0, uniqueExamTakers: 0 };
+      const data = snap.data() || {};
+      return {
+        activeUsersCount: Number(data.activeUsersCount || 0),
+        successRate: Number(data.successRate || 0),
+        uniqueExamTakers: Number(data.uniqueExamTakers || 0)
+      };
+    },
+    5 * 60 * 1000 // 5 minutes cache
+  );
+}
+
 async function getDashboardData(userId: string): Promise<DashboardPayload> {
   const userRef = adminDB.collection("users").doc(userId);
   const userSnap = await userRef.get();
@@ -215,92 +253,37 @@ async function getDashboardData(userId: string): Promise<DashboardPayload> {
   }
 
   const userData = userSnap.data() as UserDoc;
-
   const premiumCategories = normalizePremiumCategories(userData);
 
   const attemptsQuery = adminDB
     .collection("exam_attempts")
     .where("userId", "==", userId)
-    .where("status", "==", "submitted")
+    .where("status", "==", "submitted");
 
-  // let totalPremiumExams = 0;
+  // Load cached exams metadata and platform stats
+  const [allExams, platformStats, attemptSnap] = await Promise.all([
+    getCachedExamsList(),
+    getCachedPlatformStats(),
+    attemptsQuery.get()
+  ]);
 
-  // if (premiumCategories.includes("ALL")) {
-  //   const examsSnap = await adminDB
-  //     .collection("exams")
-  //     .where("isPremium", "==", true)
-  //     .where("isPublished", "==", true)
-  //     .get();
-
-  //   totalPremiumExams = examsSnap.size;
-  // }
-  // else if (premiumCategories.length > 0) {
-  //   const promises = premiumCategories.map((category) =>
-  //     adminDB
-  //       .collection("exams")
-  //       .where("category", "==", category)
-  //       .where("isPremium", "==", true)
-  //       .where("isPublished", "==", true)
-  //       .get()
-  //   );
-
-  //   const snaps = await Promise.all(promises);
-
-  //   totalPremiumExams = snaps.reduce(
-  //     (sum, snap) => sum + snap.size,
-  //     0
-  //   );
-  // }
   let totalPremiumExams = 0;
-
   const allowedExamIds = new Set<string>();
 
   if (premiumCategories.includes("ALL")) {
-    const examsSnap = await adminDB
-      .collection("exams")
-      .where("isPublished", "==", true)
-      .get();
-
-    totalPremiumExams = examsSnap.size;
-
-    examsSnap.docs.forEach((doc) => {
-      allowedExamIds.add(doc.id);
+    allExams.forEach((exam) => {
+      allowedExamIds.add(exam.id);
     });
-  }
-  else if (premiumCategories.length > 0) {
-    const promises = premiumCategories.map((category) =>
-      adminDB
-        .collection("exams")
-        .where("category", "==", category)
-        .where("isPublished", "==", true)
-        .get()
-    );
-
-    const snaps = await Promise.all(promises);
-
-    snaps.forEach((snap) => {
-      snap.docs.forEach((doc) => {
-        allowedExamIds.add(doc.id);
-      });
+    totalPremiumExams = allExams.length;
+  } else if (premiumCategories.length > 0) {
+    const catsSet = new Set(premiumCategories.map(c => c.toUpperCase()));
+    allExams.forEach((exam) => {
+      if (catsSet.has(exam.category)) {
+        allowedExamIds.add(exam.id);
+      }
     });
-
     totalPremiumExams = allowedExamIds.size;
   }
-
-
-  const passedQuery = adminDB
-    .collection("exam_attempts")
-    .where("userId", "==", userId)
-    .where("passed", "==", true)
-    .limit(5);
-
-  const statsRef = adminDB.collection("system_config").doc("platform_stats");
-
-  const [attemptSnap, passedSnap, statsSnap] = await Promise.all([
-    attemptsQuery.get(),
-    passedQuery.get(),
-    statsRef.get(),
-  ]);
 
   const recentAttempts = attemptSnap.docs
     .map((doc) => {
@@ -323,35 +306,26 @@ async function getDashboardData(userId: string): Promise<DashboardPayload> {
 
   const uniqueAttemptedExamIds = new Set(
     recentAttempts
-      .filter(
-        (a) =>
-          a.examId &&
-          allowedExamIds.has(a.examId)
-      )
+      .filter((a) => a.examId && allowedExamIds.has(a.examId))
       .map((a) => a.examId)
   );
 
-  const passedExams = passedSnap.docs
-    .map((doc) => {
-      const d = doc.data() as any;
-
-      return {
-        id: doc.id,
-        examId: d.examId ?? null,
-        examTitle: d.examTitle ?? null,
-        score: Number(d.score ?? 0),
-        percentage: Number(d.percentage ?? 0),
-        passed: !!d.passed,
-      };
-    });
+  // Eliminate redundant database query by filtering attempts in memory
+  const passedExams = recentAttempts
+    .filter((a) => a.passed)
+    .slice(0, 5)
+    .map((a) => ({
+      id: a.id,
+      examId: a.examId,
+      examTitle: a.examTitle,
+      score: a.score,
+      percentage: a.percentage,
+      passed: a.passed,
+    }));
 
   const uniquePassedExamIds = new Set(
     passedExams
-      .filter(
-        (a) =>
-          a.examId &&
-          allowedExamIds.has(a.examId)
-      )
+      .filter((a) => a.examId && allowedExamIds.has(a.examId))
       .map((a) => a.examId)
   );
 
@@ -361,9 +335,7 @@ async function getDashboardData(userId: string): Promise<DashboardPayload> {
     ? recentAttempts.reduce((sum, attempt) => sum + Number(attempt.percentage || 0), 0) / totalAttempts
     : 0;
 
-  const activeUsersCount = statsSnap.exists ? Number(statsSnap.data()?.activeUsersCount || 0) : 0;
-  const successRate = statsSnap.exists ? Number(statsSnap.data()?.successRate || 0) : 0;
-  const uniqueExamTakers = statsSnap.exists ? Number(statsSnap.data()?.uniqueExamTakers || 0) : 0;
+  const { activeUsersCount, successRate, uniqueExamTakers } = platformStats;
 
   return {
     user: userData,

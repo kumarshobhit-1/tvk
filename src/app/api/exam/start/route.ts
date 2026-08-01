@@ -5,6 +5,7 @@ import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { Exam, ExamAttempt, ExamQuestion } from "@/lib/exam-types";
 import { hasPremiumAccess } from "@/lib/premium-access";
 import { FieldValue } from "firebase-admin/firestore";
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
 
 const startExamLimiter = new RateLimiter(RATE_LIMITS.general);
@@ -38,14 +39,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Exam ID required" }, { status: 400 });
     }
 
-    // Get exam details
-    const examSnap = await adminDB.collection("exams").doc(examId).get();
+    // Get exam details (cached to optimize performance under high concurrency)
+    const exam = await cacheAside(
+      CacheKeys.exam(examId),
+      async () => {
+        const examSnap = await adminDB.collection("exams").doc(examId).get();
+        if (!examSnap.exists) return null;
+        return examSnap.data() as Exam;
+      }
+    );
 
-    if (!examSnap.exists) {
+    if (!exam) {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
     }
-
-    const exam = examSnap.data() as Exam;
     const isLockedExam = exam.isLocked === true;
     const premiumUser = Boolean(userData?.isPremium === true || userData?.premium === true);
     const explicitExamIds: string[] = Array.isArray((userData as any)?.allowedExamIds)

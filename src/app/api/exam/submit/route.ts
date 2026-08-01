@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDB, FieldValue, increment } from "@/lib/firebase/firebase-admin";
 import type { Exam, ExamAttempt, ExamAnswer } from "@/lib/exam-types";
+import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
 
 function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
   return typeof negativeMarking === 'number' ? negativeMarking : 0;
@@ -36,14 +37,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     
-    // Get exam details
-    const examSnap = await adminDB.collection("exams").doc(attempt.examId).get();
+    // Get exam details (cached to optimize performance under high concurrency)
+    const exam = await cacheAside(
+      CacheKeys.exam(attempt.examId),
+      async () => {
+        const examSnap = await adminDB.collection("exams").doc(attempt.examId).get();
+        if (!examSnap.exists) return null;
+        return examSnap.data() as Exam;
+      }
+    );
 
-    if (!examSnap.exists) {
+    if (!exam) {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
     }
-
-    const exam = examSnap.data() as Exam;
 
     // If this attempt was already submitted, return the existing result instead of failing again.
     if (attempt.status === "submitted") {
