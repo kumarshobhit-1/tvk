@@ -94,12 +94,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Batch path for category pages: one Firestore query for multiple exam IDs.
-    const attemptsSnap = await adminDB.collection("exam_attempts")
-      .where("examId", "in", examIds.slice(0, 30))
-      .where("userId", "==", userId)
-      .where("status", "==", "submitted")
-      .select("examId", "userId", "passed", "score", "percentage", "timeTaken", "submittedAt")
-      .get();
+    const [attemptsSnap, examsSnap] = await Promise.all([
+      adminDB.collection("exam_attempts")
+        .where("examId", "in", examIds.slice(0, 30))
+        .where("userId", "==", userId)
+        .where("status", "==", "submitted")
+        .select("examId", "userId", "passed", "score", "percentage", "timeTaken", "submittedAt")
+        .get(),
+      adminDB.collection("exams")
+        .where("__name__", "in", examIds.slice(0, 30))
+        .select("category", "isPremium", "isLocked")
+        .get()
+    ]);
 
     const grouped = new Map<string, any[]>();
     attemptsSnap.docs.forEach((doc) => {
@@ -111,10 +117,25 @@ export async function GET(request: NextRequest) {
       grouped.set(examId, list);
     });
 
+    const examsMap = new Map<string, any>();
+    examsSnap.docs.forEach((doc) => {
+      examsMap.set(doc.id, doc.data());
+    });
+
     const statuses = examIds.map((id) => {
       const attempts = grouped.get(id) || [];
       const passedAttempt = attempts.find((a: any) => a.passed);
       const attemptCount = attempts.length;
+
+      const examData = examsMap.get(id);
+      const isPremiumExam = examData?.isPremium === true;
+      const isLockedExam = examData?.isLocked === true;
+      const explicitExamAccess = premiumUser && explicitExamIds.length > 0 ? explicitExamIds.includes(id) : null;
+      const premiumAccessForExam = explicitExamAccess === null
+        ? hasPremiumAccess(userData, examData?.category)
+        : explicitExamAccess;
+      const canAttemptPremium = !isPremiumExam || premiumAccessForExam;
+
       return {
         examId: id,
         hasPassed: !!passedAttempt,
@@ -122,6 +143,9 @@ export async function GET(request: NextRequest) {
         maxAttempts: 5,
         canRetake: attemptCount < 5,
         lastAttemptId: attempts.length > 0 ? attempts[attempts.length - 1].id : null,
+        isPremiumExam,
+        canAttemptPremium,
+        isLocked: isLockedExam,
       };
     });
 
