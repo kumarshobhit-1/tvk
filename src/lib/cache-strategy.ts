@@ -72,15 +72,22 @@ class MemoryCache {
   }
 }
 
-// Singleton instance
-let cacheInstance: MemoryCache | null = null;
-const inFlightFetches: Map<string, Promise<unknown>> = new Map();
+// Singleton instance on globalThis to survive hot reloads in Next.js development mode
+const globalForCache = globalThis as unknown as {
+  cacheInstance: MemoryCache | undefined;
+  inFlightFetches: Map<string, Promise<unknown>> | undefined;
+};
+
+if (!globalForCache.inFlightFetches) {
+  globalForCache.inFlightFetches = new Map();
+}
+const inFlightFetches = globalForCache.inFlightFetches;
 
 export function getCache(): MemoryCache {
-  if (!cacheInstance) {
-    cacheInstance = new MemoryCache();
+  if (!globalForCache.cacheInstance) {
+    globalForCache.cacheInstance = new MemoryCache();
   }
-  return cacheInstance;
+  return globalForCache.cacheInstance;
 }
 
 // Cache key generators
@@ -201,10 +208,12 @@ export function invalidateCsContent(subjectSlug?: string, subjectId?: string) {
 }
 
 export function invalidatePdfCaches(folderId?: string) {
+  console.log(`[CACHE INVALIDATION] invalidatePdfCaches called with folderId: ${folderId}`);
   const cache = getCache();
   cache.invalidate(CacheKeys.pdfFolders());
   cache.invalidate(CacheKeys.pdfList());
   if (folderId) {
+    console.log(`[CACHE INVALIDATION] Invalidating specific key: ${CacheKeys.pdfFolderFiles(folderId)}`);
     cache.invalidate(CacheKeys.pdfFolderFiles(folderId));
   }
   cache.invalidatePattern(/^pdfs:files:/);

@@ -17,7 +17,8 @@ import {
   Search,
   ChevronRight,
   ArrowLeft,
-  ExternalLink
+  ExternalLink,
+  FileImage
 } from "lucide-react";
 import Loading from "@/components/ui/loading";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -125,11 +126,7 @@ export default function LibraryPage() {
   const loadFilesForFolder = async (folder: PDFFolderWithFiles) => {
     if (!folder?.id) return;
 
-    // Cache hit: no API call.
-    if (folderFilesCache[folder.id] && folderFilesCache[folder.id].length >= 0) {
-      setSelectedFolder((prev) => (prev && prev.id === folder.id ? { ...prev, files: folderFilesCache[folder.id] } : folder));
-      return;
-    }
+
 
     // Avoid duplicate in-flight calls.
     if (folderLoadingMap[folder.id]) return;
@@ -218,8 +215,13 @@ export default function LibraryPage() {
 
         const a = document.createElement("a");
         a.href = blobUrl;
-        // Ensure filename ends with .pdf
-        const safeName = (file.name || "download").replace(/\.pdf$/i, "") + ".pdf";
+        // Ensure filename ends with matching extension (pdf or image types)
+        let extension = "pdf";
+        if (contentType.startsWith("image/")) {
+          extension = contentType.split("/")[1] || "png";
+          if (extension === "jpeg") extension = "jpg";
+        }
+        const safeName = (file.name || "download").replace(/\.(pdf|png|jpg|jpeg|webp|gif)$/i, "") + `.${extension}`;
         a.download = safeName;
         document.body.appendChild(a);
         a.click();
@@ -531,30 +533,37 @@ export default function LibraryPage() {
                     getFilteredFiles(selectedFolder).length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">No files in this folder</div>
                     ) : (
-                      getFilteredFiles(selectedFolder).map((file) => (
-                        <div
-                          key={file.id}
-                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-secondary/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                              <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium text-sm truncate">{file.name}</div>
-                                {file.isLocked && (
-                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                    Locked
-                                  </Badge>
+                      getFilteredFiles(selectedFolder).map((file) => {
+                        const isImage = file.mimeType?.startsWith("image/");
+                        
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex items-center justify-between p-3 rounded-lg border hover:bg-secondary/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0 border border-muted-foreground/10">
+                                {isImage ? (
+                                  <FileImage className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                ) : (
+                                  <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
                                 )}
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                {formatFileSize(file.fileSize)}
-                                {file.pageCount ? ` · ${file.pageCount} pages` : ""}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <div className="font-medium text-sm truncate">{file.name}</div>
+                                  {file.isLocked && (
+                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                      Locked
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {formatFileSize(file.fileSize)}
+                                  {file.pageCount ? ` · ${file.pageCount} pages` : ""}
+                                </div>
                               </div>
                             </div>
-                          </div>
                           <div className="flex items-center gap-2">
                             <div className="text-xs text-muted-foreground min-w-fit ml-2 flex items-center gap-3">
                               <span className="flex items-center gap-1">
@@ -583,7 +592,8 @@ export default function LibraryPage() {
                             </Button>
                           </div>
                         </div>
-                      ))
+                      );
+                    })
                     )
                   )}
 

@@ -1,4 +1,4 @@
-import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+import { cacheAside, CacheKeys, invalidatePdfCaches } from "@/lib/cache-strategy";
 
 // Public API for listing published PDFs
 import { NextRequest, NextResponse } from "next/server";
@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
           const effectiveCategory = file.category || folder.category || "";
           const isLocked = file.isLocked === true;
           const canAccess = canUserAccessPdf(userData, { ...file, category: effectiveCategory }, folder);
+          console.log(`[DIAGNOSTIC] File: ${file.name} | isPremium: ${file.isPremium} | folder.isPremium: ${folder.isPremium} | premiumOverridden: ${file.premiumOverridden} | isLocked: ${isLocked} | canAccess: ${canAccess}`);
           const { cloudinaryUrl, cloudinarySecureUrl, ...safeFile } = file as PDFFile & {
             cloudinaryUrl?: string;
             cloudinarySecureUrl?: string;
@@ -151,9 +152,10 @@ export async function POST(request: NextRequest) {
       [field]: increment(1),
     });
 
-
-
-
+    const folderId = fileDoc.data()?.folderId;
+    if (folderId) {
+      invalidatePdfCaches(folderId);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
-import { uploadPDFToCloudinary, deletePDFFromCloudinary } from "@/lib/cloudinary";
+import { uploadPDFToCloudinary, deletePDFFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import type { PDFFolder, PDFFile } from "@/lib/pdf-types";
 import { invalidatePdfCaches } from "@/lib/cache-strategy";
 
@@ -51,8 +51,12 @@ export async function POST(request: NextRequest) {
       for (const file of files) {
         try {
           // Validate file type
-          if (file.type !== "application/pdf") {
-            errors.push(`${file.name}: Not a PDF file`);
+          // Validate file type (PDF or Image)
+          const isPdf = file.type === "application/pdf";
+          const isImage = file.type.startsWith("image/");
+          
+          if (!isPdf && !isImage) {
+            errors.push(`${file.name}: Not a PDF or Image file`);
             continue;
           }
 
@@ -60,16 +64,27 @@ export async function POST(request: NextRequest) {
           const arrayBuffer = await file.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
 
-          // Upload to Cloudinary
-          const cloudinaryResult = await uploadPDFToCloudinary(
-            buffer,
-            file.name,
-            folderData.name.replace(/[^a-zA-Z0-9-_]/g, "_")
-          );
+          const folderCleanName = folderData.name.replace(/[^a-zA-Z0-9-_]/g, "_");
 
-          // Create PDF file record in Firestore
+          // Upload to Cloudinary using correct service helper
+          let cloudinaryResult;
+          if (isImage) {
+            cloudinaryResult = await uploadImageToCloudinary(
+              buffer,
+              file.name,
+              `tvk-pdfs/${folderCleanName}`
+            );
+          } else {
+            cloudinaryResult = await uploadPDFToCloudinary(
+              buffer,
+              file.name,
+              folderCleanName
+            );
+          }
+
+          // Create file record in Firestore
           const pdfFile: Omit<PDFFile, "id"> = {
-            name: file.name.replace(/\.pdf$/i, ""),
+            name: file.name.replace(/\.(pdf|png|jpg|jpeg|webp|gif)$/i, ""),
             category: folderData.category || "SEBI",
             // default to unlocked unless explicitly set later by admin
             isLocked: false,
@@ -79,10 +94,10 @@ export async function POST(request: NextRequest) {
             cloudinaryPublicId: cloudinaryResult.public_id,
             cloudinaryUrl: cloudinaryResult.url,
             cloudinarySecureUrl: cloudinaryResult.secure_url,
-            thumbnailUrl: cloudinaryResult.thumbnail_url || null,
+            thumbnailUrl: isImage ? cloudinaryResult.secure_url : (cloudinaryResult.thumbnail_url || null),
             fileSize: cloudinaryResult.bytes,
-            pageCount: cloudinaryResult.pages || null,
-            mimeType: "application/pdf",
+            pageCount: isImage ? null : (cloudinaryResult.pages || null),
+            mimeType: file.type,
             order: orderIndex++,
             isPublished,
             downloadCount: 0,
@@ -275,7 +290,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    invalidatePdfCaches(type === "file" ? (normalizedUpdates.folderId || undefined) : id);
+    invalidatePdfCaches(type === "file" ? (doc.data()?.folderId || normalizedUpdates.folderId || undefined) : id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -19,6 +19,7 @@ export default function PDFViewerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [iframeError, setIframeError] = useState(false);
+  const [isImage, setIsImage] = useState(false);
 
   useEffect(() => {
     document.title = `${pdfName || "PDF Viewer"} | The Victory Key`;
@@ -74,17 +75,17 @@ export default function PDFViewerPage() {
         const res = await fetch(pdfUrl, { method: "GET" });
 
         if (!res.ok) {
-          let message = "You do not have access to this PDF.";
+          let message = "You do not have access to this PDF/IMAGE.";
           try {
             const data = await res.json();
             if (res.status === 403) {
-              message = "This PDF is Premium (locked). Please upgrade your plan or contact support to access it.";
+              message = "This PDF/IMAGE is Premium (locked). Please upgrade your plan or contact support to access it.";
             } else if (data?.error) {
               message = data.error;
             }
           } catch {
             if (res.status === 403) {
-              message = "This PDF is Premium (locked). Please upgrade your plan or contact support to access it.";
+              message = "This PDF/IMAGE is Premium (locked). Please upgrade your plan or contact support to access it.";
             }
           }
 
@@ -98,6 +99,7 @@ export default function PDFViewerPage() {
         objectUrl = URL.createObjectURL(blob);
         if (isMounted) {
           setPdfBlobUrl(objectUrl);
+          setIsImage(blob.type.startsWith("image/"));
         }
       } catch {
         if (isMounted) {
@@ -186,9 +188,15 @@ export default function PDFViewerPage() {
         </div>
       </div>
 
-      {/* PDF Viewer */}
-      <div className="flex-1 bg-muted overflow-hidden">
-        {pdfBlobUrl && !iframeError ? (
+      {/* PDF or Image Viewer */}
+      <div className="flex-1 bg-muted overflow-hidden flex items-center justify-center p-4">
+        {pdfBlobUrl && isImage ? (
+          <img
+            src={pdfBlobUrl}
+            alt={pdfName}
+            className="max-w-full max-h-full object-contain rounded shadow-lg border bg-card"
+          />
+        ) : pdfBlobUrl && !iframeError ? (
           <iframe
             src={pdfBlobUrl}
             className="w-full h-full border-0"

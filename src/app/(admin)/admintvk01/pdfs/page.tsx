@@ -246,7 +246,7 @@ export default function AdminPDFsPage() {
     if (uploadFiles.length === 0) {
       toast({
         title: "Error",
-        description: "Please select at least one PDF file",
+        description: "Please select at least one PDF or Image file",
         variant: "destructive",
       });
       return;
@@ -805,7 +805,7 @@ export default function AdminPDFsPage() {
                     </Button>
                     <Button onClick={() => setShowUploadDialog(true)}>
                       <Upload className="h-4 w-4 mr-2" />
-                      Upload PDFs
+                      Upload PDFs/Images
                     </Button>
                   </div>
                 )}
@@ -840,109 +840,120 @@ export default function AdminPDFsPage() {
                       <p className="text-lg mb-2">No files in this folder</p>
                       <Button onClick={() => setShowUploadDialog(true)}>
                         <Upload className="h-4 w-4 mr-2" />
-                        Upload PDFs
+                        Upload PDFs/Images
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {getFilesForFolder(selectedFolder.id).map((file) => (
-                        <div
-                          key={file.id}
-                          className="flex items-center justify-between p-4 rounded-lg border bg-card"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                              <FileText className="h-6 w-6 text-red-600 dark:text-red-400" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{file.name}</p>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>{formatFileSize(file.fileSize)}</span>
-                                {file.pageCount && <span>{file.pageCount} pages</span>}
-                                <span className="flex items-center gap-1">
-                                  <Eye className="h-3 w-3" /> {file.viewCount}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Download className="h-3 w-3" /> {file.downloadCount}
-                                </span>
+                      {getFilesForFolder(selectedFolder.id).map((file) => {
+                        const isImage = file.mimeType?.startsWith("image/");
+                        
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex items-center justify-between p-4 rounded-lg border bg-card"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0 border border-muted-foreground/10">
+                                {isImage ? (
+                                  <img 
+                                    src={file.cloudinarySecureUrl} 
+                                    alt={file.name} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                ) : (
+                                  <FileText className="h-6 w-6 text-red-600 dark:text-red-400" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium">{file.name}</p>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span>{formatFileSize(file.fileSize)}</span>
+                                  {file.pageCount && <span>{file.pageCount} pages</span>}
+                                  <span className="flex items-center gap-1">
+                                    <Eye className="h-3 w-3" /> {file.viewCount}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Download className="h-3 w-3" /> {file.downloadCount}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={file.isPublished ? "default" : "secondary"}>
-                              {file.isPublished ? "Published" : "Draft"}
-                            </Badge>
-                            {file.isPremium && <Badge variant="secondary">Premium</Badge>}
-                            {file.isLocked && (
-                              <Badge variant="destructive">Locked</Badge>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleMoveFile(file.id, file.folderId, "up")}
-                                >
-                                  Move Up
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleMoveFile(file.id, file.folderId, "down")}
-                                >
-                                  Move Down
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleTogglePremium("file", file.id, file.isPremium === true)}
-                                >
-                                  {file.isPremium ? (
-                                    <>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      Make Free
-                                    </>
-                                  ) : (
-                                    <>
-                                      <EyeOff className="h-4 w-4 mr-2" />
-                                      Mark Premium
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleToggleLock(file.id, file.isLocked === true)}
-                                >
-                                  {file.isLocked ? (
-                                    <>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      Unlock
-                                    </>
-                                  ) : (
-                                    <>
-                                      <EyeOff className="h-4 w-4 mr-2" />
-                                      Lock
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <a 
-                                    href={`https://docs.google.com/viewer?url=${encodeURIComponent(file.cloudinarySecureUrl)}&embedded=true`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
+                            <div className="flex items-center gap-2">
+                              <Badge variant={file.isPublished ? "default" : "secondary"}>
+                                {file.isPublished ? "Published" : "Draft"}
+                              </Badge>
+                              {file.isPremium && <Badge variant="secondary">Premium</Badge>}
+                              {file.isLocked && (
+                                <Badge variant="destructive">Locked</Badge>
+                              )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleMoveFile(file.id, file.folderId, "up")}
                                   >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View PDF
-                                  </a>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <a 
-                                    href={file.cloudinarySecureUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
+                                    Move Up
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleMoveFile(file.id, file.folderId, "down")}
                                   >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download
-                                  </a>
-                                </DropdownMenuItem>
+                                    Move Down
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleTogglePremium("file", file.id, file.isPremium === true)}
+                                  >
+                                    {file.isPremium ? (
+                                      <>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Make Free
+                                      </>
+                                    ) : (
+                                      <>
+                                        <EyeOff className="h-4 w-4 mr-2" />
+                                        Mark Premium
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleToggleLock(file.id, file.isLocked === true)}
+                                  >
+                                    {file.isLocked ? (
+                                      <>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Unlock
+                                      </>
+                                    ) : (
+                                      <>
+                                        <EyeOff className="h-4 w-4 mr-2" />
+                                        Lock
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <a 
+                                      href={`/library/view?fileId=${encodeURIComponent(file.id)}&name=${encodeURIComponent(file.name)}`} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                    >
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      {isImage ? "View Image" : "View PDF"}
+                                    </a>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <a 
+                                      href={`/api/pdf/access?fileId=${encodeURIComponent(file.id)}&action=download`}
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                    >
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Download
+                                    </a>
+                                  </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleTogglePublish("file", file.id, file.isPublished)}
                                 >
@@ -972,7 +983,8 @@ export default function AdminPDFsPage() {
                             </DropdownMenu>
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
                   )}
                 </>
@@ -1216,19 +1228,19 @@ export default function AdminPDFsPage() {
         <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Upload PDFs to {selectedFolder?.name}</DialogTitle>
+              <DialogTitle>Upload Files to {selectedFolder?.name}</DialogTitle>
               <DialogDescription>
-                Select one or more PDF files to upload
+                Select one or more PDF or Image files to upload
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="pdfFiles">PDF Files</Label>
+                <Label htmlFor="pdfFiles">PDF or Image Files</Label>
                 <div className="border-2 border-dashed rounded-lg p-6 text-center">
                   <Input
                     id="pdfFiles"
                     type="file"
-                    accept=".pdf"
+                    accept=".pdf,image/*"
                     multiple
                     className="hidden"
                     onChange={(e) => {
@@ -1242,7 +1254,7 @@ export default function AdminPDFsPage() {
                   >
                     <Upload className="h-10 w-10 text-muted-foreground mb-2" />
                     <span className="text-sm text-muted-foreground">
-                      Click to select PDFs or drag and drop
+                      Click to select PDFs/Images or drag and drop
                     </span>
                     <span className="text-xs text-muted-foreground mt-1">
                       Multiple files supported

@@ -9,6 +9,11 @@ export function buildPdfAccessUrl(fileId: string, action: "view" | "download" = 
 }
 
 export function canUserAccessPdf(userData: any, file: PDFFile, folder: PDFFolder): boolean {
+  // Admins and super_admins have full access to all files
+  if (userData?.role === "super_admin" || userData?.role === "admin") {
+    return true;
+  }
+
   if (file.isLocked === true) return false;
 
   const effectiveCategory = file.category || folder.category || "";

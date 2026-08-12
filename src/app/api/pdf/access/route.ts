@@ -57,17 +57,32 @@ export async function GET(request: NextRequest) {
     }
 
     const headers = new Headers();
-    headers.set(
-      "Content-Type",
-      action === "download"
-        ? (upstream.headers.get("content-type") || file.mimeType || "application/pdf")
-        : "application/pdf"
-    );
+    
+    // Determine Content-Type (ignore raw octet-stream for PDFs to avoid forcing downloads)
+    let fileMime = file.mimeType || "application/pdf";
+    const upstreamMime = upstream.headers.get("content-type");
+    if (upstreamMime && upstreamMime !== "application/octet-stream") {
+      fileMime = upstreamMime;
+    }
+    if (fileMime === "application/octet-stream") {
+      fileMime = "application/pdf";
+    }
+
+    headers.set("Content-Type", fileMime);
     headers.set("Cache-Control", "no-store");
-    headers.set(
-      "Content-Disposition",
-      `${action === "download" ? "attachment" : "inline"}; filename="${(file.name || "document").replace(/[^a-z0-9-_\.]/gi, "_")}.pdf"`
-    );
+    
+    let extension = "pdf";
+    if (fileMime.startsWith("image/")) {
+      extension = fileMime.split("/")[1] || "png";
+      if (extension === "jpeg") extension = "jpg";
+    }
+
+    if (action === "download") {
+      headers.set(
+        "Content-Disposition",
+        `attachment; filename="${(file.name || "document").replace(/[^a-z0-9-_\.]/gi, "_")}.${extension}"`
+      );
+    }
 
     return new NextResponse(upstream.body, {
       status: 200,
