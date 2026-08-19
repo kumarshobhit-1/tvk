@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { invalidatePlaygroundCache } from "@/lib/cache-strategy";
+import { z } from "zod";
 
 export async function PUT(
   request: NextRequest,
@@ -14,8 +15,14 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const data = await request.json();
-    delete data.createdAt;
+    const rawBody = await request.json();
+    const data = z.object({
+      title: z.string().min(1).optional(),
+      description: z.string().min(1).optional(),
+      difficulty: z.enum(["Easy", "Medium", "Hard"]).optional(),
+      starterCode: z.any().optional(),
+      testCases: z.any().optional(),
+    }).parse(rawBody);
     
     await adminDB.collection("playground_problems").doc(id).update(data);
     

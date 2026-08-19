@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { invalidateCsContent } from "@/lib/cache-strategy";
+import { z } from "zod";
 
 export async function GET(request: NextRequest) {
   const auth = await verifyAdminPermission(request, "canManageTopics");
@@ -33,8 +34,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const data = await request.json();
-    data.createdAt = new Date();
+    const rawBody = await request.json();
+    const data = z.object({
+      id: z.string().min(1),
+      title: z.string().min(1),
+      csSubjectId: z.string().min(1),
+      resources: z.array(z.object({
+        name: z.string(),
+        url: z.string(),
+      })).optional(),
+    }).parse(rawBody);
+
+    (data as any).createdAt = new Date();
     
     const docRef = await adminDB.collection("cs_topics").add(data);
     

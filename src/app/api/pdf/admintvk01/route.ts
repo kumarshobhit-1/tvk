@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { z } from "zod";
 import { uploadPDFToCloudinary, deletePDFFromCloudinary, uploadImageToCloudinary } from "@/lib/cloudinary";
 import type { PDFFolder, PDFFile } from "@/lib/pdf-types";
 import { invalidatePdfCaches } from "@/lib/cache-strategy";
@@ -19,9 +20,15 @@ export async function POST(request: NextRequest) {
     // Handle multipart form data (PDF upload)
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
-      const folderId = formData.get("folderId") as string;
+      const rawFolderId = formData.get("folderId");
+      const rawIsPublished = formData.get("isPublished");
+      const { folderId, isPublished } = z.object({
+        folderId: z.string().min(1),
+        isPublished: z.union([z.string(), z.boolean()]).optional().nullable(),
+      }).parse({ folderId: rawFolderId, isPublished: rawIsPublished });
+      
       const files = formData.getAll("files") as File[];
-      const isPublished = formData.get("isPublished") === "true";
+      const isPublishedBool = isPublished === "true" || isPublished === true;
 
       if (!folderId) {
         return NextResponse.json({ error: "Folder ID is required" }, { status: 400 });
@@ -99,7 +106,7 @@ export async function POST(request: NextRequest) {
             pageCount: isImage ? null : (cloudinaryResult.pages || null),
             mimeType: file.type,
             order: orderIndex++,
-            isPublished,
+            isPublished: isPublishedBool,
             downloadCount: 0,
             viewCount: 0,
             createdBy: auth.userId!,
@@ -124,7 +131,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle JSON (folder creation)
-    const data = await request.json();
+    const rawBody = await request.json();
+    const data = z.object({
+      action: z.enum(["createFolder", "reorderFiles", "reorderFolders"]).optional(),
+      name: z.string().optional(),
+      description: z.string().optional().nullable(),
+      category: z.string().optional().nullable(),
+      isPremium: z.boolean().optional(),
+      icon: z.string().optional().nullable(),
+      color: z.string().optional().nullable(),
+      parentId: z.string().optional().nullable(),
+      isPublished: z.boolean().optional(),
+    }).parse(rawBody);
     const { action } = data;
 
     if (action === "createFolder") {
@@ -227,12 +245,22 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const data = await request.json();
+    const rawBody = await request.json();
+    const data = z.object({
+      type: z.enum(["folder", "file"]),
+      id: z.string().min(1),
+      name: z.string().optional(),
+      description: z.string().optional().nullable(),
+      category: z.string().optional().nullable(),
+      isPremium: z.boolean().optional(),
+      isLocked: z.boolean().optional(),
+      premiumOverridden: z.boolean().optional(),
+      icon: z.string().optional().nullable(),
+      color: z.string().optional().nullable(),
+      parentId: z.string().optional().nullable(),
+      isPublished: z.boolean().optional(),
+    }).parse(rawBody);
     const { type, id, ...updates } = data;
-
-    if (!type || !id) {
-      return NextResponse.json({ error: "Type and ID are required" }, { status: 400 });
-    }
 
     const collection = type === "folder" ? "pdf_folders" : "pdf_files";
     const docRef = adminDB.collection(collection).doc(id);

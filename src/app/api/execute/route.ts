@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/firebase-admin";
+import { z } from "zod";
 
 // Language mapping for Piston API
 const languageMap: Record<string, string> = {
@@ -21,14 +22,11 @@ export async function POST(request: NextRequest) {
 
     await adminAuth.verifySessionCookie(sessionCookie);
 
-    const { code, language } = await request.json();
-
-    if (!code || !language) {
-      return NextResponse.json(
-        { error: "Code and language are required" },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
+    const { code, language } = z.object({
+      code: z.string().min(1),
+      language: z.string().min(1),
+    }).parse(body);
 
     // Map language to Piston API format
     const pistonLanguage = languageMap[language];

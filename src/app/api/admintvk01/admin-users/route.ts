@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { z } from "zod";
 import type { AdminRole } from "@/lib/role-types";
 
 const VALID_ROLES: AdminRole[] = [
@@ -31,15 +32,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { email, adminRole } = await request.json();
-
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
-    }
-
-    if (!adminRole || !VALID_ROLES.includes(adminRole)) {
-      return NextResponse.json({ error: "Valid adminRole is required" }, { status: 400 });
-    }
+    const rawBody = await request.json();
+    const { email, adminRole } = z.object({
+      email: z.string().email(),
+      adminRole: z.string().min(1),
+    }).parse(rawBody);
 
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -217,13 +214,14 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { userId, adminRole, isAdmin } = await request.json();
+    const rawBody = await request.json();
+    const { userId, adminRole, isAdmin } = z.object({
+      userId: z.string().min(1),
+      adminRole: z.string().nullable().optional(),
+      isAdmin: z.boolean().optional(),
+    }).parse(rawBody);
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    if (adminRole && !VALID_ROLES.includes(adminRole)) {
+    if (adminRole && !VALID_ROLES.includes(adminRole as any)) {
       return NextResponse.json({ error: "Invalid adminRole" }, { status: 400 });
     }
 

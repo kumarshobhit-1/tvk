@@ -3,6 +3,7 @@ import { adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { CacheKeys, getCache } from "@/lib/cache-strategy";
+import { z } from "zod";
 
 function normalizeCategory(value: unknown) {
   return String(value || "").trim().toUpperCase();
@@ -68,7 +69,26 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const examData = await request.json();
+    const rawBody = await request.json();
+    const examData = z.object({
+      title: z.string().min(1),
+      questions: z.array(z.any()),
+      sections: z.array(z.any()),
+      description: z.string().optional().nullable(),
+      category: z.string().optional().nullable(),
+      isPremium: z.boolean().optional(),
+      isLocked: z.boolean().optional(),
+      type: z.string().optional(),
+      durationMinutes: z.number().optional(),
+      totalMarks: z.number().optional(),
+      passingMarks: z.number().optional(),
+      negativeMarking: z.number().optional(),
+      isPublished: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+      shuffleQuestions: z.boolean().optional(),
+      shuffleOptions: z.boolean().optional(),
+      instructions: z.array(z.any()).optional(),
+    }).parse(rawBody);
 
     if (!examData.title || !examData.questions || examData.questions.length === 0) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -126,7 +146,7 @@ export async function POST(request: NextRequest) {
       description: examData.description || "",
       isPremium: normalizeBoolean(examData.isPremium),
       isLocked: normalizeBoolean(examData.isLocked, false),
-      type: examData.type || "timed",
+      type: (examData.type || "timed") as any,
       durationMinutes: computedDuration,
       totalMarks:
         examData.totalMarks ||
@@ -172,7 +192,27 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const { examId, ...examData } = await request.json();
+    const rawBody = await request.json();
+    const { examId, ...examData } = z.object({
+      examId: z.string().min(1),
+      title: z.string().optional(),
+      questions: z.array(z.any()).optional(),
+      sections: z.array(z.any()).optional(),
+      description: z.string().optional().nullable(),
+      category: z.string().optional().nullable(),
+      isPremium: z.boolean().optional(),
+      isLocked: z.boolean().optional(),
+      type: z.string().optional(),
+      durationMinutes: z.number().optional(),
+      totalMarks: z.number().optional(),
+      passingMarks: z.number().optional(),
+      negativeMarking: z.number().optional(),
+      isPublished: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+      shuffleQuestions: z.boolean().optional(),
+      shuffleOptions: z.boolean().optional(),
+      instructions: z.array(z.any()).optional(),
+    }).parse(rawBody);
 
     if (!examId) {
       return NextResponse.json({ error: "Exam ID required" }, { status: 400 });
@@ -264,7 +304,7 @@ export async function PUT(request: NextRequest) {
       isPremium: normalizedIsPremium,
       isLocked: normalizedIsLocked,
       isPublished: normalizedIsPublished,
-      type: examData.type || "timed",
+      type: (examData.type || "timed") as any,
       durationMinutes: computedDuration,
       totalMarks: typeof examData.totalMarks === "number" ? examData.totalMarks : computedTotalMarks,
       passingMarks: examData.passingMarks || 0,

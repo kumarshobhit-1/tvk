@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { ExamAttempt, Exam } from "@/lib/exam-types";
+import { z } from "zod";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 
 function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
@@ -105,14 +106,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { attemptId, action } = await request.json();
-
-    if (!attemptId || !action) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    const rawBody = await request.json();
+    const { attemptId, action } = z.object({
+      attemptId: z.string().min(1),
+      action: z.string().min(1),
+    }).parse(rawBody);
 
     const attemptSnap = await adminDB.collection("exam_attempts").doc(attemptId).get();
 
@@ -257,11 +255,11 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { action, examId } = await request.json();
-    
-    if (!examId || !action) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+    const rawBody = await request.json();
+    const { action, examId } = z.object({
+      examId: z.string().min(1),
+      action: z.string().min(1),
+    }).parse(rawBody);
 
     if (action === "emergency_stop_all") {
       // Emergency stop exam - mark as inactive and force submit all active attempts

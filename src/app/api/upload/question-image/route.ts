@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import { z } from "zod";
 
 async function verifyQuestionImagePermission(request: NextRequest) {
   const permissions = ["canCreateExam", "canEditExam"] as const;
@@ -37,7 +38,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 });
     }
 
-    const folderPath = String(formData.get("folderPath") || "tvk-question-images");
+    const folderPathRaw = formData.get("folderPath");
+    const validatedData = z.object({
+      folderPath: z.string().optional().nullable(),
+    }).parse({ folderPath: folderPathRaw });
+
+    const folderPath = String(validatedData.folderPath || "tvk-question-images");
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const result = await uploadImageToCloudinary(buffer, file.name, folderPath);

@@ -6,6 +6,7 @@ import type { Exam, ExamAttempt, ExamQuestion } from "@/lib/exam-types";
 import { hasPremiumAccess } from "@/lib/premium-access";
 import { FieldValue } from "firebase-admin/firestore";
 import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+import { z } from "zod";
 
 
 const startExamLimiter = new RateLimiter(RATE_LIMITS.general);
@@ -24,7 +25,10 @@ export async function POST(request: NextRequest) {
     const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
     const userId = decodedToken.uid;
 
-    const { examId } = await request.json();
+    const body = await request.json();
+    const { examId } = z.object({
+      examId: z.string().min(1),
+    }).parse(body);
 
     const userDoc = await adminDB.collection("users").doc(userId).get();
     const userData = userDoc.exists ? userDoc.data() : undefined;

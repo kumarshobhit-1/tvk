@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDB, increment } from "@/lib/firebase/firebase-admin";
 
 import type { PDFFolder, PDFFile, PDFFolderWithFiles } from "@/lib/pdf-types";
+import { z } from "zod";
 import { buildPdfAccessUrl, canUserAccessPdf } from "@/lib/pdf-access";
 
 // GET - List published folders (optionally files for a single folder)
@@ -128,11 +129,11 @@ export async function GET(request: NextRequest) {
 // POST - Track view/download
 export async function POST(request: NextRequest) {
   try {
-    const { fileId, action } = await request.json();
-
-    if (!fileId || !action) {
-      return NextResponse.json({ error: "File ID and action required" }, { status: 400 });
-    }
+    const rawBody = await request.json();
+    const { fileId, action } = z.object({
+      fileId: z.string().min(1),
+      action: z.enum(["view", "download"]),
+    }).parse(rawBody);
 
     const fileRef = adminDB.collection("pdf_files").doc(fileId);
 

@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { adminAuth, adminDB } from '@/lib/firebase/firebase-admin'
+import { z } from 'zod'
 
 export async function POST(req: Request) {
   try {
-    const { idToken } = await req.json()
-    if (!idToken) {
-      console.error('Session API: Missing idToken')
-      return NextResponse.json({ error: 'Missing idToken' }, { status: 400 })
-    }
+    const body = await req.json();
+    const { idToken } = z.object({
+      idToken: z.string().min(1),
+    }).parse(body);
 
     // Verify token and get user info
     const decodedToken = await adminAuth.verifyIdToken(idToken)

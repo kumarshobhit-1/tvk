@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { invalidateCsContent } from "@/lib/cache-strategy";
+import { z } from "zod";
 
 export async function PUT(
   request: NextRequest,
@@ -14,8 +15,16 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const data = await request.json();
-    delete data.createdAt;
+    const rawBody = await request.json();
+    const data = z.object({
+      id: z.string().min(1).optional(),
+      title: z.string().min(1).optional(),
+      csSubjectId: z.string().min(1).optional(),
+      resources: z.array(z.object({
+        name: z.string(),
+        url: z.string(),
+      })).optional(),
+    }).parse(rawBody);
     
     await adminDB.collection("cs_topics").doc(id).update(data);
     

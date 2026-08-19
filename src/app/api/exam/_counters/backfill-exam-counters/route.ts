@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
+import { z } from "zod";
 
 /**
  * Backfill per-exam counters on exams/{examId}.
@@ -13,10 +14,12 @@ import { adminDB } from "@/lib/firebase/firebase-admin";
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({} as any));
-    const examIds: string[] | undefined = Array.isArray(body?.examIds)
-      ? body.examIds.map((x: any) => String(x)).filter(Boolean)
-      : undefined;
+    const rawBody = await request.json().catch(() => ({}));
+    const body = z.object({
+      examIds: z.array(z.string()).optional(),
+    }).parse(rawBody);
+
+    const examIds = body.examIds;
 
     const examsSnap = examIds
       ? await Promise.all(examIds.map((id) => adminDB.collection("exams").doc(id).get()))

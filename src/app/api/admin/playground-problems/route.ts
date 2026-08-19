@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { invalidatePlaygroundCache } from "@/lib/cache-strategy";
+import { z } from "zod";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,8 +34,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 403 });
     }
 
-    const data = await request.json();
-    data.createdAt = new Date();
+    const rawBody = await request.json();
+    const data = z.object({
+      title: z.string().min(1),
+      description: z.string().min(1),
+      difficulty: z.enum(["Easy", "Medium", "Hard"]),
+      starterCode: z.any().optional(),
+      testCases: z.any().optional(),
+    }).parse(rawBody);
+
+    (data as any).createdAt = new Date();
     
     const docRef = await adminDB.collection("playground_problems").add(data);
     

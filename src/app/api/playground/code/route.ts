@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB, adminAuth } from "@/lib/firebase/firebase-admin";
 import { cookies } from "next/headers";
+import { z } from "zod";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,11 +16,12 @@ export async function POST(request: NextRequest) {
     const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
     const userId = decodedToken.uid;
 
-    const { problemId, language, code } = await request.json();
-
-    if (!problemId || !language || !code) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+    const body = await request.json();
+    const { problemId, language, code } = z.object({
+      problemId: z.string().min(1),
+      language: z.string().min(1),
+      code: z.string(),
+    }).parse(body);
 
     // Save code to Firestore
     const docRef = adminDB.collection("savedCodes").doc(`${userId}_${problemId}_${language}`);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
+import { z } from "zod";
 
 const DEFAULT_CATEGORY_OPTIONS = ["SEBI", "JEE", "BANKING", "SSC", "UPSC", "COAL INDIA LIMITED"];
 
@@ -76,11 +77,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const normalizedCategory = normalizeCategory(String(body?.category || ""));
+    const { category } = z.object({
+      category: z.string().min(1),
+    }).parse(body);
 
-    if (!normalizedCategory) {
-      return NextResponse.json({ error: "category is required" }, { status: 400 });
-    }
+    const normalizedCategory = normalizeCategory(category);
 
     const categories = await getCategoryState();
     const nextCategories = Array.from(new Set([...categories, normalizedCategory]));

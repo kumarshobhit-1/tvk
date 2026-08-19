@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { isPremiumUser, normalizePremiumCategories } from "@/lib/premium-access";
+import { z } from "zod";
 
 function toIsoDate(value: any): string | null {
   if (!value) return null;
@@ -199,15 +200,15 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const { userId, isPremium, premiumCategories, grantAllAccess, allowedExamIds, allowedPdfIds } = await request.json();
-
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    if (typeof isPremium !== "boolean") {
-      return NextResponse.json({ error: "isPremium must be boolean" }, { status: 400 });
-    }
+    const rawBody = await request.json();
+    const { userId, isPremium, premiumCategories, grantAllAccess, allowedExamIds, allowedPdfIds } = z.object({
+      userId: z.string().min(1),
+      isPremium: z.boolean(),
+      premiumCategories: z.union([z.array(z.string()), z.string()]).optional().nullable(),
+      grantAllAccess: z.boolean().optional().nullable(),
+      allowedExamIds: z.array(z.string()).optional().nullable(),
+      allowedPdfIds: z.array(z.string()).optional().nullable(),
+    }).parse(rawBody);
 
     const normalizedCategories = Array.isArray(premiumCategories)
       ? premiumCategories

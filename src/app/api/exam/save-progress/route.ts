@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { RateLimiter, RATE_LIMITS } from "@/lib/rate-limiter";
 import type { ExamAttempt, ExamAnswer } from "@/lib/exam-types";
+import { z } from "zod";
 
 const saveProgressLimiter = new RateLimiter(RATE_LIMITS.general);
 
@@ -20,11 +21,15 @@ export async function POST(request: NextRequest) {
     const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
     const userId = decodedToken.uid;
 
-    const { attemptId, answers } = await request.json();
-
-    if (!attemptId || !answers) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+    const body = await request.json();
+    const { attemptId, answers } = z.object({
+      attemptId: z.string().min(1),
+      answers: z.array(z.object({
+        questionId: z.string().min(1),
+        selectedOptionId: z.string().nullable(),
+        isFlagged: z.boolean().optional(),
+      })),
+    }).parse(body);
 
     // Get attempt
     const attemptSnap = await adminDB.collection("exam_attempts").doc(attemptId).get();

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDB, FieldValue, increment } from "@/lib/firebase/firebase-admin";
 import type { Exam, ExamAttempt, ExamAnswer } from "@/lib/exam-types";
 import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+import { z } from "zod";
 
 function computePenalty(negativeMarking: number | undefined, questionMarks: number): number {
   return typeof negativeMarking === 'number' ? negativeMarking : 0;
@@ -17,11 +18,15 @@ export async function POST(request: NextRequest) {
     }
     const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
 
-    const { attemptId, answers } = await request.json();
-
-    if (!attemptId || !answers) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+    const body = await request.json();
+    const { attemptId, answers } = z.object({
+      attemptId: z.string().min(1),
+      answers: z.array(z.object({
+        questionId: z.string().min(1),
+        selectedOptionId: z.string().nullable(),
+        isFlagged: z.boolean().optional(),
+      })),
+    }).parse(body);
 
     // Get attempt
     const attemptSnap = await adminDB.collection("exam_attempts").doc(attemptId).get();
