@@ -54,6 +54,7 @@ function invalidateExamCaches(examId?: string) {
   const cache = getCache();
   if (examId) {
     cache.invalidate(CacheKeys.exam(examId));
+    cache.invalidate(CacheKeys.examSummary(examId));
   }
   cache.invalidatePattern(/^exams:list:/);
   cache.invalidate('cil:counts');

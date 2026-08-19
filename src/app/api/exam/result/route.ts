@@ -101,45 +101,44 @@ export async function GET(request: NextRequest) {
       timeTaken: attempt.timeTaken || 0,
       submittedAt: attempt.submittedAt!,
       sections: sectionsSnapshot,
-      answers: attempt.answers.map((answer) => {
-        // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
-        const questionsToUse = (attempt as any).questionsSnapshot || exam.questions;
-        const question = questionsToUse?.find((q: any) => q.id === answer.questionId);
-        
-        if (!question) {
-          // Fallback if question not found
-          return {
-            questionId: answer.questionId || "",
-            questionText: "Question not found",
-            selectedOptionId: answer.selectedOptionId,
-            correctOptionId: "",
-            isCorrect: false,
-            marksAwarded: 0,
-            explanation: "",
-            options: [],
-          };
+      answers: (() => {
+        const questionsToUse = ((attempt as any).questionsSnapshot && Array.isArray((attempt as any).questionsSnapshot) && (attempt as any).questionsSnapshot.length > 0)
+          ? (attempt as any).questionsSnapshot
+          : exam.questions;
+
+        const answersMap = new Map<string, any>();
+        if (Array.isArray(attempt.answers)) {
+          attempt.answers.forEach((ans) => {
+            if (ans && ans.questionId) {
+              answersMap.set(ans.questionId, ans);
+            }
+          });
         }
 
-        const { correctMarks, negativeMarking } = getQuestionScoring(answer.questionId, question);
+        return (questionsToUse || []).map((question: any) => {
+          const answerObj = answersMap.get(question.id);
+          const selectedOptionId = answerObj ? answerObj.selectedOptionId : null;
+          const { correctMarks, negativeMarking } = getQuestionScoring(question.id, question);
 
-        const isCorrect = answer.selectedOptionId === question.correctOptionId;
-        const marksAwarded = !answer.selectedOptionId
-          ? 0
-          : isCorrect
-          ? correctMarks
-          : -computePenalty(negativeMarking, correctMarks);
+          const isCorrect = selectedOptionId === question.correctOptionId;
+          const marksAwarded = !selectedOptionId
+            ? 0
+            : isCorrect
+            ? correctMarks
+            : -computePenalty(negativeMarking, correctMarks);
 
-        return {
-          questionId: question.id,
-          questionText: question.text,
-          selectedOptionId: answer.selectedOptionId,
-          correctOptionId: question.correctOptionId,
-          isCorrect,
-          marksAwarded,
-          explanation: question.explanation || "",
-          options: question.options,
-        };
-      }),
+          return {
+            questionId: question.id,
+            questionText: question.text,
+            selectedOptionId,
+            correctOptionId: question.correctOptionId,
+            isCorrect,
+            marksAwarded,
+            explanation: question.explanation || "",
+            options: question.options,
+          };
+        });
+      })(),
     };
 
     return NextResponse.json({ result });

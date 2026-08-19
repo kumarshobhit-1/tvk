@@ -80,8 +80,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Time limit exceeded" }, { status: 400 });
     }
 
-    // Use questionsSnapshot if available (for safety), otherwise fall back to current exam
-    const questionsToScore = (attempt as any).questionsSnapshot || exam.questions;
+    // Use questionsSnapshot if available (for safety and non-empty), otherwise fall back to current exam
+    const questionsToScore = ((attempt as any).questionsSnapshot && Array.isArray((attempt as any).questionsSnapshot) && (attempt as any).questionsSnapshot.length > 0)
+      ? (attempt as any).questionsSnapshot
+      : exam.questions;
     const sectionsSnapshot = (attempt as any).sectionsSnapshot || exam.sections || [];
 
     const getQuestionScoring = (questionId: string, q: any) => {
@@ -111,15 +113,31 @@ export async function POST(request: NextRequest) {
     let wrongAnswers = 0;
     let unanswered = 0;
 
-    const updatedAnswers: ExamAnswer[] = answers.map((answer: ExamAnswer) => {
-      const question = questionsToScore.find((q: any) => q.id === answer.questionId);
-      if (!question) return answer;
+    const clientAnswersMap = new Map<string, string | null>();
+    if (Array.isArray(answers)) {
+      answers.forEach((ans: any) => {
+        if (ans && ans.questionId) {
+          clientAnswersMap.set(ans.questionId, ans.selectedOptionId || null);
+        }
+      });
+    }
 
-      const { correctMarks, negativeMarking } = getQuestionScoring(answer.questionId, question);
+    // fallback to check attempt's saved answers if client sent empty or partial
+    if (clientAnswersMap.size === 0 && Array.isArray(attempt.answers)) {
+      attempt.answers.forEach((ans: any) => {
+        if (ans && ans.questionId) {
+          clientAnswersMap.set(ans.questionId, ans.selectedOptionId || null);
+        }
+      });
+    }
 
-      if (!answer.selectedOptionId) {
+    const updatedAnswers: ExamAnswer[] = (questionsToScore || []).map((question: any) => {
+      const selectedOptionId = clientAnswersMap.get(question.id) || null;
+      const { correctMarks, negativeMarking } = getQuestionScoring(question.id, question);
+
+      if (!selectedOptionId) {
         unanswered++;
-      } else if (answer.selectedOptionId === question.correctOptionId) {
+      } else if (selectedOptionId === question.correctOptionId) {
         score += correctMarks;
         correctAnswers++;
       } else {
@@ -127,7 +145,11 @@ export async function POST(request: NextRequest) {
         score -= computePenalty(negativeMarking, correctMarks);
       }
 
-      return answer;
+      return {
+        questionId: question.id,
+        selectedOptionId,
+        isFlagged: false,
+      };
     });
 
     const percentage = (score / exam.totalMarks) * 100;

@@ -94,6 +94,7 @@ export function getCache(): MemoryCache {
 export const CacheKeys = {
   // Exams
   exam: (examId: string) => `exam:${examId}`,
+  examSummary: (examId: string) => `exam:${examId}:summary`,
   examList: (category?: string) => `exams:list:${category || 'all'}`,
   examAttempts: (examId: string) => `exam:${examId}:attempts`,
   

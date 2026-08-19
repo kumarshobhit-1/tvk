@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
       const exam = bypassCache
         ? await loadSingleExam()
         : await cacheAside(
-            CacheKeys.exam(examId),
+            CacheKeys.examSummary(examId),
             loadSingleExam,
             EXAM_LIST_TTL_MS
           );

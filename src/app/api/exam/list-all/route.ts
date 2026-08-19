@@ -74,6 +74,7 @@ export async function DELETE(request: NextRequest) {
 
     const cache = getCache();
     cache.invalidate(CacheKeys.exam(examId));
+    cache.invalidate(CacheKeys.examSummary(examId));
     cache.invalidatePattern(/^exams:list:/);
     cache.invalidate('cil:counts');
     cache.invalidate('home:stats');
