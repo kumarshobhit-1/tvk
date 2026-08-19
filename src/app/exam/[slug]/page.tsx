@@ -11,6 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Loading from "@/components/ui/loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function ExamPage() {
   const params = useParams();
@@ -26,6 +34,8 @@ export default function ExamPage() {
   const [hasStarted, setHasStarted] = useState(false);
   const [agreedToInstructions, setAgreedToInstructions] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
+  const [showFullscreenDialog, setShowFullscreenDialog] = useState(false);
+  const [isDevToolsOpen, setIsDevToolsOpen] = useState(false);
 
   // Add minimum delay to show loading
   useEffect(() => {
@@ -38,6 +48,80 @@ export default function ExamPage() {
 
   useEffect(() => {
     document.title = "Start Exam | The Victory Key";
+  }, []);
+
+  // Disable right-click and developer tools shortcuts on instructions page
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+        (e.ctrlKey && e.key === 'u') ||
+        (e.ctrlKey && e.key === 's') ||
+        e.key === 'F12'
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    // Periodically clear console to disable manual debugger scripting
+    const consoleClearInterval = setInterval(() => {
+      console.clear();
+    }, 1000);
+
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+      clearInterval(consoleClearInterval);
+    };
+  }, []);
+
+  // Developer Tools detection hook (docked and undocked without pausing in debugger)
+  // Developer Tools detection hook (highly secure, zoom-safe, and device-emulation compatible)
+  // Developer Tools detection hook (highly secure, zoom-safe, and device-emulation compatible)
+  useEffect(() => {
+    const threshold = 160;
+
+    const detectDevTools = () => {
+      // 1. Check for Chrome Device Emulation (Mobile UserAgent on Desktop Platform)
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+      const isDesktopPlatform = /Win32|Win64|MacIntel|Linux x86_64/i.test(navigator.platform || "");
+      
+      if (isMobileUA && isDesktopPlatform) {
+        setIsDevToolsOpen(true);
+        return;
+      }
+
+      // 2. Standard Dimension Check (Handles Docked DevTools at any zoom level on desktop)
+      const zoomFactor = window.devicePixelRatio || 1;
+      const correctedInnerWidth = window.innerWidth * zoomFactor;
+      const correctedInnerHeight = window.innerHeight * zoomFactor;
+
+      const widthDev = window.outerWidth - correctedInnerWidth > threshold;
+      const heightDev = window.outerHeight - correctedInnerHeight > threshold;
+
+      if (widthDev || heightDev) {
+        setIsDevToolsOpen(true);
+      } else {
+        setIsDevToolsOpen(false);
+      }
+    };
+
+    const detectorInterval = setInterval(detectDevTools, 1000);
+    window.addEventListener("resize", detectDevTools);
+
+    return () => {
+      clearInterval(detectorInterval);
+      window.removeEventListener("resize", detectDevTools);
+    };
   }, []);
 
   useEffect(() => {
@@ -145,8 +229,18 @@ export default function ExamPage() {
       return;
     }
 
-    // Delegate to the real starter
-    handleStartExam();
+    // Bypass fullscreen dialog check for real mobile devices (tablets and phones)
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+    const isDesktopPlatform = /Win32|Win64|MacIntel|Linux x86_64/i.test(navigator.platform || "");
+    const isIOSDesktopMode = typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    const isSmallScreen = typeof window !== "undefined" && window.screen && window.screen.width < 1024 && window.screen.height < 1024;
+    const isRealMobile = (isMobileUA && !isDesktopPlatform) || isIOSDesktopMode || isSmallScreen;
+
+    if (isRealMobile) {
+      handleStartExam();
+    } else {
+      setShowFullscreenDialog(true);
+    }
   };
 
   if (authLoading || showLoading) {
@@ -346,6 +440,78 @@ export default function ExamPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showFullscreenDialog} onOpenChange={setShowFullscreenDialog}>
+        <DialogContent className="sm:max-w-md rounded-2xl border p-6 shadow-2xl">
+          <DialogHeader className="space-y-3 text-left">
+            <DialogTitle className="text-2xl font-bold tracking-tight">
+              Full Screen Mode Required
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="text-sm leading-relaxed text-muted-foreground">
+                To attempt this exam, the browser must enter full screen mode (F11 style). 
+                <br /><br />
+                <strong>Important Rules:</strong>
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li>Back navigation is completely disabled during the exam.</li>
+                  <li>Exiting full screen mode at any point during the exam will <strong>automatically submit</strong> your exam immediately.</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowFullscreenDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowFullscreenDialog(false);
+                try {
+                  const element = document.documentElement;
+                  if (element.requestFullscreen) {
+                    await element.requestFullscreen();
+                  } else if ((element as any).webkitRequestFullscreen) {
+                    await (element as any).webkitRequestFullscreen();
+                  } else if ((element as any).mozRequestFullScreen) {
+                    await (element as any).mozRequestFullScreen();
+                  } else if ((element as any).msRequestFullscreen) {
+                    await (element as any).msRequestFullscreen();
+                  }
+                } catch (err) {
+                  console.error("Fullscreen error:", err);
+                }
+                handleStartExam();
+              }}
+              className="w-full sm:w-auto font-bold bg-primary hover:bg-primary/95 text-white"
+            >
+              Enter Full Screen & Start
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {isDevToolsOpen && (
+        <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-background text-foreground p-6">
+          <div className="text-center space-y-4 max-w-md">
+            <h2 className="text-3xl font-extrabold text-red-600 dark:text-red-400">
+              ⚠️ Developer Tools Detected
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              To start the exam, you must close all Developer Tools (Inspect, Console). 
+              Please close them and reload the page or click focus to proceed.
+            </p>
+            <div className="pt-4">
+              <Button onClick={() => window.location.reload()} size="lg" className="font-bold">
+                Check Again (Reload)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

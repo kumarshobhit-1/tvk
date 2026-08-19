@@ -168,3 +168,9 @@
 .animate-shimmer {
   animation: shimmer 2s linear infinite;
 }
+
+@media print {
+  body {
+    display: none !important;
+  }
+}

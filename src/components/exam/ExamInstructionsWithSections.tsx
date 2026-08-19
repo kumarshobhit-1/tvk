@@ -155,7 +155,7 @@ export function ExamInstructionsWithSections({
           {hasSections && (
             <div>
               <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-4 text-lg underline">SECTION-WISE DETAILS</h3>
-              <div className="overflow-x-visible border-2 border-gray-300 rounded">
+              <div className="overflow-x-auto border-2 border-gray-300 rounded">
                 <table className="w-full table-auto border-collapse">
                   <thead>
                     <tr className="bg-blue-900 dark:bg-blue-800 text-white text-xs sm:text-sm">
@@ -286,7 +286,7 @@ export function ExamInstructionsWithSections({
                 id="agree"
                 checked={agreedToInstructions}
                 onChange={(e) => onAgreedChange(e.target.checked)}
-                className="mt-1 cursor-pointer w-5 h-5"
+                className="mt-1 cursor-pointer w-5 h-5 shrink-0"
               />
               <label htmlFor="agree" className="text-sm text-gray-800 dark:text-gray-200 cursor-pointer leading-relaxed">
                 <strong>I have read and understood all the instructions above.</strong> I understand the exam format, marking scheme, section-wise timers, and navigation rules. I am aware that closing or refreshing the browser may terminate my exam.
@@ -298,12 +298,12 @@ export function ExamInstructionsWithSections({
 
       {/* Ready Button */}
       {showReadyButton && (
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-4 px-2">
           <Button
             onClick={onStart}
             disabled={disabled || loading || (typeof agreedToInstructions !== "undefined" && !agreedToInstructions)}
             size="lg"
-            className="px-16 py-6 text-lg font-bold bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+            className="w-full sm:w-auto px-6 sm:px-16 py-4 sm:py-6 text-base sm:text-lg font-bold bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
           >
             {loading ? "Starting Exam..." : "I AM READY TO BEGIN"}
           </Button>

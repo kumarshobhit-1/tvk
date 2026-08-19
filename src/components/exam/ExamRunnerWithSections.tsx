@@ -88,6 +88,7 @@ export function ExamRunnerWithSections({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [showTabWarning, setShowTabWarning] = useState(false);
+  const [isWindowBlurred, setIsWindowBlurred] = useState(false);
   const MAX_TAB_SWITCHES = 3;
   const isProcessingTabSwitch = useRef(false);
   const hasSubmittedExam = useRef(false);
@@ -330,6 +331,16 @@ export function ExamRunnerWithSections({
       }
 
       localStorage.removeItem(`exam_${attemptId}`);
+
+      // Exit full screen before redirecting (ensuring it happens after successful submit)
+      if (document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement || (document as any).msFullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch (err) {
+          console.error("Error exiting fullscreen:", err);
+        }
+      }
+
       router.push(`/exam/result?attemptId=${attemptId}`);
     } catch (error: any) {
       console.error("Error submitting exam:", error);
@@ -382,7 +393,31 @@ export function ExamRunnerWithSections({
       }, 0);
     };
 
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      setTimeout(() => {
+        toast({
+          title: "Action Restricted",
+          description: "Copying content is disabled during exam",
+          variant: "destructive",
+        });
+      }, 0);
+    };
+
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+    };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+    };
+
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault();
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent Ctrl+Shift+I (DevTools), Ctrl+U (View Source), F12 (DevTools)
       if (
         (e.ctrlKey && e.shiftKey && e.key === 'I') ||
         (e.ctrlKey && e.key === 'u') ||
@@ -396,17 +431,64 @@ export function ExamRunnerWithSections({
             variant: "destructive",
           });
         }, 0);
+      } else if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        e.preventDefault();
+        
+        // Hide content instantly by blurring
+        setIsWindowBlurred(true);
+
+        // Increment warning counter
+        if (!hasSubmittedExam.current) {
+          setTabSwitchCount((prev) => {
+            const newCount = prev + 1;
+            if (newCount >= MAX_TAB_SWITCHES) {
+              setTimeout(() => {
+                toast({
+                  title: "Exam Auto-Submitted",
+                  description: `Screenshot attempt detected. Your exam has been submitted automatically.`,
+                  variant: "destructive",
+                });
+                handleSubmit();
+              }, 0);
+            } else {
+              toast({
+                title: "Screenshot Violation Detected!",
+                description: `Screenshot attempts are restricted. Warning ${newCount}/${MAX_TAB_SWITCHES}`,
+                variant: "destructive",
+              });
+            }
+            return newCount;
+          });
+        }
+
+        // Wipe clipboard content to prevent screenshot paste
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText("Screenshots are restricted on this platform.").catch(() => {});
+        }
+
+        // Keep content hidden for 1.5 seconds, then restore
+        setTimeout(() => {
+          setIsWindowBlurred(false);
+        }, 1500);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('cut', handleCut);
+    document.addEventListener('paste', handlePaste);
+    document.addEventListener('selectstart', handleSelectStart);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('cut', handleCut);
+      document.removeEventListener('paste', handlePaste);
+      document.removeEventListener('selectstart', handleSelectStart);
     };
   }, [handleSubmit, toast]);
 
@@ -421,6 +503,9 @@ export function ExamRunnerWithSections({
             title: "Exam Ended",
             description: "Your exam has been submitted",
           });
+          if (document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement || (document as any).msFullscreenElement) {
+            document.exitFullscreen().catch(err => console.error("Error exiting fullscreen:", err));
+          }
           router.push(`/exam/result?attemptId=${attemptId}`);
           return;
         }
@@ -436,6 +521,9 @@ export function ExamRunnerWithSections({
               variant: "destructive",
             });
             await saveProgressToServer();
+            if (document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement || (document as any).msFullscreenElement) {
+              document.exitFullscreen().catch(err => console.error("Error exiting fullscreen:", err));
+            }
             router.push(`/exam/${exam.id}`);
             return;
           }
@@ -448,6 +536,111 @@ export function ExamRunnerWithSections({
     const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
   }, [attemptId, router, exam.id, toast, saveProgressToServer]);
+
+  // Focus loss detection to hide content from screenshot tools
+  useEffect(() => {
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+    const isDesktopPlatform = /Win32|Win64|MacIntel|Linux x86_64/i.test(navigator.platform || "");
+    const isIOSDesktopMode = typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    const isSmallScreen = typeof window !== "undefined" && window.screen && window.screen.width < 1024 && window.screen.height < 1024;
+    const isRealMobile = (isMobileUA && !isDesktopPlatform) || isIOSDesktopMode || isSmallScreen;
+    if (isRealMobile) return;
+
+    const handleBlur = () => {
+      setIsWindowBlurred(true);
+      
+      // Increment warning count if focus is lost but page remains visible (e.g. clicking on second screen or snipping overlays)
+      if (document.visibilityState === 'visible' && !hasSubmittedExam.current) {
+        setTabSwitchCount((prev) => {
+          const newCount = prev + 1;
+          if (newCount >= MAX_TAB_SWITCHES) {
+            setTimeout(() => {
+              toast({
+                title: "Exam Auto-Submitted",
+                description: `Focus lost ${MAX_TAB_SWITCHES} times. Your exam has been submitted automatically.`,
+                variant: "destructive",
+              });
+              handleSubmit();
+            }, 0);
+          } else {
+            setTimeout(() => {
+              setShowTabWarning(true);
+            }, 0);
+          }
+          return newCount;
+        });
+      }
+    };
+
+    const handleFocus = () => {
+      setIsWindowBlurred(false);
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [handleSubmit, toast]);
+
+  // Prevent back navigation
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      toast({
+        title: "Action Restricted",
+        description: "Back navigation is disabled during the exam.",
+        variant: "destructive",
+      });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [toast]);
+
+  // Full screen escape detection - auto-submit
+  useEffect(() => {
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+    const isDesktopPlatform = /Win32|Win64|MacIntel|Linux x86_64/i.test(navigator.platform || "");
+    const isIOSDesktopMode = typeof navigator !== "undefined" && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    const isSmallScreen = typeof window !== "undefined" && window.screen && window.screen.width < 1024 && window.screen.height < 1024;
+    const isRealMobile = (isMobileUA && !isDesktopPlatform) || isIOSDesktopMode || isSmallScreen;
+    if (isRealMobile) return;
+
+    const handleFullScreenChange = () => {
+      const isFullScreen = 
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement;
+      
+      if (!isFullScreen && !hasSubmittedExam.current) {
+        toast({
+          title: "Exam Auto-Submitted",
+          description: "You exited full screen mode. Your exam has been submitted automatically.",
+          variant: "destructive",
+        });
+        handleSubmit();
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullScreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullScreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullScreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullScreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullScreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullScreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullScreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullScreenChange);
+    };
+  }, [handleSubmit, toast]);
 
   // Don't render until we have questions
   if (!currentSection || currentSectionQuestions.length === 0) {
@@ -542,7 +735,7 @@ export function ExamRunnerWithSections({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background select-none" style={{ userSelect: "none" }}>
       {/* Header */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="container mx-auto px-4 py-4">
@@ -749,6 +942,19 @@ export function ExamRunnerWithSections({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {isWindowBlurred && (
+        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background/95 backdrop-blur-md text-foreground">
+          <div className="text-center p-6 max-w-md">
+            <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">
+              ⚠️ Content Hidden
+            </h2>
+            <p className="text-muted-foreground">
+              Exam content is hidden because the window lost focus. Please click back inside the window to resume.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
