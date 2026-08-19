@@ -14,6 +14,8 @@ import { useLoading } from '@/hooks/use-loading';
 import { Footer } from "@/components/ui/footer";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { ExamExpiryChecker } from "@/components/exam/ExamExpiryChecker";
+import { usePathname } from "next/navigation";
+import Script from "next/script";
 
 
 // Remove metadata export - not allowed in client components
@@ -29,6 +31,8 @@ export default function RootLayout({
 }) {
 
   const { isLoading } = useLoading();
+  const pathname = usePathname();
+  const isExamRunnerPage = pathname ? (pathname.startsWith("/exam/") && !pathname.startsWith("/exam/category/") && !pathname.startsWith("/exam/leaderboard/")) : false;
   
   // Add head tags directly in JSX for client component
   React.useEffect(() => {
@@ -89,6 +93,14 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap"
           rel="stylesheet"
         />
+        {!isExamRunnerPage && (
+          <Script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2480475355692793"
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
       </head>
       <body
         className={cn(
