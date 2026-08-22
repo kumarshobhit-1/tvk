@@ -44,6 +44,8 @@ export default function ManageExamsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [publishedExams, setPublishedExams] = useState<PublishedExam[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [selectedAttempt, setSelectedAttempt] = useState<ActiveAttempt | null>(null);
   const [selectedExam, setSelectedExam] = useState<PublishedExam | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -69,7 +71,7 @@ export default function ManageExamsPage() {
           return;
         }
         setIsAdmin(true);
-        loadAttempts();
+        loadAttempts(1);
       } catch (error) {
         router.push("/");
       } finally {
@@ -90,7 +92,7 @@ export default function ManageExamsPage() {
       const refreshInterval = hasActiveStudents ? 10000 : 30000; // 10s if active, 30s if none
 
       const timeout = setTimeout(() => {
-        loadAttempts();
+        loadAttempts(page);
         scheduleRefresh(); // Schedule next refresh
       }, refreshInterval);
 
@@ -100,7 +102,7 @@ export default function ManageExamsPage() {
     const timeout = scheduleRefresh();
 
     return () => clearTimeout(timeout);
-  }, [isAdmin]); // Only depend on isAdmin
+  }, [isAdmin, page, publishedExams]); // Only depend on isAdmin
 
   // Real-time clock for time elapsed updates
   useEffect(() => {
@@ -111,14 +113,16 @@ export default function ManageExamsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const loadAttempts = async () => {
+  const loadAttempts = async (targetPage = page) => {
     setIsRefreshing(true);
     try {
-      const response = await authenticatedFetch("/api/exam/manage");
+      const response = await authenticatedFetch(`/api/exam/manage?page=${targetPage}&limit=5`);
       if (!response.ok) throw new Error("Failed to load exams");
       
       const data = await response.json();
       setPublishedExams(data.exams || []);
+      setTotalPages(data.pagination?.totalPages || 1);
+      setPage(data.pagination?.page || 1);
       setLastRefresh(new Date());
     } catch (error) {
       console.error("Error loading exams:", error);
@@ -133,7 +137,7 @@ export default function ManageExamsPage() {
   };
 
   const handleManualRefresh = () => {
-    loadAttempts();
+    loadAttempts(page);
     toast({
       title: "Refreshed",
       description: "Exam data updated successfully",
@@ -443,6 +447,42 @@ export default function ManageExamsPage() {
                 )}
               </Card>
             ))}
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-between border-t border-border pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing page <span className="font-semibold">{page}</span> of{" "}
+                  <span className="font-semibold">{totalPages}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const prevPage = Math.max(1, page - 1);
+                      setPage(prevPage);
+                      loadAttempts(prevPage);
+                    }}
+                    disabled={page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const nextPage = Math.min(totalPages, page + 1);
+                      setPage(nextPage);
+                      loadAttempts(nextPage);
+                    }}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

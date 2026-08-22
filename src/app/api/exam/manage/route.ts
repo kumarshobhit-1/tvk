@@ -12,26 +12,41 @@ function computePenalty(negativeMarking: number | undefined, questionMarks: numb
 // Get all published exams (admin panel)
 // Counters now come from denormalized fields on exams/{examId}.
 export async function GET(request: NextRequest) {
-
-  // Temporarily disable auth check for debugging
-  // const auth = await verifyAdminPermission(request, "canManageExamAttempts");
-  // if (!auth.isValid) {
-  //   return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
-  // }
+  const auth = await verifyAdminPermission(request, "canManageExamAttempts");
+  if (!auth.isValid) {
+    return NextResponse.json({ error: auth.error || "Forbidden" }, { status: 403 });
+  }
 
   try {
-    // Get all published exams
-    const examsQuery = adminDB.collection("exams").where("isPublished", "==", true);
-    const examsSnap = await examsQuery.get();
+    const searchParams = request.nextUrl.searchParams;
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.max(1, Math.min(50, parseInt(searchParams.get("limit") || "5")));
+
+    // Fetch all published exams (without orderBy in query to prevent composite index requirement)
+    const examsSnap = await adminDB.collection("exams")
+      .where("isPublished", "==", true)
+      .get();
+    
+    // Sort in memory by createdAt descending
+    const allExams = examsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as (Exam & { id: string })[];
+    allExams.sort((a, b) => {
+      const timeA = (a.createdAt as any)?.seconds || (a.createdAt as any)?._seconds || 0;
+      const timeB = (b.createdAt as any)?.seconds || (b.createdAt as any)?._seconds || 0;
+      return timeB - timeA;
+    });
+
+    const totalExams = allExams.length;
+    const totalPages = Math.ceil(totalExams / limit);
+
+    // Get the paginated slice
+    const paginatedExams = allExams.slice((page - 1) * limit, page * limit);
     
     const examsWithAttempts: any[] = [];
 
-    // For each published exam, get active attempt count and total attempt count
-    for (const examDoc of examsSnap.docs) {
-      const exam = { id: examDoc.id, ...examDoc.data() } as Exam & { id: string };
+    // For each published exam in the paginated list, get active attempt count and total attempt count
+    for (const exam of paginatedExams) {
       
       // Read all attempts for the exam once and derive active/total counts from the same snapshot.
-      // This removes the duplicate `exam_attempts` scan that previously powered active and total counts separately.
       const attemptsSnap = await adminDB
         .collection("exam_attempts")
         .where("examId", "==", exam.id)
@@ -76,8 +91,6 @@ export async function GET(request: NextRequest) {
         ...doc.data()
       }));
 
-
-
       examsWithAttempts.push({
         ...exam,
         activeAttempts,
@@ -85,10 +98,17 @@ export async function GET(request: NextRequest) {
         totalAttempts: typeof exam.totalAttempts === "number" ? exam.totalAttempts : attemptsSnap.docs.length,
         uniqueStudents: typeof exam.uniqueStudents === "number" ? exam.uniqueStudents : activeAttempts.length
       });
-
     }
 
-    return NextResponse.json({ exams: examsWithAttempts });
+    return NextResponse.json({
+      exams: examsWithAttempts,
+      pagination: {
+        page,
+        limit,
+        totalExams,
+        totalPages
+      }
+    });
   } catch (error) {
     console.error("Error fetching published exams:", error);
     return NextResponse.json(

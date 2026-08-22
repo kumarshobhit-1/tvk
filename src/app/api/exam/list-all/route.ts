@@ -5,7 +5,6 @@ import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { getCache, CacheKeys } from "@/lib/cache-strategy";
 import { removeLatestExamConfig } from "@/lib/latest-exams";
 
-// Get all exams (for admin)
 export async function GET(request: NextRequest) {
   try {
     // View exam analytics/list permission
@@ -16,8 +15,10 @@ export async function GET(request: NextRequest) {
         { status: 403 }
       );
     }
-    const examsRef = adminDB.collection("exams");
-    const examsSnap = await examsRef.orderBy("createdAt", "desc").get();
+
+    const examsSnap = await adminDB.collection("exams")
+      .orderBy("createdAt", "desc")
+      .get();
 
     const exams: any[] = [];
     examsSnap.forEach((doc) => {

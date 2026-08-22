@@ -26,6 +26,7 @@ export default function AllExamsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exams, setExams] = useState<ExamWithId[]>([]);
+  const [page, setPage] = useState(1);
   const [selectedExam, setSelectedExam] = useState<ExamWithId | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -121,6 +122,10 @@ export default function AllExamsPage() {
     ? exams.filter(e => (e.category || "Other") === selectedCategory)
     : [];
 
+  const limit = 10;
+  const totalPages = Math.ceil(examsInSelectedCategory.length / limit);
+  const paginatedExams = examsInSelectedCategory.slice((page - 1) * limit, page * limit);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
@@ -159,7 +164,10 @@ export default function AllExamsPage() {
                   <Card 
                     key={category}
                     className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setSelectedCategory(category)}
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      setPage(1);
+                    }}
                   >
                     <CardHeader>
                       <CardTitle className="text-lg">{category}</CardTitle>
@@ -200,7 +208,10 @@ export default function AllExamsPage() {
             <Button 
               variant="outline"
               className="mb-6"
-              onClick={() => setSelectedCategory(null)}
+              onClick={() => {
+                setSelectedCategory(null);
+                setPage(1);
+              }}
             >
               ← Back to Categories
             </Button>
@@ -211,7 +222,7 @@ export default function AllExamsPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              {examsInSelectedCategory.map((exam) => (
+              {paginatedExams.map((exam) => (
                 <Card key={exam.id}>
                   <CardHeader>
                     <div className="space-y-3">
@@ -289,6 +300,40 @@ export default function AllExamsPage() {
                 </Card>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-between border-t border-border pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing page <span className="font-semibold">{page}</span> of{" "}
+                  <span className="font-semibold">{totalPages}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const prevPage = Math.max(1, page - 1);
+                      setPage(prevPage);
+                    }}
+                    disabled={page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const nextPage = Math.min(totalPages, page + 1);
+                      setPage(nextPage);
+                    }}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
