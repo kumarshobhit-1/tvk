@@ -3,6 +3,7 @@ import { adminDB } from "@/lib/firebase/firebase-admin";
 import type { Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { getCache, CacheKeys } from "@/lib/cache-strategy";
+import { removeLatestExamConfig } from "@/lib/latest-exams";
 
 // Get all exams (for admin)
 export async function GET(request: NextRequest) {
@@ -71,6 +72,7 @@ export async function DELETE(request: NextRequest) {
 
     // Now delete the exam
     await adminDB.collection("exams").doc(examId).delete();
+    await removeLatestExamConfig(examId);
 
     const cache = getCache();
     cache.invalidate(CacheKeys.exam(examId));

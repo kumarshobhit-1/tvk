@@ -126,6 +126,7 @@ export const CacheKeys = {
   playgroundProblems: () => 'playground:problems',
   cilCounts: () => 'cil:counts',
   homeStats: () => 'home:stats',
+  latestExams: () => 'latest:exams',
 } as const;
 
 // Cache TTLs (Time To Live in milliseconds)

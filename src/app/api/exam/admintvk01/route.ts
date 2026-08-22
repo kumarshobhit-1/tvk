@@ -4,6 +4,7 @@ import type { Exam } from "@/lib/exam-types";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { CacheKeys, getCache } from "@/lib/cache-strategy";
 import { z } from "zod";
+import { updateLatestExamsConfig } from "@/lib/latest-exams";
 
 function normalizeCategory(value: unknown) {
   return String(value || "").trim().toUpperCase();
@@ -167,6 +168,7 @@ export async function POST(request: NextRequest) {
 
     const examRef = await adminDB.collection("exams").add(newExam);
     invalidateExamCaches(examRef.id);
+    await updateLatestExamsConfig(examRef.id, newExam);
 
     return NextResponse.json({ success: true, examId: examRef.id });
   } catch (error: any) {
@@ -321,6 +323,7 @@ export async function PUT(request: NextRequest) {
     await adminDB.collection("exams").doc(examId).update(updateData);
 
     invalidateExamCaches(examId);
+    await updateLatestExamsConfig(examId, updateData);
 
     return NextResponse.json({ success: true });
   } catch (error) {

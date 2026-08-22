@@ -46,6 +46,21 @@ export default function ExamPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Dismiss site banner when accessing the exam page (instructions/runner)
+  useEffect(() => {
+    if (!examId) return;
+    try {
+      const stored = localStorage.getItem("tvk_dismissed_latest_exams");
+      const dismissed = stored ? JSON.parse(stored) : [];
+      if (!dismissed.includes(examId)) {
+        dismissed.push(examId);
+        localStorage.setItem("tvk_dismissed_latest_exams", JSON.stringify(dismissed));
+      }
+    } catch (err) {
+      console.error("Failed to dismiss banner via localStorage:", err);
+    }
+  }, [examId]);
+
   useEffect(() => {
     document.title = "Start Exam | The Victory Key";
   }, []);

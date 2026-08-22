@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { adminDB } from "@/lib/firebase/firebase-admin";
 import { cacheAside, CacheKeys } from "@/lib/cache-strategy";
+import SiteBanner from "@/components/exam/SiteBanner";
 
 type FeaturedTrack = {
   title: string;
@@ -225,6 +226,7 @@ export default async function Home() {
 
   return (
     <main className="bg-background text-foreground">
+      <SiteBanner />
       <section className="relative overflow-hidden border-b bg-background">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_30%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.10),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.65),transparent_40%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.10),transparent_30%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.08),transparent_28%),linear-gradient(180deg,rgba(2,6,23,0.96),transparent_44%)]" />
         <div className="absolute left-1/2 top-10 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl dark:bg-primary/20" />

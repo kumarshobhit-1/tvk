@@ -38,6 +38,7 @@ import {
 import ExamStatsRealtime from './ExamStatsRealtime';
 import PassedExamsRealtime from './PassedExamsRealtime';
 import RecentActivityRealtime from './RecentActivityRealtime';
+import SiteBanner from "@/components/exam/SiteBanner";
 
 import type { Timestamp } from "firebase-admin/firestore";
 
@@ -496,6 +497,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="bg-background text-foreground">
+      <SiteBanner />
       <section className="relative overflow-hidden border-b border-border/60 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.10),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.78),transparent_55%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_28%),linear-gradient(180deg,rgba(2,6,23,0.96),transparent_55%)]">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-500/60 to-transparent" />
         <div className="container mx-auto px-4 py-8 md:py-12">
