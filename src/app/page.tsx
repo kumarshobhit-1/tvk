@@ -476,7 +476,7 @@ export default async function Home() {
 
       <section className="border-t bg-muted/20 dark:bg-slate-950/40">
         <div className="container mx-auto px-4 py-12 md:py-16">
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-6xl">
             <div className="text-center mb-10">
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Preparation Guides</p>
               <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Master Your Exam with Curated Mock Series</h2>
@@ -485,7 +485,7 @@ export default async function Home() {
               </p>
             </div>
             
-            <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="rounded-3xl border bg-background p-6 md:p-8 shadow-sm">
                 <h3 className="text-xl font-bold mb-3">RBI Grade B & SEBI Grade A IT Preparation</h3>
                 <p className="text-sm leading-7 text-muted-foreground mb-4">
@@ -515,6 +515,16 @@ export default async function Home() {
                   All tests are updated regularly according to the latest weightage announcements, ensuring you focus on sections that maximize your competitive ranking.
                 </p>
               </div>
+
+              <div className="rounded-3xl border bg-background p-6 md:p-8 shadow-sm">
+                <h3 className="text-xl font-bold mb-3">UPSC Assistant Director (IT) & Technical Exams</h3>
+                <p className="text-sm leading-7 text-muted-foreground mb-4">
+                  The Union Public Service Commission (UPSC) Assistant Director (IT) and systems administration exams demand a high level of expertise in server management, systems design, network security, and government tech frameworks. We provide standard syllabus-aligned mocks to accelerate your readiness.
+                </p>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  Our comprehensive questions analyze core executive syllabus details, helping candidates build theoretical confidence and pass interviews with high merit rankings.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -522,49 +532,60 @@ export default async function Home() {
 
       <section className="border-t bg-background">
         <div className="container mx-auto px-4 py-12 md:py-16">
-          <div className="mx-auto max-w-3xl">
-            <div className="text-center mb-10">
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Got Questions?</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Frequently Asked Questions</h2>
-              <p className="mt-2 text-muted-foreground">
-                Find answers to common questions about mock tests, subscription access, and prep resources.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="border-b pb-4">
-                <h4 className="text-base font-semibold mb-2">How can I access the premium mock tests?</h4>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  You can purchase premium access to specific exam categories (such as Coal India Limited or SEBI). Once activated by the administrator, the locked tests within that category will be instantly unlocked in your personal prep dashboard.
+          <div className="mx-auto max-w-6xl">
+            <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Got Questions?</p>
+                <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Frequently Asked Questions</h2>
+                <p className="mt-4 text-muted-foreground leading-7">
+                  Find answers to common questions about mock tests, subscription access, and prep resources. If you need further help, feel free to reach out.
                 </p>
+                <div className="mt-6 rounded-2xl border bg-muted/20 p-5 dark:bg-slate-950/40">
+                  <h4 className="font-semibold text-sm">Need immediate assistance?</h4>
+                  <p className="mt-1 text-xs text-muted-foreground leading-5">
+                    Our support team typically responds to all queries within 24 hours.
+                  </p>
+                  <Link href="/contact" className="mt-3 inline-flex items-center text-xs font-semibold text-primary hover:underline">
+                    Go to Contact Page &rarr;
+                  </Link>
+                </div>
               </div>
 
-              <div className="border-b pb-4">
-                <h4 className="text-base font-semibold mb-2">Are there free mock tests available on the platform?</h4>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Yes! We offer a selection of free mock tests and assessment papers across different categories. These can be attempted immediately after creating a free account.
-                </p>
-              </div>
+              <div className="space-y-6">
+                <div className="border-b pb-4">
+                  <h4 className="text-base font-semibold mb-2">How can I access the premium mock tests?</h4>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    You can purchase premium access to specific exam categories (such as Coal India Limited or SEBI). Once activated by the administrator, the locked tests within that category will be instantly unlocked in your personal prep dashboard.
+                  </p>
+                </div>
 
-              <div className="border-b pb-4">
-                <h4 className="text-base font-semibold mb-2">How do I verify if my premium package is active?</h4>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Navigate to your profile or dashboard. You will see a list of active prep categories that have been unlocked for your account. You can also view the details in the Site Banner upon login.
-                </p>
-              </div>
+                <div className="border-b pb-4">
+                  <h4 className="text-base font-semibold mb-2">Are there free mock tests available on the platform?</h4>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Yes! We offer a selection of free mock tests and assessment papers across different categories. These can be attempted immediately after creating a free account.
+                  </p>
+                </div>
 
-              <div className="border-b pb-4">
-                <h4 className="text-base font-semibold mb-2">What is the PDF Library section?</h4>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  The PDF Library contains curated preparation materials, reference books, and class notes uploadable by the administrator. Users with appropriate category premium status can read and download these resources.
-                </p>
-              </div>
+                <div className="border-b pb-4">
+                  <h4 className="text-base font-semibold mb-2">How do I verify if my premium package is active?</h4>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Navigate to your profile or dashboard. You will see a list of active prep categories that have been unlocked for your account. You can also view the details in the Site Banner upon login.
+                  </p>
+                </div>
 
-              <div className="pb-4">
-                <h4 className="text-base font-semibold mb-2">How do I contact support if I face payment issues?</h4>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  You can reach out to us using our public <Link href="/contact" className="text-primary hover:underline">Contact Page</Link> or drop an email directly at **Consultantstvk@gmail.com**. Our support team typically responds to all queries within 24 hours.
-                </p>
+                <div className="border-b pb-4">
+                  <h4 className="text-base font-semibold mb-2">What is the PDF Library section?</h4>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    The PDF Library contains curated preparation materials, reference books, and class notes uploadable by the administrator. Users with appropriate category premium status can read and download these resources.
+                  </p>
+                </div>
+
+                <div className="pb-4">
+                  <h4 className="text-base font-semibold mb-2">How do I contact support if I face payment issues?</h4>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    You can reach out to us using our public <Link href="/contact" className="text-primary hover:underline">Contact Page</Link> or drop an email directly at **Consultantstvk@gmail.com**. Our support team typically responds to all queries within 24 hours.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
