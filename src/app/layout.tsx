@@ -87,7 +87,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="google-adsense-account" content="ca-pub-3914938885581520" />
+        <meta name="google-adsense-account" content="ca-pub-2480475355692793" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -97,7 +97,7 @@ export default function RootLayout({
         {!isExamRunnerPage && (
           <Script
             async
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3914938885581520"
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2480475355692793"
             crossOrigin="anonymous"
             strategy="afterInteractive"
           />

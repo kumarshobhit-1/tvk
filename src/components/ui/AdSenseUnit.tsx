@@ -24,7 +24,7 @@ export default function AdSenseUnit({ adSlot, adFormat = "auto", responsive = "t
       <ins
         className="adsbygoogle"
         style={{ display: "block" }}
-        data-ad-client="ca-pub-3914938885581520" // Apni ID dalein
+        data-ad-client="ca-pub-2480475355692793" // Apni ID dalein
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive={responsive}
