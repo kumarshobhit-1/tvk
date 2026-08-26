@@ -16,18 +16,7 @@ import Loading from "@/components/ui/loading";
 export default function ContactPage() {
   const { toast } = useToast();
   const { user, loading } = useAuth();
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLoading, setShowLoading] = useState(true);
-
-  // Add minimum delay to show loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoading(false);
-    }, 500); // Show loading for at least 500ms
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,10 +44,6 @@ export default function ContactPage() {
       });
     }
     setIsSubmitting(false);
-  }
-
-  if (loading || showLoading) {
-    return <Loading />;
   }
 
   const FormSkeleton = () => (
@@ -89,7 +74,6 @@ export default function ContactPage() {
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {user ? (
             <div className="bg-card p-8 rounded-lg border">
               <h2 className="text-2xl font-bold mb-6">Send us a Message</h2>
               <form onSubmit={handleSubmit}>
@@ -98,11 +82,19 @@ export default function ContactPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="name">Name</Label>
-                      <Input type="text" id="name" name="name" defaultValue={user.displayName || ''} readOnly className="mt-2" />
+                      {user ? (
+                        <Input type="text" id="name" name="name" defaultValue={user.displayName || ''} readOnly className="mt-2 bg-muted cursor-not-allowed" />
+                      ) : (
+                        <Input type="text" id="name" name="name" placeholder="Your Name" required className="mt-2" />
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="email">Email</Label>
-                      <Input type="email" id="email" name="email" defaultValue={user.email || ''} readOnly className="mt-2" />
+                      {user ? (
+                        <Input type="email" id="email" name="email" defaultValue={user.email || ''} readOnly className="mt-2 bg-muted cursor-not-allowed" />
+                      ) : (
+                        <Input type="email" id="email" name="email" placeholder="you@example.com" required className="mt-2" />
+                      )}
                     </div>
                   </div>
                   <div>
@@ -119,18 +111,6 @@ export default function ContactPage() {
                 </div>
               </form>
             </div>
-          ) : (
-            <div className="bg-card p-8 rounded-lg border flex flex-col items-center justify-center text-center">
-                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-                <p className="text-muted-foreground mb-6 max-w-sm">
-                    You must be logged in to send a message. Please log in to continue.
-                </p>
-                <Button onClick={() => router.push('/login')} className="w-full max-w-xs">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Go to Login
-                </Button>
-            </div>
-          )}
 
           <div className="space-y-8">
             <div>
