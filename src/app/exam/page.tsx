@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -91,16 +91,10 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
 };
 
 export default function ExamsPage() {
-  const { user, loading: authLoading } = useRequireAuth();
+  const { user, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showLoading, setShowLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     document.title = "Exam Categories | The Victory Key";
@@ -108,7 +102,6 @@ export default function ExamsPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) return;
 
     const fetchCategories = async () => {
       setLoading(true);
@@ -127,9 +120,9 @@ export default function ExamsPage() {
     };
 
     fetchCategories();
-  }, [user, authLoading]);
+  }, [authLoading]);
 
-  if (authLoading || loading || showLoading) {
+  if (loading) {
     return <Loading />;
   }
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,21 +9,9 @@ import Link from 'next/link';
 import Loading from '@/components/ui/loading';
 
 export default function AboutPage() {
-    const [showLoading, setShowLoading] = useState(true);
-
     useEffect(() => {
         document.title = "About Us | The Victory Key";
-        
-        const timer = setTimeout(() => {
-            setShowLoading(false);
-        }, 500);
-        
-        return () => clearTimeout(timer);
     }, []);
-
-    if (showLoading) {
-        return <Loading />;
-    }
 
     return (
         <div className='bg-background text-foreground'>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { authenticatedFetch } from "@/lib/api-client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,7 @@ interface ExamStatus {
 }
 
 export default function CategoryExamsPage() {
-  const { user, loading: authLoading } = useRequireAuth();
+  const { user, loading: authLoading } = useAuth();
   const params = useParams();
   const rawCategory = params.category as string;
   // Decode the category slug (hyphen-separated) into a display value
@@ -54,9 +54,8 @@ export default function CategoryExamsPage() {
   const category = decodeURIComponent(rawCategory).replace(/-/g, " ");
   const [exams, setExams] = useState<ExamListItem[]>([]);
   const [examStatuses, setExamStatuses] = useState<Record<string, ExamStatus>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showLoading, setShowLoading] = useState(true);
   const [premiumDialogOpen, setPremiumDialogOpen] = useState(false);
   const [selectedPremiumExam, setSelectedPremiumExam] = useState<ExamListItem | null>(null);
   const supportPhone = "9452903509";
@@ -79,15 +78,6 @@ export default function CategoryExamsPage() {
     openPremiumDialog(exam);
   };
 
-  // Add minimum delay to show loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
   useEffect(() => {
     const displayCategory = category === "other" ? "Other" : (category?.toUpperCase() || "Exams");
     document.title = `${displayCategory} Exams | The Victory Key`;
@@ -101,7 +91,6 @@ export default function CategoryExamsPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) return;
 
     const fetchExams = async () => {
       setLoading(true);
@@ -111,17 +100,19 @@ export default function CategoryExamsPage() {
           ? "/api/exam/list?category=other&noCache=1"
           : `/api/exam/list?category=${encodeURIComponent(category)}&noCache=1`;
         
-        const response = await authenticatedFetch(url, { cache: "no-store" });
+        const response = user 
+          ? await authenticatedFetch(url, { cache: "no-store" })
+          : await fetch(url, { cache: "no-store" });
         const data = await response.json();
         
         if (data.exams) {
           setExams(data.exams);
           
-          // Fetch all statuses in one request to avoid the N+1 pattern.
+          // Fetch all statuses in one request to avoid the N+1 pattern. Only if user is logged in.
           const examIds = data.exams.map((exam: ExamListItem) => exam.id).filter(Boolean);
           const statuses: Record<string, ExamStatus> = {};
 
-          if (examIds.length > 0) {
+          if (user && examIds.length > 0) {
             try {
               const statusRes = await fetch(`/api/exam/status?examIds=${encodeURIComponent(examIds.join(","))}`, { cache: "no-store" });
               if (statusRes.ok) {
@@ -131,16 +122,6 @@ export default function CategoryExamsPage() {
                     if (item?.examId) {
                       statuses[item.examId] = item;
                     }
-                  }
-                }
-              } else {
-                // Safe fallback: preserve old behavior if the batch endpoint is unavailable.
-                for (const exam of data.exams) {
-                  try {
-                    const statusRes = await fetch(`/api/exam/status?examId=${exam.id}`, { cache: "no-store" });
-                    statuses[exam.id] = await statusRes.json();
-                  } catch (err) {
-                    console.error(`Error fetching status for exam ${exam.id}:`, err);
                   }
                 }
               }
@@ -167,7 +148,7 @@ export default function CategoryExamsPage() {
     fetchExams();
   }, [user, authLoading, category]);
 
-  if (authLoading || loading || showLoading) {
+  if (loading) {
     return <Loading />;
   }
 

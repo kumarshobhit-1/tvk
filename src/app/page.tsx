@@ -474,6 +474,103 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="border-t bg-muted/20 dark:bg-slate-950/40">
+        <div className="container mx-auto px-4 py-12 md:py-16">
+          <div className="mx-auto max-w-4xl">
+            <div className="text-center mb-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Preparation Guides</p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Master Your Exam with Curated Mock Series</h2>
+              <p className="mt-2 text-muted-foreground">
+                Comprehensive coverage of regulatory body exams, specialist IT officer tracks, and PSU engineering examinations.
+              </p>
+            </div>
+            
+            <div className="space-y-8">
+              <div className="rounded-3xl border bg-background p-6 md:p-8 shadow-sm">
+                <h3 className="text-xl font-bold mb-3">RBI Grade B & SEBI Grade A IT Preparation</h3>
+                <p className="text-sm leading-7 text-muted-foreground mb-4">
+                  Securing a position at the Reserve Bank of India (RBI) or Securities and Exchange Board of India (SEBI) requires a deep understanding of core Computer Science concepts, Securities markets, and Financial systems. Our dedicated test series provides chapter-wise subject tests and full-length papers covering Software Engineering, Database Management Systems (DBMS), Data Communications & Networking, Operating Systems, and Web Technologies.
+                </p>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  With our premium exam tracks, candidates get access to meticulously drafted multiple-choice questions (MCQs) aligned with the latest syllabus guidelines released by regulatory boards.
+                </p>
+              </div>
+
+              <div className="rounded-3xl border bg-background p-6 md:p-8 shadow-sm">
+                <h3 className="text-xl font-bold mb-3">IBPS SO IT Officer & Specialist Officer Prep</h3>
+                <p className="text-sm leading-7 text-muted-foreground mb-4">
+                  The IBPS Specialist Officer (IT) exam evaluates candidates on professional knowledge relevant to IT infrastructure, system analysis, database administration, and cybersecurity. We offer timed practice tests that simulate the real-world exam interface to help you master time management and logical accuracy.
+                </p>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  Our mock tests cover essential sections including OOPs concepts, Data Structures, Algorithms, Computer Architecture, Computer Science fundamentals, and advanced networking protocols.
+                </p>
+              </div>
+
+              <div className="rounded-3xl border bg-background p-6 md:p-8 shadow-sm">
+                <h3 className="text-xl font-bold mb-3">PSU Exams: Coal India Limited (CIL) & HPCL IS</h3>
+                <p className="text-sm leading-7 text-muted-foreground mb-4">
+                  Public Sector Undertaking (PSU) exams like Coal India Limited (CIL) and Hindustan Petroleum Corporation Limited (HPCL) demand a high level of technical competency in engineering streams. We provide past-year question paper patterns, comprehensive mock tracks, and conceptual guides to boost your preparation.
+                </p>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  All tests are updated regularly according to the latest weightage announcements, ensuring you focus on sections that maximize your competitive ranking.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t bg-background">
+        <div className="container mx-auto px-4 py-12 md:py-16">
+          <div className="mx-auto max-w-3xl">
+            <div className="text-center mb-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">Got Questions?</p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Frequently Asked Questions</h2>
+              <p className="mt-2 text-muted-foreground">
+                Find answers to common questions about mock tests, subscription access, and prep resources.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="border-b pb-4">
+                <h4 className="text-base font-semibold mb-2">How can I access the premium mock tests?</h4>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  You can purchase premium access to specific exam categories (such as Coal India Limited or SEBI). Once activated by the administrator, the locked tests within that category will be instantly unlocked in your personal prep dashboard.
+                </p>
+              </div>
+
+              <div className="border-b pb-4">
+                <h4 className="text-base font-semibold mb-2">Are there free mock tests available on the platform?</h4>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Yes! We offer a selection of free mock tests and assessment papers across different categories. These can be attempted immediately after creating a free account.
+                </p>
+              </div>
+
+              <div className="border-b pb-4">
+                <h4 className="text-base font-semibold mb-2">How do I verify if my premium package is active?</h4>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Navigate to your profile or dashboard. You will see a list of active prep categories that have been unlocked for your account. You can also view the details in the Site Banner upon login.
+                </p>
+              </div>
+
+              <div className="border-b pb-4">
+                <h4 className="text-base font-semibold mb-2">What is the PDF Library section?</h4>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  The PDF Library contains curated preparation materials, reference books, and class notes uploadable by the administrator. Users with appropriate category premium status can read and download these resources.
+                </p>
+              </div>
+
+              <div className="pb-4">
+                <h4 className="text-base font-semibold mb-2">How do I contact support if I face payment issues?</h4>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  You can reach out to us using our public <Link href="/contact" className="text-primary hover:underline">Contact Page</Link> or drop an email directly at **Consultantstvk@gmail.com**. Our support team typically responds to all queries within 24 hours.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="container mx-auto px-4 py-12 md:py-16">
         <Card className="overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/10 via-background to-emerald-500/10 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
           <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-8">
