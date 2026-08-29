@@ -11,11 +11,13 @@ const serviceAccount = {
 if (!getApps().length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
 }
 
 export const adminAuth = admin.auth();
 export const adminDB = admin.firestore();
+export const adminStorage = admin.storage();
 export const adminFirestore = admin;
 export const FieldValue = admin.firestore.FieldValue;
 export const increment = admin.firestore.FieldValue.increment;

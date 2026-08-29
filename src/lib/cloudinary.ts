@@ -1,12 +1,5 @@
-// Cloudinary configuration for PDF uploads
-import { v2 as cloudinary } from 'cloudinary';
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Redirected to Firebase Admin GCS Storage wrapper to avoid Cloudinary quota limits
+import { adminStorage } from './firebase/firebase-admin';
 
 export interface CloudinaryUploadResult {
   public_id: string;
@@ -23,44 +16,35 @@ export async function uploadPDFToCloudinary(
   fileName: string,
   folderPath: string
 ): Promise<CloudinaryUploadResult> {
-  return new Promise((resolve, reject) => {
-    // Clean filename - remove extension and special characters
-    const cleanFileName = fileName
-      .replace(/\.pdf$/i, '')
-      .replace(/[^a-zA-Z0-9-_]/g, '_');
-    
-    // Generate unique ID with timestamp
-    const uniqueId = `${cleanFileName}_${Date.now()}`;
-    
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        resource_type: 'raw',
-        folder: `tvk-pdfs/${folderPath}`,
-        public_id: uniqueId,
-        type: 'upload', // Public delivery type
-        overwrite: false,
-      },
-      (error, result) => {
-        if (error) {
-          console.error('Cloudinary upload error:', error);
-          reject(error);
-        } else if (result) {
-          console.log('Cloudinary upload success:', result.secure_url);
-          resolve({
-            public_id: result.public_id,
-            secure_url: result.secure_url,
-            url: result.url,
-            bytes: result.bytes,
-            format: result.format || 'pdf',
-            pages: result.pages,
-            thumbnail_url: undefined,
-          });
-        }
-      }
-    );
+  // Clean filename - remove extension and special characters
+  const cleanFileName = fileName
+    .replace(/\.pdf$/i, '')
+    .replace(/[^a-zA-Z0-9-_]/g, '_');
+  
+  // Generate unique ID with timestamp
+  const uniqueId = `${cleanFileName}_${Date.now()}`;
+  const storagePath = `tvk-pdfs/${folderPath}/${uniqueId}.pdf`;
 
-    uploadStream.end(fileBuffer);
+  const bucket = adminStorage.bucket();
+  const file = bucket.file(storagePath);
+
+  console.log(`Firebase Storage: Uploading PDF to ${storagePath}`);
+  await file.save(fileBuffer, {
+    metadata: {
+      contentType: 'application/pdf',
+    }
   });
+
+  const firebaseUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media`;
+  console.log(`Firebase Storage: Upload complete. URL: ${firebaseUrl}`);
+
+  return {
+    public_id: storagePath,
+    secure_url: firebaseUrl,
+    url: firebaseUrl,
+    bytes: fileBuffer.length,
+    format: 'pdf',
+  };
 }
 
 export async function uploadImageToCloudinary(
@@ -68,78 +52,82 @@ export async function uploadImageToCloudinary(
   fileName: string,
   folderPath: string = 'tvk-question-images'
 ): Promise<CloudinaryUploadResult> {
-  return new Promise((resolve, reject) => {
-    const cleanFileName = fileName
-      .replace(/\.[^/.]+$/i, '')
-      .replace(/[^a-zA-Z0-9-_]/g, '_');
+  const cleanFileName = fileName
+    .replace(/\.[^/.]+$/i, '')
+    .replace(/[^a-zA-Z0-9-_]/g, '_');
 
-    const uniqueId = `${cleanFileName}_${Date.now()}`;
+  const uniqueId = `${cleanFileName}_${Date.now()}`;
+  
+  let ext = 'png';
+  if (fileName.toLowerCase().endsWith('.jpg') || fileName.toLowerCase().endsWith('.jpeg')) {
+    ext = 'jpg';
+  } else if (fileName.toLowerCase().endsWith('.webp')) {
+    ext = 'webp';
+  } else if (fileName.toLowerCase().endsWith('.gif')) {
+    ext = 'gif';
+  }
 
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        resource_type: 'image',
-        folder: folderPath,
-        public_id: uniqueId,
-        type: 'upload',
-        overwrite: false,
-      },
-      (error, result) => {
-        if (error) {
-          console.error('Cloudinary image upload error:', error);
-          reject(error);
-        } else if (result) {
-          resolve({
-            public_id: result.public_id,
-            secure_url: result.secure_url,
-            url: result.url,
-            bytes: result.bytes,
-            format: result.format || 'jpg',
-            pages: result.pages,
-            thumbnail_url: undefined,
-          });
-        }
-      }
-    );
+  const storagePath = `${folderPath}/${uniqueId}.${ext}`;
 
-    uploadStream.end(fileBuffer);
+  const bucket = adminStorage.bucket();
+  const file = bucket.file(storagePath);
+
+  console.log(`Firebase Storage: Uploading Image to ${storagePath}`);
+  await file.save(fileBuffer, {
+    metadata: {
+      contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+    }
   });
+
+  const firebaseUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media`;
+  console.log(`Firebase Storage: Upload complete. URL: ${firebaseUrl}`);
+
+  return {
+    public_id: storagePath,
+    secure_url: firebaseUrl,
+    url: firebaseUrl,
+    bytes: fileBuffer.length,
+    format: ext,
+  };
 }
 
 export function generatePDFThumbnail(publicId: string): string {
-  // Generate a thumbnail image from the first page of the PDF
-  return cloudinary.url(publicId, {
-    resource_type: 'image',
-    format: 'jpg',
-    transformation: [
-      { page: 1 },
-      { width: 300, height: 400, crop: 'fill' },
-      { quality: 'auto' },
-    ],
-  });
+  // Return null or empty as Cloudinary URL thumbnail is no longer needed
+  return "";
 }
 
 export async function deletePDFFromCloudinary(publicId: string): Promise<boolean> {
   try {
-    const result = await cloudinary.uploader.destroy(publicId, {
-      resource_type: 'raw',
-    });
-    return result.result === 'ok';
+    console.log(`Firebase Storage: Deleting asset ${publicId}`);
+    const bucket = adminStorage.bucket();
+    const file = bucket.file(publicId);
+    await file.delete();
+    return true;
   } catch (error) {
-    console.error('Error deleting PDF from Cloudinary:', error);
+    console.error('Error deleting asset from Firebase Storage:', error);
     return false;
   }
 }
 
 export async function getPDFInfo(publicId: string) {
   try {
-    const result = await cloudinary.api.resource(publicId, {
-      resource_type: 'raw',
-    });
-    return result;
+    const bucket = adminStorage.bucket();
+    const file = bucket.file(publicId);
+    const [metadata] = await file.getMetadata();
+    return metadata;
   } catch (error) {
-    console.error('Error getting PDF info:', error);
+    console.error('Error getting PDF info from Firebase Storage:', error);
     return null;
   }
 }
 
-export { cloudinary };
+// Keep a mock cloudinary export object to prevent any compile breakages elsewhere
+export const cloudinary = {
+  config: () => {},
+  uploader: {
+    destroy: async (publicId: string) => {
+      const ok = await deletePDFFromCloudinary(publicId);
+      return { result: ok ? 'ok' : 'failed' };
+    }
+  }
+};

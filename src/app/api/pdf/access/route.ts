@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
+import { adminAuth, adminDB, adminStorage } from "@/lib/firebase/firebase-admin";
 import type { PDFFile, PDFFolder } from "@/lib/pdf-types";
 import { canUserAccessPdf } from "@/lib/pdf-access";
 
@@ -51,19 +51,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Resource URL missing" }, { status: 500 });
     }
 
-    const upstream = await fetch(sourceUrl);
-    if (!upstream.ok || !upstream.body) {
-      return NextResponse.json({ error: "Unable to fetch resource" }, { status: 502 });
+    let fileBuffer: Buffer;
+    let fileMime = file.mimeType || "application/pdf";
+
+    if (sourceUrl.includes("cloudinary.com")) {
+      const upstream = await fetch(sourceUrl);
+      if (!upstream.ok || !upstream.body) {
+        return NextResponse.json({ error: "Unable to fetch resource" }, { status: 502 });
+      }
+      const arrayBuffer = await upstream.arrayBuffer();
+      fileBuffer = Buffer.from(arrayBuffer);
+      const upstreamMime = upstream.headers.get("content-type");
+      if (upstreamMime && upstreamMime !== "application/octet-stream") {
+        fileMime = upstreamMime;
+      }
+    } else {
+      try {
+        const bucket = adminStorage.bucket();
+        // cloudinaryPublicId contains the storage path: e.g. tvk-pdfs/folderId/docId.pdf
+        const storageFile = bucket.file(file.cloudinaryPublicId);
+        const [buffer] = await storageFile.download();
+        fileBuffer = buffer;
+      } catch (err: any) {
+        console.error("Firebase Storage direct download failed:", err);
+        return NextResponse.json({ error: `Unable to retrieve file: ${err.message}` }, { status: 502 });
+      }
     }
 
     const headers = new Headers();
-    
-    // Determine Content-Type (ignore raw octet-stream for PDFs to avoid forcing downloads)
-    let fileMime = file.mimeType || "application/pdf";
-    const upstreamMime = upstream.headers.get("content-type");
-    if (upstreamMime && upstreamMime !== "application/octet-stream") {
-      fileMime = upstreamMime;
-    }
     if (fileMime === "application/octet-stream") {
       fileMime = "application/pdf";
     }
@@ -84,7 +99,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return new NextResponse(upstream.body, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       status: 200,
       headers,
     });
