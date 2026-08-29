@@ -54,3 +54,6 @@ firestore-debug.log
 
 /load-tests
 .env.example
+
+list_emails.js
+premium_users_list.md

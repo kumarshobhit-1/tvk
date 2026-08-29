@@ -40,33 +40,52 @@ export async function GET(request: NextRequest) {
     const statsDoc = await statsRef.get();
 
     let activeUsersCount = Number(statsDoc.data()?.activeUsersCount || 0);
+    const activeUsersUpdatedAt = statsDoc.data()?.activeUsersUpdatedAt;
 
-    // ALWAYS fetch live active users count from Firebase Auth first
-    let totalAuthUsers = 0;
-    let pageToken: string | undefined;
-    
-    try {
-      do {
-        const listUsersResult = await adminAuth.listUsers(1000, pageToken);
-        totalAuthUsers += listUsersResult.users.length;
-        pageToken = listUsersResult.pageToken;
-      } while (pageToken);
+    // Convert Firestore Timestamp or Date representation to JS Date safely
+    let lastUpdatedDate = new Date(0);
+    if (activeUsersUpdatedAt) {
+      if (typeof activeUsersUpdatedAt.toDate === "function") {
+        lastUpdatedDate = activeUsersUpdatedAt.toDate();
+      } else if (activeUsersUpdatedAt instanceof Date) {
+        lastUpdatedDate = activeUsersUpdatedAt;
+      } else if (typeof activeUsersUpdatedAt === "string" || typeof activeUsersUpdatedAt === "number") {
+        lastUpdatedDate = new Date(activeUsersUpdatedAt);
+      }
+    }
+
+    const shouldRefreshAuthCount =
+      !statsDoc.exists ||
+      !statsDoc.data()?.activeUsersInitialized ||
+      (Date.now() - lastUpdatedDate.getTime() > 60 * 60 * 1000); // 1 hour threshold
+
+    if (shouldRefreshAuthCount) {
+      let totalAuthUsers = 0;
+      let pageToken: string | undefined;
       
-      activeUsersCount = totalAuthUsers;
-      
-      // Update Firestore cache for fallback
-      await statsRef.set(
-        {
-          activeUsersCount,
-          activeUsersInitialized: true,
-          activeUsersUpdatedAt: new Date(),
-        },
-        { merge: true }
-      );
-    } catch (authError) {
-      console.error('Error counting Firebase Auth users:', authError);
-      // Fallback to cached Firestore value if Auth listing fails
-      activeUsersCount = Number(statsDoc.data()?.activeUsersCount || 0);
+      try {
+        do {
+          const listUsersResult = await adminAuth.listUsers(1000, pageToken);
+          totalAuthUsers += listUsersResult.users.length;
+          pageToken = listUsersResult.pageToken;
+        } while (pageToken);
+        
+        activeUsersCount = totalAuthUsers;
+        
+        // Update Firestore cache for fallback
+        await statsRef.set(
+          {
+            activeUsersCount,
+            activeUsersInitialized: true,
+            activeUsersUpdatedAt: new Date(),
+          },
+          { merge: true }
+        );
+      } catch (authError) {
+        console.error('Error counting Firebase Auth users:', authError);
+        // Fallback to cached Firestore value if Auth listing fails
+        activeUsersCount = Number(statsDoc.data()?.activeUsersCount || 0);
+      }
     }
 
     // Now proceed with other metrics
