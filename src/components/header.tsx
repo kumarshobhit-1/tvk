@@ -57,22 +57,27 @@ export function Header() {
       setIsAdmin(false);
       return;
     }
+
+    // Immediately read cached admin status from localStorage for instant menu rendering
+    const cachedAdmin = localStorage.getItem(`tvk_admin_${user.uid}`);
+    if (cachedAdmin !== null) {
+      setIsAdmin(cachedAdmin === "true");
+    }
+
     const checkAdminStatus = async () => {
       try {
         const userData = await getUserDocCached(user.uid);
         const adminRole = userData?.adminRole;
-        if (
-          userData &&
-          (userData.isAdmin === true ||
-            ['super_admin', 'isAdmin', 'content_admin', 'exam_admin', 'qa_admin'].includes(adminRole))
-        ) {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
+        const isAdminUser = userData && (
+          userData.isAdmin === true ||
+          ['super_admin', 'isAdmin', 'content_admin', 'exam_admin', 'qa_admin'].includes(adminRole)
+        );
+
+        const newAdminState = !!isAdminUser;
+        setIsAdmin(newAdminState);
+        localStorage.setItem(`tvk_admin_${user.uid}`, String(newAdminState));
       } catch (error) {
         console.error("Error checking admin status:", error);
-        setIsAdmin(false);
       }
     };
     checkAdminStatus();
