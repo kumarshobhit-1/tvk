@@ -370,34 +370,35 @@ export default function AdminPDFsPage() {
     const currentFolder = folders.find((folder) => folder.id === folderId);
     if (!currentFolder) return;
 
-    // Only consider siblings (same parent)
-    const siblings = getSortedFolders().filter((folder) => (folder.parentId || null) === (currentFolder.parentId || null));
+    const isRoot = !currentFolder.parentId || !folders.some((f) => f.id === currentFolder.parentId);
+    const siblings = isRoot ? getRootFolders() : getChildFolders(currentFolder.parentId || null);
     const index = siblings.findIndex((item) => item.id === folderId);
     if (index < 0) return;
 
     const swapIndex = direction === "up" ? index - 1 : index + 1;
     if (swapIndex < 0 || swapIndex >= siblings.length) return;
 
-    const target = siblings[swapIndex];
-
-    // Assign deterministic order indices based on sibling positions and swap
-    const updates = [
-      { id: currentFolder.id, order: swapIndex },
-      { id: target.id, order: index },
-    ];
+    const reordered = [...siblings];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(swapIndex, 0, moved);
 
     try {
-      await Promise.all(
-        updates.map((u) =>
-          authenticatedFetch("/api/pdf/admintvk01", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: "folder", id: u.id, order: u.order }),
-          })
-        )
-      );
+      const response = await authenticatedFetch("/api/pdf/admintvk01", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reorderFolders",
+          folderIds: reordered.map((f) => f.id),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to reorder folders");
+      }
 
       await fetchData();
+      toast({ title: "Success", description: "Folder order updated successfully" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to reorder folders", variant: "destructive" });
     }
@@ -411,24 +412,28 @@ export default function AdminPDFsPage() {
     const swapIndex = direction === "up" ? index - 1 : index + 1;
     if (swapIndex < 0 || swapIndex >= sorted.length) return;
 
-    const current = sorted[index];
-    const target = sorted[swapIndex];
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(swapIndex, 0, moved);
 
     try {
-      await Promise.all([
-        authenticatedFetch("/api/pdf/admintvk01", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "file", id: current.id, order: target.order ?? swapIndex }),
+      const response = await authenticatedFetch("/api/pdf/admintvk01", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reorderFiles",
+          fileIds: reordered.map((f) => f.id),
+          folderId,
         }),
-        authenticatedFetch("/api/pdf/admintvk01", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "file", id: target.id, order: current.order ?? index }),
-        }),
-      ]);
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to reorder files");
+      }
 
       await fetchData();
+      toast({ title: "Success", description: "File order updated successfully" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to reorder files", variant: "destructive" });
     }

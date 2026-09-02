@@ -130,8 +130,50 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Handle JSON (folder creation)
+    // Handle JSON (folder creation, reordering)
     const rawBody = await request.json();
+    const { action } = rawBody;
+
+    if (action === "reorderFolders") {
+      const { folderIds } = rawBody;
+      if (!Array.isArray(folderIds) || folderIds.length === 0) {
+        return NextResponse.json({ error: "folderIds array is required" }, { status: 400 });
+      }
+
+      const batch = adminDB.batch();
+      folderIds.forEach((id: string, index: number) => {
+        const ref = adminDB.collection("pdf_folders").doc(id);
+        batch.update(ref, { order: index, updatedAt: new Date() });
+      });
+
+      await batch.commit();
+      invalidatePdfCaches();
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "reorderFiles") {
+      const { fileIds, folderId } = rawBody;
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return NextResponse.json({ error: "fileIds array is required" }, { status: 400 });
+      }
+
+      const batch = adminDB.batch();
+      fileIds.forEach((id: string, index: number) => {
+        const ref = adminDB.collection("pdf_files").doc(id);
+        batch.update(ref, { order: index, updatedAt: new Date() });
+      });
+
+      await batch.commit();
+      if (folderId) {
+        invalidatePdfCaches(folderId);
+      } else {
+        invalidatePdfCaches();
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
     const data = z.object({
       action: z.enum(["createFolder", "reorderFiles", "reorderFolders"]).optional(),
       name: z.string().optional(),
@@ -143,7 +185,6 @@ export async function POST(request: NextRequest) {
       parentId: z.string().optional().nullable(),
       isPublished: z.boolean().optional(),
     }).parse(rawBody);
-    const { action } = data;
 
     if (action === "createFolder") {
       const { name, description, category, isPremium, icon, color, parentId, isPublished } = data;
@@ -259,6 +300,7 @@ export async function PUT(request: NextRequest) {
       color: z.string().optional().nullable(),
       parentId: z.string().optional().nullable(),
       isPublished: z.boolean().optional(),
+      order: z.number().optional(),
     }).parse(rawBody);
     const { type, id, ...updates } = data;
 
