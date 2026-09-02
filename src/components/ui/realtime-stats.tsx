@@ -46,9 +46,12 @@ export function RealtimeStats() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
+    const url = manual ? `/api/platform/stats?refresh=true&t=${Date.now()}` : `/api/platform/stats?t=${Date.now()}`;
+
     try {
-      const response = await fetch(`/api/platform/stats`, {
-        signal: controller.signal
+      const response = await fetch(url, {
+        signal: controller.signal,
+        cache: 'no-store',
       });
 
       if (!response.ok) throw new Error(`Status ${response.status}`);
@@ -74,8 +77,9 @@ export function RealtimeStats() {
           // second attempt with longer timeout
           const controller2 = new AbortController();
           const timeout2 = setTimeout(() => controller2.abort(), 10000);
-          const resp2 = await fetch(`/api/platform/stats`, {
-            signal: controller2.signal
+          const resp2 = await fetch(url, {
+            signal: controller2.signal,
+            cache: 'no-store',
           });
 
           clearTimeout(timeout2);

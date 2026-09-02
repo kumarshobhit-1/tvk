@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB, adminAuth } from "@/lib/firebase/firebase-admin";
+import { getCache, CacheKeys } from "@/lib/cache-strategy";
 
 type PlatformStats = {
   activeUsersCount: number;
@@ -10,30 +11,32 @@ type PlatformStats = {
   queryTime: number;
 };
 
-let cachedStats: PlatformStats | null = null;
-let cachedAt = 0;
-const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_TTL_MS = 30 * 1000; // 30 seconds memory cache for high traffic efficiency
 
 export async function GET(request: NextRequest) {
   try {
     const startTime = Date.now();
+    const isExplicitRefresh = request.nextUrl.searchParams.get("refresh") === "true";
+    const cache = getCache();
 
-    // Serve the cached payload first when it is still fresh.
-    // This avoids repeatedly re-reading exam_attempts and re-listing Firebase Auth users on every poll.
-    if (cachedStats && Date.now() - cachedAt < CACHE_TTL_MS) {
-      return NextResponse.json(
-        {
-          ...cachedStats,
-          queryTime: Date.now() - startTime,
-        },
-        {
-          headers: {
-            "Cache-Control": "private, max-age=300, stale-while-revalidate=60",
-            "Pragma": "cache",
-            "Expires": new Date(Date.now() + 5 * 60 * 1000).toUTCString(),
+    // Serve the cached payload first when it is still fresh and no explicit refresh requested.
+    if (!isExplicitRefresh) {
+      const cached = cache.get<PlatformStats>(CacheKeys.platformStats());
+      if (cached) {
+        return NextResponse.json(
+          {
+            ...cached,
+            queryTime: Date.now() - startTime,
           },
-        }
-      );
+          {
+            headers: {
+              "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "Pragma": "no-cache",
+              "Expires": "0",
+            },
+          }
+        );
+      }
     }
 
     const statsRef = adminDB.collection('system_config').doc('platform_stats');
@@ -88,34 +91,47 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Periodic auto-refresh for premium users count (every 30 mins)
+    let premiumUsersCount = Number(statsDoc.data()?.premiumUsersCount || 0);
+    const premiumUsersUpdatedAt = statsDoc.data()?.premiumUsersUpdatedAt;
+    let lastPremiumUpdatedDate = new Date(0);
+    if (premiumUsersUpdatedAt) {
+      if (typeof premiumUsersUpdatedAt.toDate === "function") {
+        lastPremiumUpdatedDate = premiumUsersUpdatedAt.toDate();
+      } else if (premiumUsersUpdatedAt instanceof Date) {
+        lastPremiumUpdatedDate = premiumUsersUpdatedAt;
+      } else if (typeof premiumUsersUpdatedAt === "string" || typeof premiumUsersUpdatedAt === "number") {
+        lastPremiumUpdatedDate = new Date(premiumUsersUpdatedAt);
+      }
+    }
+
+    const shouldRefreshPremiumCount =
+      !statsDoc.exists ||
+      !statsDoc.data()?.premiumUsersInitialized ||
+      (Date.now() - lastPremiumUpdatedDate.getTime() > 30 * 60 * 1000);
+
+    if (shouldRefreshPremiumCount) {
+      try {
+        const premiumSnap = await adminDB.collection("users").where("isPremium", "==", true).select("isPremium").get();
+        premiumUsersCount = premiumSnap.size;
+        await statsRef.set(
+          {
+            premiumUsersCount,
+            premiumUsersInitialized: true,
+            premiumUsersUpdatedAt: new Date(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error("Error refreshing premium users count:", err);
+      }
+    }
+
     // Now proceed with other metrics
     let uniqueExamTakers = Number(statsDoc.data()?.uniqueExamTakers || 0);
     const statsInitialized = statsDoc.exists && statsDoc.data()?.initialized === true;
-    let premiumUsersCount = Number(statsDoc.data()?.premiumUsersCount || 0);
-    const premiumUsersInitialized = statsDoc.exists && statsDoc.data()?.premiumUsersInitialized === true;
     let successRate = Number(statsDoc.data()?.successRate || 0);
     const successRateInitialized = statsDoc.exists && statsDoc.data()?.successRate !== undefined;
-
-    if (cachedStats && Date.now() - cachedAt < CACHE_TTL_MS && statsInitialized && successRateInitialized) {
-      return NextResponse.json(
-        {
-          ...cachedStats,
-          activeLearners: uniqueExamTakers,
-          premiumUsersCount,
-          activeUsersCount,
-          successRate,
-          queryTime: Date.now() - startTime,
-        },
-        {
-          headers: {
-            'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
-            'Pragma': 'cache',
-            'Expires': new Date(Date.now() + 5 * 60 * 1000).toUTCString(),
-            'Surrogate-Control': 'max-age=300'
-          }
-        }
-      );
-    }
 
     // Avoid expensive collection scans here. Rely on `platform_stats` document values
     // which are incrementally maintained during normal operation (exam submits).
@@ -135,16 +151,13 @@ export async function GET(request: NextRequest) {
       queryTime: Date.now() - startTime
     };
 
-    cachedStats = stats;
-    cachedAt = Date.now();
+    cache.set(CacheKeys.platformStats(), stats, CACHE_TTL_MS);
 
-    // Force no caching
     return NextResponse.json(stats, {
       headers: {
-        'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
-        'Pragma': 'cache',
-        'Expires': new Date(Date.now() + 5 * 60 * 1000).toUTCString(),
-        'Surrogate-Control': 'max-age=300'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       }
     });
   } catch (error: any) {

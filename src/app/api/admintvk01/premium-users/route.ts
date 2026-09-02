@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDB } from "@/lib/firebase/firebase-admin";
 import { verifyAdminPermission } from "@/lib/auth-helpers";
 import { isPremiumUser, normalizePremiumCategories } from "@/lib/premium-access";
+import { invalidatePlatformStatsCache } from "@/lib/cache-strategy";
 import { z } from "zod";
 
 function toIsoDate(value: any): string | null {
@@ -378,6 +379,8 @@ export async function PATCH(request: NextRequest) {
         { merge: true }
       );
     });
+
+    invalidatePlatformStatsCache();
 
     return NextResponse.json({
       success: true,

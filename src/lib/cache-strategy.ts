@@ -126,6 +126,7 @@ export const CacheKeys = {
   playgroundProblems: () => 'playground:problems',
   cilCounts: () => 'cil:counts',
   homeStats: () => 'home:stats',
+  platformStats: () => 'platform:stats',
   latestExams: () => 'latest:exams',
 } as const;
 
@@ -210,12 +211,10 @@ export function invalidateCsContent(subjectSlug?: string, subjectId?: string) {
 }
 
 export function invalidatePdfCaches(folderId?: string) {
-  console.log(`[CACHE INVALIDATION] invalidatePdfCaches called with folderId: ${folderId}`);
   const cache = getCache();
   cache.invalidate(CacheKeys.pdfFolders());
   cache.invalidate(CacheKeys.pdfList());
   if (folderId) {
-    console.log(`[CACHE INVALIDATION] Invalidating specific key: ${CacheKeys.pdfFolderFiles(folderId)}`);
     cache.invalidate(CacheKeys.pdfFolderFiles(folderId));
   }
   cache.invalidatePattern(/^pdfs:files:/);
@@ -225,4 +224,9 @@ export function invalidatePdfCaches(folderId?: string) {
 export function invalidatePlaygroundCache() {
   const cache = getCache();
   cache.invalidate(CacheKeys.playgroundProblems());
+}
+
+export function invalidatePlatformStatsCache() {
+  const cache = getCache();
+  cache.invalidate(CacheKeys.platformStats());
 }
